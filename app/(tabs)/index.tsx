@@ -19,6 +19,7 @@ import Animated, { FadeInDown, FadeInRight } from 'react-native-reanimated';
 import { MediaCardProps } from '../../components/media/MediaCard';
 import { MediaRow } from '../../components/media/MediaRow';
 import { QueueCard } from '../../components/media/QueueCard';
+import { SkeletonRow } from '../../components/ui/Skeleton';
 import { Colors } from '../../constants/Colors';
 import { Spacing } from '../../constants/Spacing';
 import { useJellyfinImageUrl, useLatestItems, useResumeItems } from '../../services/hooks/useJellyfin';
@@ -214,10 +215,15 @@ export default function HomeScreen() {
 
   if (!isLoaded) {
     return (
-      <View style={styles.loadingContainer}>
-        <Animated.View entering={FadeInDown.duration(800)}>
-          <Text style={styles.loadingText}>Loading JellyRoll...</Text>
-        </Animated.View>
+      <View style={styles.container}>
+        <View style={styles.header}>
+          <View>
+            <Text style={styles.greeting}>JellyRoll</Text>
+            <Text style={styles.subtitle}>Loading...</Text>
+          </View>
+        </View>
+        <SkeletonRow variant="backdrop" count={3} />
+        <SkeletonRow variant="poster" count={4} />
       </View>
     );
   }
@@ -263,12 +269,20 @@ export default function HomeScreen() {
             {servers.length} server{servers.length !== 1 ? 's' : ''} connected
           </Text>
         </View>
-        <TouchableOpacity
-          style={styles.addButton}
-          onPress={() => router.push('/server/add')}
-        >
-          <Ionicons name="add" size={24} color={Colors.primary} />
-        </TouchableOpacity>
+        <View style={styles.headerActions}>
+          <TouchableOpacity
+            style={styles.headerBtn}
+            onPress={() => router.push('/search' as any)}
+          >
+            <Ionicons name="search" size={22} color={Colors.text} />
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={styles.headerBtn}
+            onPress={() => router.push('/server/add')}
+          >
+            <Ionicons name="add" size={24} color={Colors.primary} />
+          </TouchableOpacity>
+        </View>
       </Animated.View>
 
       {/* Server cards */}
@@ -407,7 +421,8 @@ const styles = StyleSheet.create({
   header: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingHorizontal: Spacing.screenPadding, paddingTop: Spacing.xl, paddingBottom: Spacing.lg },
   greeting: { fontFamily: 'Inter_700Bold', fontSize: 28, color: Colors.text },
   subtitle: { fontFamily: 'Inter_400Regular', fontSize: 14, color: Colors.textSecondary, marginTop: 2 },
-  addButton: { width: 44, height: 44, borderRadius: 22, backgroundColor: Colors.backgroundTertiary, justifyContent: 'center', alignItems: 'center', borderWidth: 1, borderColor: Colors.surfaceBorder },
+  headerActions: { flexDirection: 'row', gap: Spacing.sm },
+  headerBtn: { width: 44, height: 44, borderRadius: 22, backgroundColor: Colors.backgroundTertiary, justifyContent: 'center', alignItems: 'center', borderWidth: 1, borderColor: Colors.surfaceBorder },
 
   // Server cards
   serverCardsContainer: { paddingHorizontal: Spacing.screenPadding, gap: Spacing.md, marginBottom: Spacing.lg },
