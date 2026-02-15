@@ -7,8 +7,9 @@ import { Ionicons } from '@expo/vector-icons';
 import { memo, useState } from 'react';
 import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import Animated, { FadeInDown } from 'react-native-reanimated';
-import { Colors } from '../../constants/Colors';
 import { Spacing } from '../../constants/Spacing';
+import { AppColors } from '../../hooks/useColors';
+import { useThemedStyles } from '../../hooks/useThemedStyles';
 
 export interface EpisodeItem {
     id: string | number;
@@ -35,7 +36,7 @@ interface EpisodeListProps {
     accentColor?: string;
 }
 
-function SeasonSection({ season, accentColor }: { season: SeasonGroup; accentColor: string }) {
+function SeasonSection({ season, accentColor, styles }: { season: SeasonGroup; accentColor: string; styles: ReturnType<typeof createStyles> }) {
     const [expanded, setExpanded] = useState(season.seasonNumber === 1);
 
     const fileCount = season.episodeFileCount ?? season.episodes.filter((e) => e.hasFile).length;
@@ -53,7 +54,7 @@ function SeasonSection({ season, accentColor }: { season: SeasonGroup; accentCol
                     <Ionicons
                         name={expanded ? 'chevron-down' : 'chevron-forward'}
                         size={18}
-                        color={Colors.textSecondary}
+                        color={styles.iconSecondary.color}
                     />
                     <Text style={styles.seasonTitle}>
                         {season.seasonNumber === 0 ? 'Specials' : `Season ${season.seasonNumber}`}
@@ -108,11 +109,11 @@ function SeasonSection({ season, accentColor }: { season: SeasonGroup; accentCol
                                 </View>
                                 <View style={styles.episodeStatus}>
                                     {episode.hasFile ? (
-                                        <Ionicons name="checkmark-circle" size={18} color={Colors.success} />
+                                        <Ionicons name="checkmark-circle" size={18} color={styles.successColor.color} />
                                     ) : episode.monitored !== false ? (
-                                        <Ionicons name="arrow-down-circle-outline" size={18} color={Colors.textTertiary} />
+                                        <Ionicons name="arrow-down-circle-outline" size={18} color={styles.iconTertiary.color} />
                                     ) : (
-                                        <Ionicons name="remove-circle-outline" size={18} color={Colors.textTertiary} />
+                                        <Ionicons name="remove-circle-outline" size={18} color={styles.iconTertiary.color} />
                                     )}
                                 </View>
                             </TouchableOpacity>
@@ -124,11 +125,14 @@ function SeasonSection({ season, accentColor }: { season: SeasonGroup; accentCol
     );
 }
 
-function EpisodeListBase({ seasons, accentColor = Colors.sonarr }: EpisodeListProps) {
+function EpisodeListBase({ seasons, accentColor }: EpisodeListProps) {
+    const styles = useThemedStyles(createStyles);
+    const resolvedAccent = accentColor ?? (styles.sonarrColor.color as string);
+
     return (
         <View>
             {seasons.map((season) => (
-                <SeasonSection key={season.seasonNumber} season={season} accentColor={accentColor} />
+                <SeasonSection key={season.seasonNumber} season={season} accentColor={resolvedAccent} styles={styles} />
             ))}
         </View>
     );
@@ -136,7 +140,7 @@ function EpisodeListBase({ seasons, accentColor = Colors.sonarr }: EpisodeListPr
 
 export const EpisodeList = memo(EpisodeListBase);
 
-const styles = StyleSheet.create({
+const createStyles = (colors: AppColors) => StyleSheet.create({
     seasonContainer: {
         marginBottom: Spacing.sm,
     },
@@ -144,12 +148,12 @@ const styles = StyleSheet.create({
         flexDirection: 'row',
         justifyContent: 'space-between',
         alignItems: 'center',
-        backgroundColor: Colors.backgroundTertiary,
+        backgroundColor: colors.backgroundTertiary,
         paddingHorizontal: Spacing.lg,
         paddingVertical: Spacing.md,
         borderRadius: Spacing.radiusMd,
         borderWidth: 1,
-        borderColor: Colors.surfaceBorder,
+        borderColor: colors.surfaceBorder,
     },
     seasonLeft: {
         flexDirection: 'row',
@@ -159,7 +163,7 @@ const styles = StyleSheet.create({
     seasonTitle: {
         fontFamily: 'Inter_600SemiBold',
         fontSize: 15,
-        color: Colors.text,
+        color: colors.text,
     },
     seasonRight: {
         flexDirection: 'row',
@@ -169,12 +173,12 @@ const styles = StyleSheet.create({
     episodeCount: {
         fontFamily: 'Inter_400Regular',
         fontSize: 12,
-        color: Colors.textSecondary,
+        color: colors.textSecondary,
     },
     miniProgress: {
         width: 40,
         height: 4,
-        backgroundColor: Colors.surfaceBorder,
+        backgroundColor: colors.surfaceBorder,
         borderRadius: 2,
     },
     miniProgressBar: {
@@ -192,7 +196,7 @@ const styles = StyleSheet.create({
         paddingVertical: Spacing.md,
         paddingHorizontal: Spacing.sm,
         borderBottomWidth: 0.5,
-        borderBottomColor: Colors.surfaceBorder,
+        borderBottomColor: colors.surfaceBorder,
     },
     episodeNumber: {
         width: 32,
@@ -201,7 +205,7 @@ const styles = StyleSheet.create({
     episodeNumberText: {
         fontFamily: 'Inter_600SemiBold',
         fontSize: 14,
-        color: Colors.textTertiary,
+        color: colors.textTertiary,
     },
     episodeInfo: {
         flex: 1,
@@ -210,27 +214,33 @@ const styles = StyleSheet.create({
     episodeTitle: {
         fontFamily: 'Inter_500Medium',
         fontSize: 14,
-        color: Colors.text,
+        color: colors.text,
     },
     episodeAirDate: {
         fontFamily: 'Inter_400Regular',
         fontSize: 11,
-        color: Colors.textTertiary,
+        color: colors.textTertiary,
         marginTop: 2,
     },
     episodeProgress: {
         height: 2,
-        backgroundColor: Colors.surfaceBorder,
+        backgroundColor: colors.surfaceBorder,
         borderRadius: 1,
         marginTop: 4,
     },
     episodeProgressBar: {
         height: '100%',
-        backgroundColor: Colors.primary,
+        backgroundColor: colors.primary,
         borderRadius: 1,
     },
     episodeStatus: {
         width: 28,
         alignItems: 'center',
     },
+
+    // Color tokens for inline use
+    iconSecondary: { color: colors.textSecondary },
+    iconTertiary: { color: colors.textTertiary },
+    successColor: { color: colors.success },
+    sonarrColor: { color: colors.sonarr },
 });

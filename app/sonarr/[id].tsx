@@ -18,8 +18,9 @@ import {
 } from 'react-native';
 import Animated, { FadeIn, FadeInDown } from 'react-native-reanimated';
 import { EpisodeList, SeasonGroup } from '../../components/media/EpisodeList';
-import { Colors } from '../../constants/Colors';
 import { Spacing } from '../../constants/Spacing';
+import { AppColors } from '../../hooks/useColors';
+import { useThemedStyles } from '../../hooks/useThemedStyles';
 import {
     useSonarrEpisodes,
     useSonarrImageUrl,
@@ -39,6 +40,7 @@ function formatSize(bytes: number): string {
 export default function SonarrDetailScreen() {
     const { id } = useLocalSearchParams<{ id: string }>();
     const router = useRouter();
+    const styles = useThemedStyles(createStyles);
     const numericId = id ? parseInt(id, 10) : undefined;
     const getImageUrl = useSonarrImageUrl();
 
@@ -92,7 +94,7 @@ export default function SonarrDetailScreen() {
         return (
             <View style={styles.loadingContainer}>
                 <Stack.Screen options={{ title: 'Loading...' }} />
-                <ActivityIndicator size="large" color={Colors.sonarr} />
+                <ActivityIndicator size="large" color={styles.sonarrColor.color as string} />
             </View>
         );
     }
@@ -108,8 +110,8 @@ export default function SonarrDetailScreen() {
             <Stack.Screen
                 options={{
                     title: series.title,
-                    headerStyle: { backgroundColor: Colors.backgroundSecondary },
-                    headerTintColor: Colors.text,
+                    headerStyle: { backgroundColor: styles.headerBg.backgroundColor },
+                    headerTintColor: styles.headerTitle.color as string,
                     headerTitleStyle: { fontFamily: 'Inter_600SemiBold' },
                 }}
             />
@@ -119,10 +121,10 @@ export default function SonarrDetailScreen() {
                     {bannerUrl ? (
                         <Image source={{ uri: bannerUrl }} style={styles.banner} resizeMode="cover" />
                     ) : (
-                        <View style={[styles.banner, { backgroundColor: Colors.backgroundSecondary }]} />
+                        <View style={[styles.banner, styles.bannerPlaceholder]} />
                     )}
                     <LinearGradient
-                        colors={['transparent', 'rgba(13,17,23,0.8)', Colors.background]}
+                        colors={['transparent', 'rgba(13,17,23,0.8)', styles.container.backgroundColor as string]}
                         style={styles.heroGradient}
                     />
 
@@ -136,13 +138,13 @@ export default function SonarrDetailScreen() {
                                 {series.year} · {series.network ?? ''} · {series.runtime}min
                             </Text>
                             <View style={styles.statusRow}>
-                                <View style={[styles.badge, { backgroundColor: series.monitored ? Colors.success + '20' : Colors.textTertiary + '20' }]}>
-                                    <Text style={[styles.badgeText, { color: series.monitored ? Colors.success : Colors.textTertiary }]}>
+                                <View style={[styles.badge, { backgroundColor: series.monitored ? styles.successColor.color + '20' : styles.iconTertiary.color + '20' }]}>
+                                    <Text style={[styles.badgeText, { color: series.monitored ? (styles.successColor.color as string) : (styles.iconTertiary.color as string) }]}>
                                         {series.monitored ? 'Monitored' : 'Unmonitored'}
                                     </Text>
                                 </View>
-                                <View style={[styles.badge, { backgroundColor: Colors.sonarr + '20' }]}>
-                                    <Text style={[styles.badgeText, { color: Colors.sonarr }]}>
+                                <View style={[styles.badge, { backgroundColor: styles.sonarrColor.color + '20' }]}>
+                                    <Text style={[styles.badgeText, { color: styles.sonarrColor.color as string }]}>
                                         {series.status}
                                     </Text>
                                 </View>
@@ -179,7 +181,7 @@ export default function SonarrDetailScreen() {
                 {/* Action buttons */}
                 <Animated.View entering={FadeInDown.duration(400).delay(200)} style={styles.actionsRow}>
                     <TouchableOpacity style={styles.actionBtn} onPress={handleRefresh}>
-                        <Ionicons name="refresh" size={20} color={Colors.sonarr} />
+                        <Ionicons name="refresh" size={20} color={styles.sonarrColor.color} />
                         <Text style={styles.actionBtnText}>Refresh</Text>
                     </TouchableOpacity>
                 </Animated.View>
@@ -206,51 +208,61 @@ export default function SonarrDetailScreen() {
                 {/* Seasons & Episodes */}
                 <Animated.View entering={FadeInDown.duration(400).delay(400)} style={styles.section}>
                     <Text style={styles.sectionTitle}>Seasons & Episodes</Text>
-                    <EpisodeList seasons={seasonGroups} accentColor={Colors.sonarr} />
+                    <EpisodeList seasons={seasonGroups} accentColor={styles.sonarrColor.color as string} />
                 </Animated.View>
             </ScrollView>
         </View>
     );
 }
 
-const styles = StyleSheet.create({
-    container: { flex: 1, backgroundColor: Colors.background },
+const createStyles = (colors: AppColors) => StyleSheet.create({
+    container: { flex: 1, backgroundColor: colors.background },
     contentContainer: { paddingBottom: 40 },
-    loadingContainer: { flex: 1, backgroundColor: Colors.background, justifyContent: 'center', alignItems: 'center' },
+    loadingContainer: { flex: 1, backgroundColor: colors.background, justifyContent: 'center', alignItems: 'center' },
 
     // Hero
     heroContainer: { width: SCREEN_WIDTH, height: 260, position: 'relative' },
     banner: { width: '100%', height: '100%' },
+    bannerPlaceholder: { backgroundColor: colors.backgroundSecondary },
     heroGradient: { position: 'absolute', bottom: 0, left: 0, right: 0, height: 180 },
     heroContent: { position: 'absolute', bottom: Spacing.lg, left: Spacing.screenPadding, right: Spacing.screenPadding, flexDirection: 'row', gap: Spacing.md },
     poster: { width: 80, height: 120, borderRadius: Spacing.radiusSm },
     heroInfo: { flex: 1, justifyContent: 'flex-end' },
-    title: { fontFamily: 'Inter_700Bold', fontSize: 22, color: Colors.text },
-    meta: { fontFamily: 'Inter_400Regular', fontSize: 13, color: Colors.textSecondary, marginTop: 4, textTransform: 'capitalize' },
+    title: { fontFamily: 'Inter_700Bold', fontSize: 22, color: colors.text },
+    meta: { fontFamily: 'Inter_400Regular', fontSize: 13, color: colors.textSecondary, marginTop: 4, textTransform: 'capitalize' },
     statusRow: { flexDirection: 'row', gap: Spacing.sm, marginTop: 6 },
     badge: { paddingHorizontal: 8, paddingVertical: 2, borderRadius: 4 },
     badgeText: { fontFamily: 'Inter_600SemiBold', fontSize: 10, textTransform: 'uppercase', letterSpacing: 0.3 },
 
     // Stats
-    statsRow: { flexDirection: 'row', justifyContent: 'space-around', paddingVertical: Spacing.lg, marginHorizontal: Spacing.screenPadding, borderBottomWidth: 1, borderBottomColor: Colors.surfaceBorder },
+    statsRow: { flexDirection: 'row', justifyContent: 'space-around', paddingVertical: Spacing.lg, marginHorizontal: Spacing.screenPadding, borderBottomWidth: 1, borderBottomColor: colors.surfaceBorder },
     stat: { alignItems: 'center' },
-    statValue: { fontFamily: 'Inter_700Bold', fontSize: 18, color: Colors.sonarr },
-    statLabel: { fontFamily: 'Inter_400Regular', fontSize: 11, color: Colors.textTertiary, marginTop: 2 },
+    statValue: { fontFamily: 'Inter_700Bold', fontSize: 18, color: colors.sonarr },
+    statLabel: { fontFamily: 'Inter_400Regular', fontSize: 11, color: colors.textTertiary, marginTop: 2 },
 
     // Progress
-    progressContainer: { height: 4, backgroundColor: Colors.surfaceBorder, marginHorizontal: Spacing.screenPadding, borderRadius: 2, marginTop: Spacing.md },
-    progressBar: { height: '100%', backgroundColor: Colors.sonarr, borderRadius: 2 },
+    progressContainer: { height: 4, backgroundColor: colors.surfaceBorder, marginHorizontal: Spacing.screenPadding, borderRadius: 2, marginTop: Spacing.md },
+    progressBar: { height: '100%', backgroundColor: colors.sonarr, borderRadius: 2 },
 
     // Actions
     actionsRow: { flexDirection: 'row', paddingHorizontal: Spacing.screenPadding, marginTop: Spacing.lg, gap: Spacing.md },
-    actionBtn: { flexDirection: 'row', alignItems: 'center', gap: 6, backgroundColor: Colors.backgroundTertiary, paddingHorizontal: Spacing.lg, paddingVertical: Spacing.sm, borderRadius: Spacing.radiusMd, borderWidth: 1, borderColor: Colors.surfaceBorder },
-    actionBtnText: { fontFamily: 'Inter_500Medium', fontSize: 13, color: Colors.text },
+    actionBtn: { flexDirection: 'row', alignItems: 'center', gap: 6, backgroundColor: colors.backgroundTertiary, paddingHorizontal: Spacing.lg, paddingVertical: Spacing.sm, borderRadius: Spacing.radiusMd, borderWidth: 1, borderColor: colors.surfaceBorder },
+    actionBtnText: { fontFamily: 'Inter_500Medium', fontSize: 13, color: colors.text },
 
     // Sections
     section: { paddingHorizontal: Spacing.screenPadding, marginTop: Spacing.xxl },
-    sectionTitle: { fontFamily: 'Inter_600SemiBold', fontSize: 18, color: Colors.text, marginBottom: Spacing.md },
-    overview: { fontFamily: 'Inter_400Regular', fontSize: 15, color: Colors.textSecondary, lineHeight: 24 },
+    sectionTitle: { fontFamily: 'Inter_600SemiBold', fontSize: 18, color: colors.text, marginBottom: Spacing.md },
+    overview: { fontFamily: 'Inter_400Regular', fontSize: 15, color: colors.textSecondary, lineHeight: 24 },
     genreRow: { flexDirection: 'row', flexWrap: 'wrap', gap: Spacing.sm, paddingHorizontal: Spacing.screenPadding, marginTop: Spacing.md },
-    genreChip: { paddingHorizontal: Spacing.md, paddingVertical: 4, borderRadius: Spacing.radiusFull, backgroundColor: Colors.backgroundTertiary, borderWidth: 1, borderColor: Colors.surfaceBorder },
-    genreText: { fontFamily: 'Inter_400Regular', fontSize: 12, color: Colors.textSecondary },
+    genreChip: { paddingHorizontal: Spacing.md, paddingVertical: 4, borderRadius: Spacing.radiusFull, backgroundColor: colors.backgroundTertiary, borderWidth: 1, borderColor: colors.surfaceBorder },
+    genreText: { fontFamily: 'Inter_400Regular', fontSize: 12, color: colors.textSecondary },
+
+    // Header
+    headerBg: { backgroundColor: colors.backgroundSecondary },
+    headerTitle: { color: colors.text },
+
+    // Color tokens for inline use
+    iconTertiary: { color: colors.textTertiary },
+    sonarrColor: { color: colors.sonarr },
+    successColor: { color: colors.success },
 });

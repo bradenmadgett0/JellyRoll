@@ -7,13 +7,15 @@ import { Ionicons } from '@expo/vector-icons';
 import { BlurView } from 'expo-blur';
 import { Tabs } from 'expo-router';
 import { Platform, StyleSheet, Text, View } from 'react-native';
-import { Colors } from '../../constants/Colors';
+import { AppColors } from '../../hooks/useColors';
+import { useThemedStyles } from '../../hooks/useThemedStyles';
 import { useLidarrQueue } from '../../services/hooks/useLidarr';
 import { useRadarrQueue } from '../../services/hooks/useRadarr';
 import { useSonarrQueue } from '../../services/hooks/useSonarr';
 import { useServerStore } from '../../services/stores/serverStore';
 
 export default function TabLayout() {
+  const styles = useThemedStyles(createStyles);
   const servers = useServerStore((s) => s.servers);
   const hasArr = servers.some((s) => s.type !== 'jellyfin');
 
@@ -26,19 +28,19 @@ export default function TabLayout() {
   return (
     <Tabs
       screenOptions={{
-        tabBarActiveTintColor: Colors.primary,
-        tabBarInactiveTintColor: Colors.textTertiary,
+        tabBarActiveTintColor: styles.tabBarActive.color,
+        tabBarInactiveTintColor: styles.tabBarInactive.color,
         tabBarStyle: styles.tabBar,
         tabBarLabelStyle: styles.tabBarLabel,
         headerStyle: styles.header,
-        headerTintColor: Colors.text,
+        headerTintColor: styles.headerTitle.color,
         headerTitleStyle: styles.headerTitle,
         headerShadowVisible: false,
         tabBarBackground: () =>
           Platform.OS === 'ios' ? (
             <BlurView intensity={80} tint="dark" style={StyleSheet.absoluteFill} />
           ) : (
-            <View style={[StyleSheet.absoluteFill, { backgroundColor: Colors.backgroundSecondary }]} />
+            <View style={[StyleSheet.absoluteFill, styles.tabBarBg]} />
           ),
       }}
     >
@@ -91,10 +93,10 @@ export default function TabLayout() {
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (colors: AppColors) => StyleSheet.create({
   tabBar: {
-    backgroundColor: Platform.OS === 'ios' ? 'transparent' : Colors.backgroundSecondary,
-    borderTopColor: Colors.glassBorder,
+    backgroundColor: Platform.OS === 'ios' ? 'transparent' : colors.backgroundSecondary,
+    borderTopColor: colors.glassBorder,
     borderTopWidth: 0.5,
     paddingTop: 4,
     height: Platform.OS === 'ios' ? 88 : 64,
@@ -105,19 +107,22 @@ const styles = StyleSheet.create({
     fontSize: 11,
     marginBottom: Platform.OS === 'ios' ? 0 : 8,
   },
+  tabBarBg: { backgroundColor: colors.backgroundSecondary },
+  tabBarActive: { color: colors.primary },
+  tabBarInactive: { color: colors.textTertiary },
   header: {
-    backgroundColor: Colors.background,
+    backgroundColor: colors.background,
   },
   headerTitle: {
     fontFamily: 'Inter_700Bold',
     fontSize: 18,
-    color: Colors.text,
+    color: colors.text,
   },
   badge: {
     position: 'absolute',
     top: -4,
     right: -10,
-    backgroundColor: Colors.accent,
+    backgroundColor: colors.accent,
     borderRadius: 9,
     minWidth: 18,
     height: 18,

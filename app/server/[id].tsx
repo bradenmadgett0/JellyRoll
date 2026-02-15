@@ -16,32 +16,21 @@ import {
     View,
 } from 'react-native';
 import Animated, { FadeInDown } from 'react-native-reanimated';
-import { Colors } from '../../constants/Colors';
+import { SOURCE_COLORS, SOURCE_ICONS } from '../../constants/Sources';
 import { Spacing } from '../../constants/Spacing';
+import { AppColors } from '../../hooks/useColors';
+import { useThemedStyles } from '../../hooks/useThemedStyles';
 import { JellyfinClient } from '../../services/api/jellyfin';
 import { LidarrClient } from '../../services/api/lidarr';
 import { RadarrClient } from '../../services/api/radarr';
 import { SonarrClient } from '../../services/api/sonarr';
 import { useServerStore } from '../../services/stores/serverStore';
-import { ConnectionTestResult, SERVER_TYPE_LABELS, ServerType } from '../../types/server';
-
-const SERVER_COLORS: Record<ServerType, string> = {
-    jellyfin: Colors.jellyfin,
-    sonarr: Colors.sonarr,
-    radarr: Colors.radarr,
-    lidarr: Colors.lidarr,
-};
-
-const SERVER_ICONS: Record<ServerType, keyof typeof Ionicons.glyphMap> = {
-    jellyfin: 'play-circle',
-    sonarr: 'tv',
-    radarr: 'film',
-    lidarr: 'musical-notes',
-};
+import { ConnectionTestResult, SERVER_TYPE_LABELS } from '../../types/server';
 
 export default function ServerDetailScreen() {
     const { id } = useLocalSearchParams<{ id: string }>();
     const router = useRouter();
+    const styles = useThemedStyles(createStyles);
     const { getServer, removeServer, updateServer } = useServerStore();
     const [testResult, setTestResult] = useState<ConnectionTestResult | null>(null);
     const [isTesting, setIsTesting] = useState(false);
@@ -59,7 +48,7 @@ export default function ServerDetailScreen() {
         );
     }
 
-    const color = SERVER_COLORS[server.type];
+    const color = SOURCE_COLORS[server.type];
 
     const handleTestConnection = async () => {
         setIsTesting(true);
@@ -134,7 +123,7 @@ export default function ServerDetailScreen() {
             {/* Server header */}
             <Animated.View entering={FadeInDown.duration(500)} style={styles.header}>
                 <View style={[styles.iconBg, { backgroundColor: color + '20' }]}>
-                    <Ionicons name={SERVER_ICONS[server.type]} size={40} color={color} />
+                    <Ionicons name={SOURCE_ICONS[server.type]} size={40} color={color} />
                 </View>
                 <Text style={styles.serverName}>{server.name}</Text>
                 <Text style={styles.serverType}>{SERVER_TYPE_LABELS[server.type]}</Text>
@@ -158,9 +147,9 @@ export default function ServerDetailScreen() {
                             <Ionicons
                                 name={server.isHttps ? 'lock-closed' : 'lock-open'}
                                 size={14}
-                                color={server.isHttps ? Colors.success : Colors.warning}
+                                color={server.isHttps ? (styles.successColor.color as string) : (styles.warningColor.color as string)}
                             />
-                            <Text style={[styles.protocolText, { color: server.isHttps ? Colors.success : Colors.warning }]}>
+                            <Text style={[styles.protocolText, { color: server.isHttps ? (styles.successColor.color as string) : (styles.warningColor.color as string) }]}>
                                 {server.isHttps ? 'HTTPS' : 'HTTP'}
                             </Text>
                         </View>
@@ -188,9 +177,9 @@ export default function ServerDetailScreen() {
                     activeOpacity={0.7}
                 >
                     {isTesting ? (
-                        <ActivityIndicator size="small" color={Colors.primary} />
+                        <ActivityIndicator size="small" color={styles.testButtonText.color as string} />
                     ) : (
-                        <Ionicons name="pulse" size={20} color={Colors.primary} />
+                        <Ionicons name="pulse" size={20} color={styles.testButtonText.color} />
                     )}
                     <Text style={styles.testButtonText}>
                         {isTesting ? 'Testing...' : 'Test Connection'}
@@ -200,16 +189,16 @@ export default function ServerDetailScreen() {
                 {testResult && (
                     <View style={[
                         styles.testResultBanner,
-                        { backgroundColor: testResult.success ? Colors.success + '15' : Colors.error + '15' }
+                        { backgroundColor: testResult.success ? (styles.successColor.color as string) + '15' : (styles.errorColor.color as string) + '15' }
                     ]}>
                         <Ionicons
                             name={testResult.success ? 'checkmark-circle' : 'alert-circle'}
                             size={20}
-                            color={testResult.success ? Colors.success : Colors.error}
+                            color={testResult.success ? (styles.successColor.color as string) : (styles.errorColor.color as string)}
                         />
                         <Text style={[
                             styles.testResultText,
-                            { color: testResult.success ? Colors.success : Colors.error }
+                            { color: testResult.success ? (styles.successColor.color as string) : (styles.errorColor.color as string) }
                         ]}>
                             {testResult.success
                                 ? `Connected! ${testResult.serverName} v${testResult.serverVersion}`
@@ -223,7 +212,7 @@ export default function ServerDetailScreen() {
             <Animated.View entering={FadeInDown.duration(500).delay(300)}>
                 <Text style={styles.sectionTitle}>Actions</Text>
                 <TouchableOpacity style={styles.dangerButton} onPress={handleDelete}>
-                    <Ionicons name="trash" size={20} color={Colors.error} />
+                    <Ionicons name="trash" size={20} color={styles.dangerButtonText.color} />
                     <Text style={styles.dangerButtonText}>Remove Server</Text>
                 </TouchableOpacity>
             </Animated.View>
@@ -231,28 +220,28 @@ export default function ServerDetailScreen() {
     );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (colors: AppColors) => StyleSheet.create({
     container: {
         flex: 1,
-        backgroundColor: Colors.background,
+        backgroundColor: colors.background,
     },
     contentContainer: {
         paddingBottom: 48,
     },
     errorContainer: {
         flex: 1,
-        backgroundColor: Colors.background,
+        backgroundColor: colors.background,
         justifyContent: 'center',
         alignItems: 'center',
     },
     errorText: {
         fontFamily: 'Inter_500Medium',
         fontSize: 16,
-        color: Colors.textSecondary,
+        color: colors.textSecondary,
         marginBottom: Spacing.lg,
     },
     backBtn: {
-        backgroundColor: Colors.backgroundTertiary,
+        backgroundColor: colors.backgroundTertiary,
         paddingHorizontal: Spacing.xl,
         paddingVertical: Spacing.md,
         borderRadius: Spacing.radiusMd,
@@ -260,7 +249,7 @@ const styles = StyleSheet.create({
     backBtnText: {
         fontFamily: 'Inter_500Medium',
         fontSize: 14,
-        color: Colors.primary,
+        color: colors.primary,
     },
 
     // Header
@@ -280,18 +269,18 @@ const styles = StyleSheet.create({
     serverName: {
         fontFamily: 'Inter_700Bold',
         fontSize: 24,
-        color: Colors.text,
+        color: colors.text,
         marginBottom: 4,
     },
     serverType: {
         fontFamily: 'Inter_500Medium',
         fontSize: 14,
-        color: Colors.textSecondary,
+        color: colors.textSecondary,
     },
     serverVersion: {
         fontFamily: 'Inter_400Regular',
         fontSize: 13,
-        color: Colors.textTertiary,
+        color: colors.textTertiary,
         marginTop: 4,
     },
 
@@ -299,7 +288,7 @@ const styles = StyleSheet.create({
     sectionTitle: {
         fontFamily: 'Inter_600SemiBold',
         fontSize: 14,
-        color: Colors.textSecondary,
+        color: colors.textSecondary,
         textTransform: 'uppercase',
         letterSpacing: 0.5,
         paddingHorizontal: Spacing.screenPadding,
@@ -309,11 +298,11 @@ const styles = StyleSheet.create({
 
     // Info card
     infoCard: {
-        backgroundColor: Colors.backgroundTertiary,
+        backgroundColor: colors.backgroundTertiary,
         marginHorizontal: Spacing.screenPadding,
         borderRadius: Spacing.radiusMd,
         borderWidth: 1,
-        borderColor: Colors.surfaceBorder,
+        borderColor: colors.surfaceBorder,
         overflow: 'hidden',
     },
     infoRow: {
@@ -325,18 +314,18 @@ const styles = StyleSheet.create({
     infoLabel: {
         fontFamily: 'Inter_500Medium',
         fontSize: 14,
-        color: Colors.textSecondary,
+        color: colors.textSecondary,
     },
     infoValue: {
         fontFamily: 'Inter_400Regular',
         fontSize: 14,
-        color: Colors.text,
+        color: colors.text,
         maxWidth: 200,
         textAlign: 'right',
     },
     divider: {
         height: 1,
-        backgroundColor: Colors.surfaceBorder,
+        backgroundColor: colors.surfaceBorder,
         marginHorizontal: Spacing.lg,
     },
     protocolBadge: {
@@ -354,19 +343,19 @@ const styles = StyleSheet.create({
         flexDirection: 'row',
         alignItems: 'center',
         justifyContent: 'center',
-        backgroundColor: Colors.backgroundTertiary,
+        backgroundColor: colors.backgroundTertiary,
         marginHorizontal: Spacing.screenPadding,
         marginTop: Spacing.lg,
         borderRadius: Spacing.radiusMd,
         padding: Spacing.lg,
         borderWidth: 1,
-        borderColor: Colors.primary + '40',
+        borderColor: colors.primary + '40',
         gap: Spacing.sm,
     },
     testButtonText: {
         fontFamily: 'Inter_500Medium',
         fontSize: 15,
-        color: Colors.primary,
+        color: colors.primary,
     },
     testResultBanner: {
         flexDirection: 'row',
@@ -388,17 +377,22 @@ const styles = StyleSheet.create({
         flexDirection: 'row',
         alignItems: 'center',
         justifyContent: 'center',
-        backgroundColor: Colors.error + '10',
+        backgroundColor: colors.error + '10',
         marginHorizontal: Spacing.screenPadding,
         borderRadius: Spacing.radiusMd,
         padding: Spacing.lg,
         borderWidth: 1,
-        borderColor: Colors.error + '30',
+        borderColor: colors.error + '30',
         gap: Spacing.sm,
     },
     dangerButtonText: {
         fontFamily: 'Inter_500Medium',
         fontSize: 15,
-        color: Colors.error,
+        color: colors.error,
     },
+
+    // Color tokens for inline use
+    successColor: { color: colors.success },
+    warningColor: { color: colors.warning },
+    errorColor: { color: colors.error },
 });

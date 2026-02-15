@@ -18,8 +18,9 @@ import {
 } from 'react-native';
 import Animated, { FadeIn, FadeInDown, FadeInUp } from 'react-native-reanimated';
 import { EpisodeList, SeasonGroup } from '../../components/media/EpisodeList';
-import { Colors } from '../../constants/Colors';
 import { Spacing } from '../../constants/Spacing';
+import { AppColors } from '../../hooks/useColors';
+import { useThemedStyles } from '../../hooks/useThemedStyles';
 import {
     useJellyfinDetail,
     useJellyfinImageUrl,
@@ -41,6 +42,7 @@ function formatRuntime(ticks?: number): string {
 export default function MediaDetailScreen() {
     const { id } = useLocalSearchParams<{ id: string }>();
     const router = useRouter();
+    const styles = useThemedStyles(createStyles);
     const getImageUrl = useJellyfinImageUrl();
 
     const { data: item, isLoading, error } = useJellyfinDetail(id);
@@ -54,7 +56,7 @@ export default function MediaDetailScreen() {
         if (!seasons) return [];
         return seasons.map((s) => ({
             seasonNumber: s.IndexNumber ?? 0,
-            episodes: [], // episodes loaded on expand
+            episodes: [],
             totalEpisodes: s.ChildCount,
         }));
     }, [seasons]);
@@ -73,7 +75,7 @@ export default function MediaDetailScreen() {
         return (
             <View style={styles.loadingContainer}>
                 <Stack.Screen options={{ headerShown: false }} />
-                <ActivityIndicator size="large" color={Colors.primary} />
+                <ActivityIndicator size="large" color={styles.iconPrimary.color as string} />
                 <Text style={styles.loadingText}>Loading...</Text>
             </View>
         );
@@ -83,7 +85,7 @@ export default function MediaDetailScreen() {
         return (
             <View style={styles.loadingContainer}>
                 <Stack.Screen options={{ title: 'Error' }} />
-                <Ionicons name="alert-circle" size={48} color={Colors.error} />
+                <Ionicons name="alert-circle" size={48} color={styles.iconError.color} />
                 <Text style={styles.errorText}>Failed to load media</Text>
                 <TouchableOpacity style={styles.backBtn} onPress={() => router.back()}>
                     <Text style={styles.backBtnText}>Go Back</Text>
@@ -112,17 +114,17 @@ export default function MediaDetailScreen() {
                         <Image source={{ uri: backdropUrl }} style={styles.backdropImage} resizeMode="cover" />
                     ) : (
                         <View style={[styles.backdropImage, styles.backdropPlaceholder]}>
-                            <Ionicons name="image" size={48} color={Colors.textTertiary} />
+                            <Ionicons name="image" size={48} color={styles.iconTertiary.color} />
                         </View>
                     )}
                     <LinearGradient
-                        colors={['transparent', 'rgba(13, 17, 23, 0.4)', 'rgba(13, 17, 23, 0.9)', Colors.background]}
+                        colors={['transparent', 'rgba(13, 17, 23, 0.4)', 'rgba(13, 17, 23, 0.9)', styles.container.backgroundColor as string]}
                         style={styles.heroGradient}
                     />
 
                     {/* Back button */}
                     <TouchableOpacity style={styles.heroBackButton} onPress={() => router.back()}>
-                        <Ionicons name="arrow-back" size={24} color={Colors.text} />
+                        <Ionicons name="arrow-back" size={24} color={styles.iconText.color} />
                     </TouchableOpacity>
                 </Animated.View>
 
@@ -148,7 +150,7 @@ export default function MediaDetailScreen() {
                             )}
                             {item.CommunityRating && (
                                 <View style={styles.ratingRow}>
-                                    <Ionicons name="star" size={14} color={Colors.warning} />
+                                    <Ionicons name="star" size={14} color={styles.ratingText.color} />
                                     <Text style={styles.ratingText}>{item.CommunityRating.toFixed(1)}</Text>
                                 </View>
                             )}
@@ -162,7 +164,7 @@ export default function MediaDetailScreen() {
                             onPress={() => router.push({ pathname: '/media/player', params: { itemId: item.Id } })}
                             activeOpacity={0.8}
                         >
-                            <Ionicons name="play" size={22} color={Colors.textInverse} />
+                            <Ionicons name="play" size={22} color={styles.playButtonText.color} />
                             <Text style={styles.playButtonText}>Play</Text>
                         </TouchableOpacity>
                     )}
@@ -195,7 +197,7 @@ export default function MediaDetailScreen() {
                                                 <Image source={{ uri: personImage }} style={styles.castImage} />
                                             ) : (
                                                 <View style={[styles.castImage, styles.castImagePlaceholder]}>
-                                                    <Ionicons name="person" size={18} color={Colors.textTertiary} />
+                                                    <Ionicons name="person" size={18} color={styles.iconTertiary.color} />
                                                 </View>
                                             )}
                                             <Text style={styles.castName} numberOfLines={1}>{person.Name}</Text>
@@ -229,7 +231,7 @@ export default function MediaDetailScreen() {
                             <Text style={styles.sectionTitle}>
                                 Seasons ({seasonGroups.length})
                             </Text>
-                            <EpisodeList seasons={seasonGroups} accentColor={Colors.jellyfin} />
+                            <EpisodeList seasons={seasonGroups} accentColor={styles.jellyfinColor.color as string} />
                         </Animated.View>
                     )}
 
@@ -281,64 +283,71 @@ export default function MediaDetailScreen() {
     );
 }
 
-const styles = StyleSheet.create({
-    container: { flex: 1, backgroundColor: Colors.background },
+const createStyles = (colors: AppColors) => StyleSheet.create({
+    container: { flex: 1, backgroundColor: colors.background },
     scrollView: { flex: 1 },
     contentContainer: { paddingBottom: 40 },
-    loadingContainer: { flex: 1, backgroundColor: Colors.background, justifyContent: 'center', alignItems: 'center', gap: Spacing.md },
-    loadingText: { color: Colors.textSecondary, fontSize: 15, fontFamily: 'Inter_400Regular' },
-    errorText: { color: Colors.error, fontSize: 16, fontFamily: 'Inter_500Medium', marginTop: Spacing.sm },
-    backBtn: { marginTop: Spacing.lg, backgroundColor: Colors.backgroundTertiary, paddingHorizontal: Spacing.xxl, paddingVertical: Spacing.md, borderRadius: Spacing.radiusMd },
-    backBtnText: { color: Colors.primary, fontFamily: 'Inter_600SemiBold', fontSize: 15 },
+    loadingContainer: { flex: 1, backgroundColor: colors.background, justifyContent: 'center', alignItems: 'center', gap: Spacing.md },
+    loadingText: { color: colors.textSecondary, fontSize: 15, fontFamily: 'Inter_400Regular' },
+    errorText: { color: colors.error, fontSize: 16, fontFamily: 'Inter_500Medium', marginTop: Spacing.sm },
+    backBtn: { marginTop: Spacing.lg, backgroundColor: colors.backgroundTertiary, paddingHorizontal: Spacing.xxl, paddingVertical: Spacing.md, borderRadius: Spacing.radiusMd },
+    backBtnText: { color: colors.primary, fontFamily: 'Inter_600SemiBold', fontSize: 15 },
 
     // Hero
     heroContainer: { width: SCREEN_WIDTH, height: BACKDROP_HEIGHT, position: 'relative' },
     backdropImage: { width: '100%', height: '100%' },
-    backdropPlaceholder: { backgroundColor: Colors.backgroundSecondary, justifyContent: 'center', alignItems: 'center' },
+    backdropPlaceholder: { backgroundColor: colors.backgroundSecondary, justifyContent: 'center', alignItems: 'center' },
     heroGradient: { position: 'absolute', bottom: 0, left: 0, right: 0, height: BACKDROP_HEIGHT * 0.7 },
     heroBackButton: { position: 'absolute', top: 52, left: Spacing.screenPadding, width: 40, height: 40, borderRadius: 20, backgroundColor: 'rgba(0,0,0,0.5)', justifyContent: 'center', alignItems: 'center' },
 
     // Content
     contentOverlay: { paddingHorizontal: Spacing.screenPadding, marginTop: -60 },
     titleRow: { flexDirection: 'row', gap: Spacing.lg, marginBottom: Spacing.lg },
-    poster: { width: 100, height: 150, borderRadius: Spacing.radiusMd, backgroundColor: Colors.backgroundTertiary },
+    poster: { width: 100, height: 150, borderRadius: Spacing.radiusMd, backgroundColor: colors.backgroundTertiary },
     titleInfo: { flex: 1, justifyContent: 'flex-end' },
-    title: { fontFamily: 'Inter_700Bold', fontSize: 24, color: Colors.text, lineHeight: 30 },
-    seriesName: { fontFamily: 'Inter_500Medium', fontSize: 14, color: Colors.jellyfin, marginTop: 2 },
-    episodeLabel: { fontFamily: 'Inter_500Medium', fontSize: 14, color: Colors.textSecondary, marginTop: 2 },
-    meta: { fontFamily: 'Inter_400Regular', fontSize: 13, color: Colors.textSecondary, marginTop: 6 },
+    title: { fontFamily: 'Inter_700Bold', fontSize: 24, color: colors.text, lineHeight: 30 },
+    seriesName: { fontFamily: 'Inter_500Medium', fontSize: 14, color: colors.jellyfin, marginTop: 2 },
+    episodeLabel: { fontFamily: 'Inter_500Medium', fontSize: 14, color: colors.textSecondary, marginTop: 2 },
+    meta: { fontFamily: 'Inter_400Regular', fontSize: 13, color: colors.textSecondary, marginTop: 6 },
     ratingRow: { flexDirection: 'row', alignItems: 'center', gap: 4, marginTop: 6 },
-    ratingText: { fontFamily: 'Inter_600SemiBold', fontSize: 14, color: Colors.warning },
+    ratingText: { fontFamily: 'Inter_600SemiBold', fontSize: 14, color: colors.warning },
 
     // Play button
-    playButton: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', backgroundColor: Colors.primary, paddingVertical: Spacing.md, borderRadius: Spacing.radiusMd, gap: Spacing.sm, marginBottom: Spacing.lg },
-    playButtonText: { fontFamily: 'Inter_600SemiBold', fontSize: 16, color: Colors.textInverse },
+    playButton: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', backgroundColor: colors.primary, paddingVertical: Spacing.md, borderRadius: Spacing.radiusMd, gap: Spacing.sm, marginBottom: Spacing.lg },
+    playButtonText: { fontFamily: 'Inter_600SemiBold', fontSize: 16, color: colors.textInverse },
 
     // Genres
-    genres: { fontFamily: 'Inter_400Regular', fontSize: 13, color: Colors.primary, marginBottom: Spacing.md },
+    genres: { fontFamily: 'Inter_400Regular', fontSize: 13, color: colors.primary, marginBottom: Spacing.md },
 
     // Sections
-    sectionTitle: { fontFamily: 'Inter_600SemiBold', fontSize: 18, color: Colors.text, marginTop: Spacing.xxl, marginBottom: Spacing.md },
-    overview: { fontFamily: 'Inter_400Regular', fontSize: 15, color: Colors.textSecondary, lineHeight: 24 },
+    sectionTitle: { fontFamily: 'Inter_600SemiBold', fontSize: 18, color: colors.text, marginTop: Spacing.xxl, marginBottom: Spacing.md },
+    overview: { fontFamily: 'Inter_400Regular', fontSize: 15, color: colors.textSecondary, lineHeight: 24 },
 
     // Cast
     castScroll: { marginBottom: Spacing.md },
     castCard: { width: 72, marginRight: Spacing.md, alignItems: 'center' },
-    castImage: { width: 56, height: 56, borderRadius: 28, backgroundColor: Colors.backgroundTertiary, marginBottom: 6 },
+    castImage: { width: 56, height: 56, borderRadius: 28, backgroundColor: colors.backgroundTertiary, marginBottom: 6 },
     castImagePlaceholder: { justifyContent: 'center', alignItems: 'center' },
-    castName: { fontFamily: 'Inter_500Medium', fontSize: 11, color: Colors.text, textAlign: 'center' },
-    castRole: { fontFamily: 'Inter_400Regular', fontSize: 10, color: Colors.textTertiary, textAlign: 'center' },
+    castName: { fontFamily: 'Inter_500Medium', fontSize: 11, color: colors.text, textAlign: 'center' },
+    castRole: { fontFamily: 'Inter_400Regular', fontSize: 10, color: colors.textTertiary, textAlign: 'center' },
 
     // Studios
     studioRow: { flexDirection: 'row', flexWrap: 'wrap', gap: Spacing.sm },
-    studioChip: { paddingHorizontal: Spacing.md, paddingVertical: 4, borderRadius: Spacing.radiusFull, backgroundColor: Colors.backgroundTertiary, borderWidth: 1, borderColor: Colors.surfaceBorder },
-    studioText: { fontFamily: 'Inter_400Regular', fontSize: 12, color: Colors.textSecondary },
+    studioChip: { paddingHorizontal: Spacing.md, paddingVertical: 4, borderRadius: Spacing.radiusFull, backgroundColor: colors.backgroundTertiary, borderWidth: 1, borderColor: colors.surfaceBorder },
+    studioText: { fontFamily: 'Inter_400Regular', fontSize: 12, color: colors.textSecondary },
 
     // Media info
-    mediaInfoCard: { backgroundColor: Colors.backgroundTertiary, borderRadius: Spacing.radiusMd, padding: Spacing.lg, borderWidth: 1, borderColor: Colors.surfaceBorder, marginBottom: Spacing.sm },
-    mediaInfoName: { fontFamily: 'Inter_600SemiBold', fontSize: 14, color: Colors.text, marginBottom: Spacing.sm },
+    mediaInfoCard: { backgroundColor: colors.backgroundTertiary, borderRadius: Spacing.radiusMd, padding: Spacing.lg, borderWidth: 1, borderColor: colors.surfaceBorder, marginBottom: Spacing.sm },
+    mediaInfoName: { fontFamily: 'Inter_600SemiBold', fontSize: 14, color: colors.text, marginBottom: Spacing.sm },
     mediaInfoRow: { flexDirection: 'row', flexWrap: 'wrap', gap: Spacing.sm, marginBottom: Spacing.sm },
-    mediaInfoChip: { paddingHorizontal: Spacing.sm, paddingVertical: 2, borderRadius: 4, backgroundColor: Colors.surfaceHover },
-    mediaInfoChipText: { fontFamily: 'Inter_500Medium', fontSize: 11, color: Colors.textSecondary },
-    mediaStreamText: { fontFamily: 'Inter_400Regular', fontSize: 12, color: Colors.textTertiary, marginTop: 2 },
+    mediaInfoChip: { paddingHorizontal: Spacing.sm, paddingVertical: 2, borderRadius: 4, backgroundColor: colors.surfaceHover },
+    mediaInfoChipText: { fontFamily: 'Inter_500Medium', fontSize: 11, color: colors.textSecondary },
+    mediaStreamText: { fontFamily: 'Inter_400Regular', fontSize: 12, color: colors.textTertiary, marginTop: 2 },
+
+    // Color tokens for inline use
+    iconPrimary: { color: colors.primary },
+    iconTertiary: { color: colors.textTertiary },
+    iconText: { color: colors.text },
+    iconError: { color: colors.error },
+    jellyfinColor: { color: colors.jellyfin },
 });

@@ -11,11 +11,12 @@ import { Stack } from 'expo-router';
 import * as SplashScreen from 'expo-splash-screen';
 import { StatusBar } from 'expo-status-bar';
 import { useEffect } from 'react';
-import { useColorScheme } from 'react-native';
 import 'react-native-reanimated';
 
 import { Themes } from '../constants/Colors';
+import { useEffectiveScheme } from '../hooks/useEffectiveScheme';
 import { useServerStore } from '../services/stores/serverStore';
+import { useSettingsStore } from '../services/stores/settingsStore';
 
 // Keep splash visible while loading
 SplashScreen.preventAutoHideAsync();
@@ -58,7 +59,8 @@ export const unstable_settings = {
 
 export default function RootLayout() {
   const loadServers = useServerStore((s) => s.loadServers);
-  const scheme = useColorScheme() ?? 'dark';
+  const loadSettings = useSettingsStore((s) => s.loadSettings);
+  const scheme = useEffectiveScheme();
   const navTheme = buildNavTheme(scheme);
 
   const [fontsLoaded] = useFonts({
@@ -70,13 +72,13 @@ export default function RootLayout() {
 
   useEffect(() => {
     async function init() {
-      await loadServers();
+      await Promise.all([loadServers(), loadSettings()]);
       if (fontsLoaded) {
         await SplashScreen.hideAsync();
       }
     }
     init();
-  }, [fontsLoaded, loadServers]);
+  }, [fontsLoaded, loadServers, loadSettings]);
 
   if (!fontsLoaded) {
     return null;
@@ -172,7 +174,7 @@ export default function RootLayout() {
             }}
           />
         </Stack>
-        <StatusBar style="light" />
+        <StatusBar style={scheme === 'dark' ? 'light' : 'dark'} />
       </ThemeProvider>
     </QueryClientProvider>
   );

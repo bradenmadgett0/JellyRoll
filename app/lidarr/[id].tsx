@@ -14,8 +14,9 @@ import {
     View
 } from 'react-native';
 import Animated, { FadeIn, FadeInDown } from 'react-native-reanimated';
-import { Colors } from '../../constants/Colors';
 import { Spacing } from '../../constants/Spacing';
+import { AppColors } from '../../hooks/useColors';
+import { useThemedStyles } from '../../hooks/useThemedStyles';
 import { useLidarrAlbums, useLidarrArtistDetail, useLidarrImageUrl } from '../../services/hooks/useLidarr';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
@@ -29,6 +30,7 @@ function formatSize(bytes: number): string {
 export default function LidarrDetailScreen() {
     const { id } = useLocalSearchParams<{ id: string }>();
     const router = useRouter();
+    const styles = useThemedStyles(createStyles);
     const numericId = id ? parseInt(id, 10) : undefined;
     const getImageUrl = useLidarrImageUrl();
 
@@ -41,7 +43,7 @@ export default function LidarrDetailScreen() {
         return (
             <View style={styles.loadingContainer}>
                 <Stack.Screen options={{ title: 'Loading...' }} />
-                <ActivityIndicator size="large" color={Colors.lidarr} />
+                <ActivityIndicator size="large" color={styles.lidarrColor.color as string} />
             </View>
         );
     }
@@ -53,8 +55,8 @@ export default function LidarrDetailScreen() {
             <Stack.Screen
                 options={{
                     title: artist.artistName,
-                    headerStyle: { backgroundColor: Colors.backgroundSecondary },
-                    headerTintColor: Colors.text,
+                    headerStyle: { backgroundColor: styles.headerBg.backgroundColor },
+                    headerTintColor: styles.headerTitle.color as string,
                     headerTitleStyle: { fontFamily: 'Inter_600SemiBold' },
                 }}
             />
@@ -62,10 +64,10 @@ export default function LidarrDetailScreen() {
                 {/* Artist header */}
                 <Animated.View entering={FadeIn.duration(500)} style={styles.header}>
                     {artistImage ? (
-                        <Image source={{ uri: artistImage }} style={styles.artistImage} resizeMode="cover" />
+                        <Image source={{ uri: artistImage }} style={styles.artistImageStyle} resizeMode="cover" />
                     ) : (
-                        <View style={[styles.artistImage, styles.imagePlaceholder]}>
-                            <Ionicons name="person" size={40} color={Colors.textTertiary} />
+                        <View style={[styles.artistImageStyle, styles.imagePlaceholder]}>
+                            <Ionicons name="person" size={40} color={styles.iconTertiary.color} />
                         </View>
                     )}
                     <Text style={styles.artistName}>{artist.artistName}</Text>
@@ -73,8 +75,8 @@ export default function LidarrDetailScreen() {
                         <Text style={styles.artistType}>{artist.artistType}</Text>
                     )}
                     <View style={styles.badgeRow}>
-                        <View style={[styles.badge, { backgroundColor: artist.monitored ? Colors.success + '20' : Colors.textTertiary + '20' }]}>
-                            <Text style={[styles.badgeText, { color: artist.monitored ? Colors.success : Colors.textTertiary }]}>
+                        <View style={[styles.badge, { backgroundColor: artist.monitored ? styles.successColor.color + '20' : styles.iconTertiary.color + '20' }]}>
+                            <Text style={[styles.badgeText, { color: artist.monitored ? (styles.successColor.color as string) : (styles.iconTertiary.color as string) }]}>
                                 {artist.monitored ? 'Monitored' : 'Unmonitored'}
                             </Text>
                         </View>
@@ -147,11 +149,11 @@ export default function LidarrDetailScreen() {
                                                 </Text>
                                             </View>
                                         </View>
-                                        <View style={[styles.albumStatusBadge, { backgroundColor: album.monitored ? Colors.lidarr + '20' : Colors.textTertiary + '10' }]}>
+                                        <View style={[styles.albumStatusBadge, { backgroundColor: album.monitored ? styles.lidarrColor.color + '20' : styles.iconTertiary.color + '10' }]}>
                                             <Ionicons
                                                 name={album.monitored ? 'eye' : 'eye-off'}
                                                 size={14}
-                                                color={album.monitored ? Colors.lidarr : Colors.textTertiary}
+                                                color={album.monitored ? (styles.lidarrColor.color as string) : (styles.iconTertiary.color as string)}
                                             />
                                         </View>
                                     </View>
@@ -176,45 +178,54 @@ export default function LidarrDetailScreen() {
     );
 }
 
-const styles = StyleSheet.create({
-    container: { flex: 1, backgroundColor: Colors.background },
+const createStyles = (colors: AppColors) => StyleSheet.create({
+    container: { flex: 1, backgroundColor: colors.background },
     contentContainer: { paddingBottom: 40 },
-    loadingContainer: { flex: 1, backgroundColor: Colors.background, justifyContent: 'center', alignItems: 'center' },
+    loadingContainer: { flex: 1, backgroundColor: colors.background, justifyContent: 'center', alignItems: 'center' },
 
     // Header
     header: { alignItems: 'center', paddingTop: Spacing.xxl, paddingBottom: Spacing.lg },
-    artistImage: { width: 120, height: 120, borderRadius: 60, backgroundColor: Colors.backgroundTertiary, marginBottom: Spacing.lg },
+    artistImageStyle: { width: 120, height: 120, borderRadius: 60, backgroundColor: colors.backgroundTertiary, marginBottom: Spacing.lg },
     imagePlaceholder: { justifyContent: 'center', alignItems: 'center' },
-    artistName: { fontFamily: 'Inter_700Bold', fontSize: 24, color: Colors.text, textAlign: 'center' },
-    artistType: { fontFamily: 'Inter_400Regular', fontSize: 14, color: Colors.textTertiary, marginTop: 4 },
+    artistName: { fontFamily: 'Inter_700Bold', fontSize: 24, color: colors.text, textAlign: 'center' },
+    artistType: { fontFamily: 'Inter_400Regular', fontSize: 14, color: colors.textTertiary, marginTop: 4 },
     badgeRow: { flexDirection: 'row', gap: Spacing.sm, marginTop: Spacing.sm },
     badge: { paddingHorizontal: 8, paddingVertical: 2, borderRadius: 4 },
     badgeText: { fontFamily: 'Inter_600SemiBold', fontSize: 10, textTransform: 'uppercase', letterSpacing: 0.3 },
 
     // Stats
-    statsRow: { flexDirection: 'row', justifyContent: 'space-around', paddingVertical: Spacing.lg, marginHorizontal: Spacing.screenPadding, borderTopWidth: 1, borderBottomWidth: 1, borderColor: Colors.surfaceBorder },
+    statsRow: { flexDirection: 'row', justifyContent: 'space-around', paddingVertical: Spacing.lg, marginHorizontal: Spacing.screenPadding, borderTopWidth: 1, borderBottomWidth: 1, borderColor: colors.surfaceBorder },
     stat: { alignItems: 'center' },
-    statValue: { fontFamily: 'Inter_700Bold', fontSize: 18, color: Colors.lidarr },
-    statLabel: { fontFamily: 'Inter_400Regular', fontSize: 11, color: Colors.textTertiary, marginTop: 2 },
+    statValue: { fontFamily: 'Inter_700Bold', fontSize: 18, color: colors.lidarr },
+    statLabel: { fontFamily: 'Inter_400Regular', fontSize: 11, color: colors.textTertiary, marginTop: 2 },
 
     // Sections
     section: { paddingHorizontal: Spacing.screenPadding, marginTop: Spacing.xxl },
-    sectionTitle: { fontFamily: 'Inter_600SemiBold', fontSize: 18, color: Colors.text, marginBottom: Spacing.md },
-    overview: { fontFamily: 'Inter_400Regular', fontSize: 15, color: Colors.textSecondary, lineHeight: 24 },
+    sectionTitle: { fontFamily: 'Inter_600SemiBold', fontSize: 18, color: colors.text, marginBottom: Spacing.md },
+    overview: { fontFamily: 'Inter_400Regular', fontSize: 15, color: colors.textSecondary, lineHeight: 24 },
 
     // Albums
-    albumCard: { flexDirection: 'row', alignItems: 'center', paddingVertical: Spacing.md, borderBottomWidth: 0.5, borderBottomColor: Colors.surfaceBorder },
+    albumCard: { flexDirection: 'row', alignItems: 'center', paddingVertical: Spacing.md, borderBottomWidth: 0.5, borderBottomColor: colors.surfaceBorder },
     albumInfo: { flex: 1 },
-    albumTitle: { fontFamily: 'Inter_600SemiBold', fontSize: 14, color: Colors.text },
-    albumMeta: { fontFamily: 'Inter_400Regular', fontSize: 12, color: Colors.textTertiary, marginTop: 2 },
+    albumTitle: { fontFamily: 'Inter_600SemiBold', fontSize: 14, color: colors.text },
+    albumMeta: { fontFamily: 'Inter_400Regular', fontSize: 12, color: colors.textTertiary, marginTop: 2 },
     albumProgressRow: { flexDirection: 'row', alignItems: 'center', gap: Spacing.sm, marginTop: 6 },
-    albumProgressBar: { flex: 1, height: 4, backgroundColor: Colors.surfaceBorder, borderRadius: 2 },
-    albumProgressFill: { height: '100%', backgroundColor: Colors.lidarr, borderRadius: 2 },
-    albumProgressText: { fontFamily: 'Inter_500Medium', fontSize: 11, color: Colors.textTertiary, width: 40 },
+    albumProgressBar: { flex: 1, height: 4, backgroundColor: colors.surfaceBorder, borderRadius: 2 },
+    albumProgressFill: { height: '100%', backgroundColor: colors.lidarr, borderRadius: 2 },
+    albumProgressText: { fontFamily: 'Inter_500Medium', fontSize: 11, color: colors.textTertiary, width: 40 },
     albumStatusBadge: { width: 32, height: 32, borderRadius: 16, justifyContent: 'center', alignItems: 'center' },
 
     // Genres
     genreRow: { flexDirection: 'row', flexWrap: 'wrap', gap: Spacing.sm, paddingHorizontal: Spacing.screenPadding, marginTop: Spacing.lg },
-    genreChip: { paddingHorizontal: Spacing.md, paddingVertical: 4, borderRadius: Spacing.radiusFull, backgroundColor: Colors.backgroundTertiary, borderWidth: 1, borderColor: Colors.surfaceBorder },
-    genreText: { fontFamily: 'Inter_400Regular', fontSize: 12, color: Colors.textSecondary },
+    genreChip: { paddingHorizontal: Spacing.md, paddingVertical: 4, borderRadius: Spacing.radiusFull, backgroundColor: colors.backgroundTertiary, borderWidth: 1, borderColor: colors.surfaceBorder },
+    genreText: { fontFamily: 'Inter_400Regular', fontSize: 12, color: colors.textSecondary },
+
+    // Header nav
+    headerBg: { backgroundColor: colors.backgroundSecondary },
+    headerTitle: { color: colors.text },
+
+    // Color tokens for inline use
+    iconTertiary: { color: colors.textTertiary },
+    lidarrColor: { color: colors.lidarr },
+    successColor: { color: colors.success },
 });

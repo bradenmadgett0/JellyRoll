@@ -12,10 +12,10 @@ import Animated, {
     withRepeat,
     withTiming,
 } from 'react-native-reanimated';
-import { Colors } from '../../constants/Colors';
 import { Spacing } from '../../constants/Spacing';
+import { useColors } from '../../hooks/useColors';
 
-// ─── Shimmer Wrapper ───────────────────────────────
+// ─── Shimmer Wrapper ─────────────────────────────
 
 interface ShimmerProps {
     width: number | string;
@@ -25,6 +25,7 @@ interface ShimmerProps {
 }
 
 export function Shimmer({ width, height, borderRadius = 6, style }: ShimmerProps) {
+    const colors = useColors();
     const progress = useSharedValue(0);
 
     useEffect(() => {
@@ -46,7 +47,7 @@ export function Shimmer({ width, height, borderRadius = 6, style }: ShimmerProps
                     width: width as any,
                     height,
                     borderRadius,
-                    backgroundColor: Colors.backgroundTertiary,
+                    backgroundColor: colors.backgroundTertiary,
                     overflow: 'hidden',
                 },
                 animatedStyle,

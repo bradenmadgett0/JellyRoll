@@ -7,8 +7,9 @@ import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
 import { useVideoPlayer, VideoView } from 'expo-video';
 import { useEffect, useState } from 'react';
 import { Dimensions, StatusBar, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
-import { Colors } from '../../constants/Colors';
 import { Spacing } from '../../constants/Spacing';
+import { AppColors } from '../../hooks/useColors';
+import { useThemedStyles } from '../../hooks/useThemedStyles';
 import { useJellyfinDetail, useJellyfinStreamUrl } from '../../services/hooks/useJellyfin';
 
 const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get('window');
@@ -16,6 +17,7 @@ const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get('window');
 export default function PlayerScreen() {
     const { itemId } = useLocalSearchParams<{ itemId: string }>();
     const router = useRouter();
+    const styles = useThemedStyles(createStyles);
     const getStreamUrl = useJellyfinStreamUrl();
     const { data: item } = useJellyfinDetail(itemId);
 
@@ -43,7 +45,7 @@ export default function PlayerScreen() {
         return (
             <View style={styles.errorContainer}>
                 <Stack.Screen options={{ headerShown: false }} />
-                <Ionicons name="alert-circle" size={48} color={Colors.error} />
+                <Ionicons name="alert-circle" size={48} color={styles.iconError.color} />
                 <Text style={styles.errorText}>Unable to load video stream</Text>
                 <TouchableOpacity style={styles.backBtn} onPress={() => router.back()}>
                     <Text style={styles.backBtnText}>Go Back</Text>
@@ -97,7 +99,7 @@ export default function PlayerScreen() {
     );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (colors: AppColors) => StyleSheet.create({
     container: {
         flex: 1,
         backgroundColor: '#000',
@@ -152,20 +154,23 @@ const styles = StyleSheet.create({
         gap: Spacing.md,
     },
     errorText: {
-        color: Colors.error,
+        color: colors.error,
         fontSize: 16,
         fontFamily: 'Inter_500Medium',
     },
     backBtn: {
-        backgroundColor: Colors.backgroundTertiary,
+        backgroundColor: colors.backgroundTertiary,
         paddingHorizontal: Spacing.xxl,
         paddingVertical: Spacing.md,
         borderRadius: Spacing.radiusMd,
         marginTop: Spacing.md,
     },
     backBtnText: {
-        color: Colors.primary,
+        color: colors.primary,
         fontFamily: 'Inter_600SemiBold',
         fontSize: 15,
     },
+
+    // Color tokens for inline use
+    iconError: { color: colors.error },
 });

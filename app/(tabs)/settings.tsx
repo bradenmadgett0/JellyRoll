@@ -15,25 +15,13 @@ import {
     View,
 } from 'react-native';
 import Animated, { FadeInDown } from 'react-native-reanimated';
-import { Colors } from '../../constants/Colors';
+import { SOURCE_COLORS, SOURCE_ICONS } from '../../constants/Sources';
 import { Spacing } from '../../constants/Spacing';
+import { AppColors } from '../../hooks/useColors';
+import { useThemedStyles } from '../../hooks/useThemedStyles';
 import { useServerStore } from '../../services/stores/serverStore';
 import { useSettingsStore } from '../../services/stores/settingsStore';
-import { SERVER_TYPE_LABELS, ServerType } from '../../types/server';
-
-const SERVER_COLORS: Record<ServerType, string> = {
-    jellyfin: Colors.jellyfin,
-    sonarr: Colors.sonarr,
-    radarr: Colors.radarr,
-    lidarr: Colors.lidarr,
-};
-
-const SERVER_ICONS: Record<ServerType, keyof typeof Ionicons.glyphMap> = {
-    jellyfin: 'play-circle',
-    sonarr: 'tv',
-    radarr: 'film',
-    lidarr: 'musical-notes',
-};
+import { SERVER_TYPE_LABELS } from '../../types/server';
 
 const QUALITY_OPTIONS = [
     { label: 'Auto', value: 'auto' },
@@ -49,14 +37,23 @@ const REFRESH_OPTIONS = [
     { label: '60s', value: 60 },
 ] as const;
 
+const THEME_OPTIONS = [
+    { label: 'Dark', value: 'dark' as const, icon: 'moon' as keyof typeof Ionicons.glyphMap },
+    { label: 'Light', value: 'light' as const, icon: 'sunny' as keyof typeof Ionicons.glyphMap },
+    { label: 'System', value: 'system' as const, icon: 'phone-portrait' as keyof typeof Ionicons.glyphMap },
+];
+
 export default function SettingsScreen() {
     const router = useRouter();
+    const styles = useThemedStyles(createStyles);
     const { servers, removeServer } = useServerStore();
     const {
+        theme,
         streamQuality,
         autoRefreshInterval,
         showSubtitles,
         enableNotifications,
+        setTheme,
         setStreamQuality,
         setAutoRefreshInterval,
         setShowSubtitles,
@@ -95,7 +92,7 @@ export default function SettingsScreen() {
                 <View style={styles.sectionHeader}>
                     <Text style={styles.sectionTitle}>Servers</Text>
                     <TouchableOpacity onPress={() => router.push('/server/add')}>
-                        <Ionicons name="add-circle" size={24} color={Colors.primary} />
+                        <Ionicons name="add-circle" size={24} color={styles.iconPrimary.color} />
                     </TouchableOpacity>
                 </View>
 
@@ -112,11 +109,11 @@ export default function SettingsScreen() {
                             activeOpacity={0.7}
                         >
                             <View style={styles.serverRowLeft}>
-                                <View style={[styles.serverIcon, { backgroundColor: SERVER_COLORS[server.type] + '20' }]}>
+                                <View style={[styles.serverIcon, { backgroundColor: SOURCE_COLORS[server.type] + '20' }]}>
                                     <Ionicons
-                                        name={SERVER_ICONS[server.type]}
+                                        name={SOURCE_ICONS[server.type]}
                                         size={20}
-                                        color={SERVER_COLORS[server.type]}
+                                        color={SOURCE_COLORS[server.type]}
                                     />
                                 </View>
                                 <View style={styles.serverInfo}>
@@ -131,7 +128,7 @@ export default function SettingsScreen() {
                                 onPress={() => handleDeleteServer(server.id, server.name)}
                                 hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
                             >
-                                <Ionicons name="trash-outline" size={18} color={Colors.error} />
+                                <Ionicons name="trash-outline" size={18} color={styles.iconError.color} />
                             </TouchableOpacity>
                         </TouchableOpacity>
                     ))
@@ -145,7 +142,7 @@ export default function SettingsScreen() {
                 {/* Stream Quality */}
                 <View style={styles.settingCard}>
                     <View style={styles.settingCardHeader}>
-                        <Ionicons name="speedometer" size={20} color={Colors.primary} />
+                        <Ionicons name="speedometer" size={20} color={styles.iconPrimary.color} />
                         <Text style={styles.settingLabel}>Stream Quality</Text>
                     </View>
                     <View style={styles.segmentRow}>
@@ -173,14 +170,14 @@ export default function SettingsScreen() {
                 {/* Subtitles */}
                 <View style={styles.settingRow}>
                     <View style={styles.settingLeft}>
-                        <Ionicons name="text" size={20} color={Colors.textSecondary} />
+                        <Ionicons name="text" size={20} color={styles.iconSecondary.color} />
                         <Text style={styles.settingLabel}>Show Subtitles</Text>
                     </View>
                     <Switch
                         value={showSubtitles}
                         onValueChange={setShowSubtitles}
-                        trackColor={{ false: Colors.surfaceBorder, true: Colors.primary + '60' }}
-                        thumbColor={showSubtitles ? Colors.primary : Colors.textTertiary}
+                        trackColor={{ false: styles.switchTrack.backgroundColor as string, true: styles.switchTrackActive.backgroundColor as string }}
+                        thumbColor={showSubtitles ? styles.switchThumbActive.backgroundColor as string : styles.switchThumb.backgroundColor as string}
                     />
                 </View>
             </Animated.View>
@@ -192,7 +189,7 @@ export default function SettingsScreen() {
                 {/* Auto Refresh */}
                 <View style={styles.settingCard}>
                     <View style={styles.settingCardHeader}>
-                        <Ionicons name="refresh" size={20} color={Colors.info} />
+                        <Ionicons name="refresh" size={20} color={styles.iconInfo.color} />
                         <Text style={styles.settingLabel}>Auto Refresh Interval</Text>
                     </View>
                     <View style={styles.segmentRow}>
@@ -223,14 +220,14 @@ export default function SettingsScreen() {
                 <Text style={styles.sectionTitle}>Notifications</Text>
                 <View style={styles.settingRow}>
                     <View style={styles.settingLeft}>
-                        <Ionicons name="notifications" size={20} color={Colors.warning} />
+                        <Ionicons name="notifications" size={20} color={styles.iconWarning.color} />
                         <Text style={styles.settingLabel}>Download Alerts</Text>
                     </View>
                     <Switch
                         value={enableNotifications}
                         onValueChange={setEnableNotifications}
-                        trackColor={{ false: Colors.surfaceBorder, true: Colors.primary + '60' }}
-                        thumbColor={enableNotifications ? Colors.primary : Colors.textTertiary}
+                        trackColor={{ false: styles.switchTrack.backgroundColor as string, true: styles.switchTrackActive.backgroundColor as string }}
+                        thumbColor={enableNotifications ? styles.switchThumbActive.backgroundColor as string : styles.switchThumb.backgroundColor as string}
                     />
                 </View>
             </Animated.View>
@@ -238,14 +235,36 @@ export default function SettingsScreen() {
             {/* Appearance Section */}
             <Animated.View entering={FadeInDown.duration(500).delay(300)}>
                 <Text style={styles.sectionTitle}>Appearance</Text>
-                <View style={styles.settingRow}>
-                    <View style={styles.settingLeft}>
-                        <Ionicons name="moon" size={20} color={Colors.textSecondary} />
+                <View style={styles.settingCard}>
+                    <View style={styles.settingCardHeader}>
+                        <Ionicons name="color-palette" size={20} color={styles.iconPrimary.color} />
                         <Text style={styles.settingLabel}>Theme</Text>
                     </View>
-                    <View style={styles.settingValue}>
-                        <Text style={styles.settingValueText}>Dark</Text>
-                        <Ionicons name="chevron-forward" size={16} color={Colors.textTertiary} />
+                    <View style={styles.segmentRow}>
+                        {THEME_OPTIONS.map((opt) => (
+                            <TouchableOpacity
+                                key={opt.value}
+                                style={[
+                                    styles.segmentBtn,
+                                    theme === opt.value && styles.segmentBtnActive,
+                                ]}
+                                onPress={() => setTheme(opt.value)}
+                                activeOpacity={0.7}
+                            >
+                                <Ionicons
+                                    name={opt.icon}
+                                    size={14}
+                                    color={theme === opt.value ? styles.segmentTextActive.color as string : styles.segmentText.color as string}
+                                    style={{ marginBottom: 2 }}
+                                />
+                                <Text style={[
+                                    styles.segmentText,
+                                    theme === opt.value && styles.segmentTextActive,
+                                ]}>
+                                    {opt.label}
+                                </Text>
+                            </TouchableOpacity>
+                        ))}
                     </View>
                 </View>
             </Animated.View>
@@ -255,7 +274,7 @@ export default function SettingsScreen() {
                 <Text style={styles.sectionTitle}>About</Text>
                 <View style={styles.aboutCard}>
                     <View style={styles.aboutLogoContainer}>
-                        <Ionicons name="planet" size={40} color={Colors.primary} />
+                        <Ionicons name="planet" size={40} color={styles.iconPrimary.color} />
                     </View>
                     <Text style={styles.aboutAppName}>JellyRoll</Text>
                     <Text style={styles.aboutVersion}>Version 1.0.0 · Build 1</Text>
@@ -269,7 +288,7 @@ export default function SettingsScreen() {
             <Animated.View entering={FadeInDown.duration(500).delay(400)}>
                 <Text style={styles.sectionTitle}>Security</Text>
                 <View style={styles.securityInfo}>
-                    <Ionicons name="shield-checkmark" size={20} color={Colors.success} />
+                    <Ionicons name="shield-checkmark" size={20} color={styles.iconSuccess.color} />
                     <Text style={styles.securityText}>
                         API keys and tokens are encrypted using {Platform.OS === 'ios' ? 'iOS Keychain' : Platform.OS === 'android' ? 'Android Keystore' : 'secure storage'}.
                         All connections use HTTPS when available.
@@ -280,49 +299,63 @@ export default function SettingsScreen() {
     );
 }
 
-const styles = StyleSheet.create({
-    container: { flex: 1, backgroundColor: Colors.background },
+const createStyles = (colors: AppColors) => StyleSheet.create({
+    container: { flex: 1, backgroundColor: colors.background },
     contentContainer: { paddingBottom: 48 },
-    header: { fontFamily: 'Inter_700Bold', fontSize: 28, color: Colors.text, paddingHorizontal: Spacing.screenPadding, paddingTop: Spacing.xl, paddingBottom: Spacing.md },
+    header: { fontFamily: 'Inter_700Bold', fontSize: 28, color: colors.text, paddingHorizontal: Spacing.screenPadding, paddingTop: Spacing.xl, paddingBottom: Spacing.md },
 
     // Sections
     sectionHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingHorizontal: Spacing.screenPadding, marginTop: Spacing.xxl, marginBottom: Spacing.md },
-    sectionTitle: { fontFamily: 'Inter_600SemiBold', fontSize: 14, color: Colors.textSecondary, textTransform: 'uppercase', letterSpacing: 0.5, paddingHorizontal: Spacing.screenPadding, marginTop: Spacing.xxl, marginBottom: Spacing.md },
+    sectionTitle: { fontFamily: 'Inter_600SemiBold', fontSize: 14, color: colors.textSecondary, textTransform: 'uppercase', letterSpacing: 0.5, paddingHorizontal: Spacing.screenPadding, marginTop: Spacing.xxl, marginBottom: Spacing.md },
 
     // Server rows
-    emptyServers: { marginHorizontal: Spacing.screenPadding, backgroundColor: Colors.backgroundTertiary, borderRadius: Spacing.radiusMd, padding: Spacing.xl, alignItems: 'center', borderWidth: 1, borderColor: Colors.surfaceBorder },
-    emptyServersText: { fontFamily: 'Inter_400Regular', fontSize: 14, color: Colors.textTertiary },
-    serverRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', backgroundColor: Colors.backgroundTertiary, marginHorizontal: Spacing.screenPadding, marginBottom: Spacing.sm, borderRadius: Spacing.radiusMd, padding: Spacing.lg, borderWidth: 1, borderColor: Colors.surfaceBorder },
+    emptyServers: { marginHorizontal: Spacing.screenPadding, backgroundColor: colors.backgroundTertiary, borderRadius: Spacing.radiusMd, padding: Spacing.xl, alignItems: 'center', borderWidth: 1, borderColor: colors.surfaceBorder },
+    emptyServersText: { fontFamily: 'Inter_400Regular', fontSize: 14, color: colors.textTertiary },
+    serverRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', backgroundColor: colors.backgroundTertiary, marginHorizontal: Spacing.screenPadding, marginBottom: Spacing.sm, borderRadius: Spacing.radiusMd, padding: Spacing.lg, borderWidth: 1, borderColor: colors.surfaceBorder },
     serverRowLeft: { flexDirection: 'row', alignItems: 'center', gap: Spacing.md, flex: 1 },
     serverIcon: { width: 40, height: 40, borderRadius: Spacing.radiusSm, justifyContent: 'center', alignItems: 'center' },
     serverInfo: { flex: 1 },
-    serverName: { fontFamily: 'Inter_600SemiBold', fontSize: 15, color: Colors.text },
-    serverMeta: { fontFamily: 'Inter_400Regular', fontSize: 12, color: Colors.textSecondary, marginTop: 2 },
+    serverName: { fontFamily: 'Inter_600SemiBold', fontSize: 15, color: colors.text },
+    serverMeta: { fontFamily: 'Inter_400Regular', fontSize: 12, color: colors.textSecondary, marginTop: 2 },
 
     // Settings rows
-    settingRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', backgroundColor: Colors.backgroundTertiary, marginHorizontal: Spacing.screenPadding, marginBottom: Spacing.sm, borderRadius: Spacing.radiusMd, padding: Spacing.lg, borderWidth: 1, borderColor: Colors.surfaceBorder },
+    settingRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', backgroundColor: colors.backgroundTertiary, marginHorizontal: Spacing.screenPadding, marginBottom: Spacing.sm, borderRadius: Spacing.radiusMd, padding: Spacing.lg, borderWidth: 1, borderColor: colors.surfaceBorder },
     settingLeft: { flexDirection: 'row', alignItems: 'center', gap: Spacing.md },
-    settingLabel: { fontFamily: 'Inter_500Medium', fontSize: 15, color: Colors.text },
+    settingLabel: { fontFamily: 'Inter_500Medium', fontSize: 15, color: colors.text },
     settingValue: { flexDirection: 'row', alignItems: 'center', gap: Spacing.xs },
-    settingValueText: { fontFamily: 'Inter_400Regular', fontSize: 14, color: Colors.textSecondary },
+    settingValueText: { fontFamily: 'Inter_400Regular', fontSize: 14, color: colors.textSecondary },
 
     // Setting card with segments
-    settingCard: { backgroundColor: Colors.backgroundTertiary, marginHorizontal: Spacing.screenPadding, marginBottom: Spacing.sm, borderRadius: Spacing.radiusMd, padding: Spacing.lg, borderWidth: 1, borderColor: Colors.surfaceBorder },
+    settingCard: { backgroundColor: colors.backgroundTertiary, marginHorizontal: Spacing.screenPadding, marginBottom: Spacing.sm, borderRadius: Spacing.radiusMd, padding: Spacing.lg, borderWidth: 1, borderColor: colors.surfaceBorder },
     settingCardHeader: { flexDirection: 'row', alignItems: 'center', gap: Spacing.md, marginBottom: Spacing.md },
     segmentRow: { flexDirection: 'row', gap: Spacing.sm },
-    segmentBtn: { flex: 1, paddingVertical: Spacing.sm, alignItems: 'center', borderRadius: Spacing.radiusSm, backgroundColor: Colors.surfaceHover },
-    segmentBtnActive: { backgroundColor: Colors.primary + '25', borderWidth: 1, borderColor: Colors.primary + '50' },
-    segmentText: { fontFamily: 'Inter_500Medium', fontSize: 13, color: Colors.textTertiary },
-    segmentTextActive: { color: Colors.primary },
+    segmentBtn: { flex: 1, paddingVertical: Spacing.sm, alignItems: 'center', borderRadius: Spacing.radiusSm, backgroundColor: colors.surfaceHover },
+    segmentBtnActive: { backgroundColor: colors.primary + '25', borderWidth: 1, borderColor: colors.primary + '50' },
+    segmentText: { fontFamily: 'Inter_500Medium', fontSize: 13, color: colors.textTertiary },
+    segmentTextActive: { color: colors.primary },
 
     // About
-    aboutCard: { backgroundColor: Colors.backgroundTertiary, marginHorizontal: Spacing.screenPadding, borderRadius: Spacing.radiusMd, padding: Spacing.xxl, borderWidth: 1, borderColor: Colors.surfaceBorder, alignItems: 'center' },
-    aboutLogoContainer: { width: 72, height: 72, borderRadius: 36, backgroundColor: Colors.glassHighlight, justifyContent: 'center', alignItems: 'center', marginBottom: Spacing.md },
-    aboutAppName: { fontFamily: 'Inter_700Bold', fontSize: 22, color: Colors.text, marginBottom: 4 },
-    aboutVersion: { fontFamily: 'Inter_400Regular', fontSize: 13, color: Colors.textSecondary, marginBottom: Spacing.md },
-    aboutDescription: { fontFamily: 'Inter_400Regular', fontSize: 14, color: Colors.textTertiary, textAlign: 'center' },
+    aboutCard: { backgroundColor: colors.backgroundTertiary, marginHorizontal: Spacing.screenPadding, borderRadius: Spacing.radiusMd, padding: Spacing.xxl, borderWidth: 1, borderColor: colors.surfaceBorder, alignItems: 'center' },
+    aboutLogoContainer: { width: 72, height: 72, borderRadius: 36, backgroundColor: colors.glassHighlight, justifyContent: 'center', alignItems: 'center', marginBottom: Spacing.md },
+    aboutAppName: { fontFamily: 'Inter_700Bold', fontSize: 22, color: colors.text, marginBottom: 4 },
+    aboutVersion: { fontFamily: 'Inter_400Regular', fontSize: 13, color: colors.textSecondary, marginBottom: Spacing.md },
+    aboutDescription: { fontFamily: 'Inter_400Regular', fontSize: 14, color: colors.textTertiary, textAlign: 'center' },
 
     // Security
-    securityInfo: { flexDirection: 'row', backgroundColor: Colors.backgroundTertiary, marginHorizontal: Spacing.screenPadding, borderRadius: Spacing.radiusMd, padding: Spacing.lg, borderWidth: 1, borderColor: Colors.surfaceBorder, gap: Spacing.md, alignItems: 'flex-start' },
-    securityText: { fontFamily: 'Inter_400Regular', fontSize: 13, color: Colors.textSecondary, flex: 1, lineHeight: 20 },
+    securityInfo: { flexDirection: 'row', backgroundColor: colors.backgroundTertiary, marginHorizontal: Spacing.screenPadding, borderRadius: Spacing.radiusMd, padding: Spacing.lg, borderWidth: 1, borderColor: colors.surfaceBorder, gap: Spacing.md, alignItems: 'flex-start' },
+    securityText: { fontFamily: 'Inter_400Regular', fontSize: 13, color: colors.textSecondary, flex: 1, lineHeight: 20 },
+
+    // Icon color tokens (used for inline color props)
+    iconPrimary: { color: colors.primary },
+    iconSecondary: { color: colors.textSecondary },
+    iconError: { color: colors.error },
+    iconInfo: { color: colors.info },
+    iconWarning: { color: colors.warning },
+    iconSuccess: { color: colors.success },
+
+    // Switch color tokens
+    switchTrack: { backgroundColor: colors.surfaceBorder },
+    switchTrackActive: { backgroundColor: colors.primary + '60' },
+    switchThumb: { backgroundColor: colors.textTertiary },
+    switchThumbActive: { backgroundColor: colors.primary },
 });

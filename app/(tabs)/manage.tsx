@@ -17,8 +17,10 @@ import {
 } from 'react-native';
 import Animated, { FadeInDown } from 'react-native-reanimated';
 import { QueueCard } from '../../components/media/QueueCard';
-import { Colors } from '../../constants/Colors';
+import { SOURCE_COLORS, SOURCE_ICONS } from '../../constants/Sources';
 import { Spacing } from '../../constants/Spacing';
+import { AppColors } from '../../hooks/useColors';
+import { useThemedStyles } from '../../hooks/useThemedStyles';
 import { useLidarrQueue } from '../../services/hooks/useLidarr';
 import { useRadarrQueue } from '../../services/hooks/useRadarr';
 import { useSonarrQueue } from '../../services/hooks/useSonarr';
@@ -27,31 +29,18 @@ import { ServerType } from '../../types/server';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
 
-const SERVER_COLORS: Record<ServerType, string> = {
-    jellyfin: Colors.jellyfin,
-    sonarr: Colors.sonarr,
-    radarr: Colors.radarr,
-    lidarr: Colors.lidarr,
-};
-
-const SERVER_ICONS: Record<ServerType, keyof typeof Ionicons.glyphMap> = {
-    jellyfin: 'play-circle',
-    sonarr: 'tv',
-    radarr: 'film',
-    lidarr: 'musical-notes',
-};
-
 interface ServiceCardProps {
     type: ServerType;
     name: string;
     queueCount: number;
     onPress: () => void;
     delay: number;
+    styles: ReturnType<typeof createStyles>;
 }
 
-function ServiceCard({ type, name, queueCount, onPress, delay }: ServiceCardProps) {
-    const color = SERVER_COLORS[type];
-    const icon = SERVER_ICONS[type];
+function ServiceCard({ type, name, queueCount, onPress, delay, styles }: ServiceCardProps) {
+    const color = SOURCE_COLORS[type];
+    const icon = SOURCE_ICONS[type];
 
     return (
         <Animated.View entering={FadeInDown.duration(400).delay(delay)}>
@@ -64,7 +53,7 @@ function ServiceCard({ type, name, queueCount, onPress, delay }: ServiceCardProp
                         <Text style={styles.serviceName}>{name}</Text>
                         <Text style={styles.serviceType}>{type}</Text>
                     </View>
-                    <Ionicons name="chevron-forward" size={18} color={Colors.textTertiary} />
+                    <Ionicons name="chevron-forward" size={18} color={styles.serviceType.color} />
                 </View>
                 {queueCount > 0 && (
                     <View style={[styles.queueBadge, { backgroundColor: color + '15' }]}>
@@ -81,6 +70,7 @@ function ServiceCard({ type, name, queueCount, onPress, delay }: ServiceCardProp
 
 export default function ManageScreen() {
     const router = useRouter();
+    const styles = useThemedStyles(createStyles);
     const queryClient = useQueryClient();
     const servers = useServerStore((s) => s.servers);
 
@@ -136,7 +126,7 @@ export default function ManageScreen() {
         return (
             <View style={styles.emptyContainer}>
                 <Animated.View entering={FadeInDown.duration(800)} style={styles.emptyContent}>
-                    <Ionicons name="construct" size={64} color={Colors.textTertiary} />
+                    <Ionicons name="construct" size={64} color={styles.iconTertiary.color} />
                     <Text style={styles.emptyTitle}>No Management Servers</Text>
                     <Text style={styles.emptySubtitle}>
                         Add Sonarr, Radarr, or Lidarr to manage your media collection.
@@ -146,7 +136,7 @@ export default function ManageScreen() {
                         onPress={() => router.push('/server/add')}
                         activeOpacity={0.8}
                     >
-                        <Ionicons name="add-circle" size={20} color={Colors.textInverse} />
+                        <Ionicons name="add-circle" size={20} color={styles.addButtonText.color} />
                         <Text style={styles.addButtonText}>Add Server</Text>
                     </TouchableOpacity>
                 </Animated.View>
@@ -180,7 +170,7 @@ export default function ManageScreen() {
                 <RefreshControl
                     refreshing={false}
                     onRefresh={() => queryClient.invalidateQueries({ queryKey: ['sonarr', 'radarr', 'lidarr'] })}
-                    tintColor={Colors.primary}
+                    tintColor={styles.iconPrimary.color as string}
                 />
             }
         >
@@ -191,7 +181,7 @@ export default function ManageScreen() {
                     <Text style={styles.summaryLabel}>Services</Text>
                 </View>
                 <View style={styles.summaryCard}>
-                    <Text style={[styles.summaryValue, { color: Colors.badgeDownloading }]}>{totalQueue}</Text>
+                    <Text style={[styles.summaryValue, styles.summaryValueHighlight]}>{totalQueue}</Text>
                     <Text style={styles.summaryLabel}>In Queue</Text>
                 </View>
             </Animated.View>
@@ -206,6 +196,7 @@ export default function ManageScreen() {
                     queueCount={getQueueCount(server.type)}
                     onPress={() => router.push(getRoute(server.type) as any)}
                     delay={100 + index * 80}
+                    styles={styles}
                 />
             ))}
 
@@ -230,37 +221,42 @@ export default function ManageScreen() {
     );
 }
 
-const styles = StyleSheet.create({
-    container: { flex: 1, backgroundColor: Colors.background },
+const createStyles = (colors: AppColors) => StyleSheet.create({
+    container: { flex: 1, backgroundColor: colors.background },
     contentContainer: { paddingBottom: 32 },
 
     // Empty
-    emptyContainer: { flex: 1, backgroundColor: Colors.background, justifyContent: 'center', alignItems: 'center', paddingHorizontal: 32 },
+    emptyContainer: { flex: 1, backgroundColor: colors.background, justifyContent: 'center', alignItems: 'center', paddingHorizontal: 32 },
     emptyContent: { alignItems: 'center', gap: Spacing.md },
-    emptyTitle: { fontFamily: 'Inter_600SemiBold', fontSize: 22, color: Colors.text },
-    emptySubtitle: { fontFamily: 'Inter_400Regular', fontSize: 15, color: Colors.textSecondary, textAlign: 'center', lineHeight: 22 },
-    addButton: { flexDirection: 'row', alignItems: 'center', backgroundColor: Colors.primary, paddingHorizontal: Spacing.xxl, paddingVertical: Spacing.md, borderRadius: Spacing.radiusFull, gap: Spacing.sm, marginTop: Spacing.md },
-    addButtonText: { fontFamily: 'Inter_600SemiBold', fontSize: 15, color: Colors.textInverse },
+    emptyTitle: { fontFamily: 'Inter_600SemiBold', fontSize: 22, color: colors.text },
+    emptySubtitle: { fontFamily: 'Inter_400Regular', fontSize: 15, color: colors.textSecondary, textAlign: 'center', lineHeight: 22 },
+    addButton: { flexDirection: 'row', alignItems: 'center', backgroundColor: colors.primary, paddingHorizontal: Spacing.xxl, paddingVertical: Spacing.md, borderRadius: Spacing.radiusFull, gap: Spacing.sm, marginTop: Spacing.md },
+    addButtonText: { fontFamily: 'Inter_600SemiBold', fontSize: 15, color: colors.textInverse },
 
     // Summary
     summaryRow: { flexDirection: 'row', gap: Spacing.md, paddingHorizontal: Spacing.screenPadding, paddingTop: Spacing.lg, marginBottom: Spacing.lg },
-    summaryCard: { flex: 1, backgroundColor: Colors.backgroundTertiary, borderRadius: Spacing.radiusMd, padding: Spacing.lg, alignItems: 'center', borderWidth: 1, borderColor: Colors.surfaceBorder },
-    summaryValue: { fontFamily: 'Inter_700Bold', fontSize: 28, color: Colors.text },
-    summaryLabel: { fontFamily: 'Inter_400Regular', fontSize: 12, color: Colors.textTertiary, marginTop: 4 },
+    summaryCard: { flex: 1, backgroundColor: colors.backgroundTertiary, borderRadius: Spacing.radiusMd, padding: Spacing.lg, alignItems: 'center', borderWidth: 1, borderColor: colors.surfaceBorder },
+    summaryValue: { fontFamily: 'Inter_700Bold', fontSize: 28, color: colors.text },
+    summaryValueHighlight: { color: colors.badgeDownloading },
+    summaryLabel: { fontFamily: 'Inter_400Regular', fontSize: 12, color: colors.textTertiary, marginTop: 4 },
 
     // Sections
-    sectionTitle: { fontFamily: 'Inter_600SemiBold', fontSize: 18, color: Colors.text, paddingHorizontal: Spacing.screenPadding, marginTop: Spacing.xl, marginBottom: Spacing.md },
+    sectionTitle: { fontFamily: 'Inter_600SemiBold', fontSize: 18, color: colors.text, paddingHorizontal: Spacing.screenPadding, marginTop: Spacing.xl, marginBottom: Spacing.md },
 
     // Service card
-    serviceCard: { marginHorizontal: Spacing.screenPadding, marginBottom: Spacing.sm, backgroundColor: Colors.backgroundTertiary, borderRadius: Spacing.radiusMd, padding: Spacing.lg, borderLeftWidth: 3, borderWidth: 1, borderColor: Colors.surfaceBorder },
+    serviceCard: { marginHorizontal: Spacing.screenPadding, marginBottom: Spacing.sm, backgroundColor: colors.backgroundTertiary, borderRadius: Spacing.radiusMd, padding: Spacing.lg, borderLeftWidth: 3, borderWidth: 1, borderColor: colors.surfaceBorder },
     serviceCardHeader: { flexDirection: 'row', alignItems: 'center' },
     serviceIconBg: { width: 44, height: 44, borderRadius: Spacing.radiusMd, justifyContent: 'center', alignItems: 'center' },
     serviceInfo: { flex: 1, marginLeft: Spacing.md },
-    serviceName: { fontFamily: 'Inter_600SemiBold', fontSize: 16, color: Colors.text },
-    serviceType: { fontFamily: 'Inter_400Regular', fontSize: 12, color: Colors.textTertiary, textTransform: 'capitalize', marginTop: 2 },
+    serviceName: { fontFamily: 'Inter_600SemiBold', fontSize: 16, color: colors.text },
+    serviceType: { fontFamily: 'Inter_400Regular', fontSize: 12, color: colors.textTertiary, textTransform: 'capitalize', marginTop: 2 },
     queueBadge: { flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: Spacing.sm, paddingHorizontal: Spacing.md, paddingVertical: 4, borderRadius: Spacing.radiusSm, alignSelf: 'flex-start' },
     queueBadgeText: { fontFamily: 'Inter_500Medium', fontSize: 12 },
 
     // Queue
     queueCardWrapper: { paddingHorizontal: Spacing.screenPadding },
+
+    // Color tokens for inline use
+    iconPrimary: { color: colors.primary },
+    iconTertiary: { color: colors.textTertiary },
 });

@@ -17,13 +17,15 @@ import {
     View,
 } from 'react-native';
 import Animated, { FadeIn } from 'react-native-reanimated';
-import { Colors } from '../../constants/Colors';
 import { Spacing } from '../../constants/Spacing';
+import { AppColors } from '../../hooks/useColors';
+import { useThemedStyles } from '../../hooks/useThemedStyles';
 import { useLidarrArtists, useLidarrImageUrl } from '../../services/hooks/useLidarr';
 import { LidarrArtist } from '../../types/lidarr';
 
 export default function LidarrScreen() {
     const router = useRouter();
+    const styles = useThemedStyles(createStyles);
     const { data: artists, isLoading, refetch } = useLidarrArtists();
     const getImageUrl = useLidarrImageUrl();
 
@@ -54,7 +56,7 @@ export default function LidarrScreen() {
                         <Image source={{ uri: imageUrl }} style={styles.artistImage} resizeMode="cover" />
                     ) : (
                         <View style={[styles.artistImage, styles.imagePlaceholder]}>
-                            <Ionicons name="person" size={24} color={Colors.textTertiary} />
+                            <Ionicons name="person" size={24} color={styles.iconTertiary.color} />
                         </View>
                     )}
                     <View style={styles.artistInfo}>
@@ -65,34 +67,34 @@ export default function LidarrScreen() {
                         {stats && (
                             <View style={styles.statsRow}>
                                 <Text style={styles.statText}>
-                                    <Ionicons name="disc" size={11} color={Colors.lidarr} /> {stats.albumCount ?? 0} albums
+                                    <Ionicons name="disc" size={11} color={styles.lidarrColor.color} /> {stats.albumCount ?? 0} albums
                                 </Text>
                                 <Text style={styles.statText}>
-                                    <Ionicons name="musical-note" size={11} color={Colors.textTertiary} /> {stats.trackFileCount ?? 0}/{stats.trackCount ?? 0} tracks
+                                    <Ionicons name="musical-note" size={11} color={styles.iconTertiary.color} /> {stats.trackFileCount ?? 0}/{stats.trackCount ?? 0} tracks
                                 </Text>
                             </View>
                         )}
                         <View style={styles.badgeRow}>
-                            <View style={[styles.badge, { backgroundColor: item.monitored ? Colors.success + '20' : Colors.textTertiary + '20' }]}>
-                                <Text style={[styles.badgeText, { color: item.monitored ? Colors.success : Colors.textTertiary }]}>
+                            <View style={[styles.badge, { backgroundColor: item.monitored ? styles.successColor.color + '20' : styles.iconTertiary.color + '20' }]}>
+                                <Text style={[styles.badgeText, { color: item.monitored ? (styles.successColor.color as string) : (styles.iconTertiary.color as string) }]}>
                                     {item.monitored ? 'Monitored' : 'Unmonitored'}
                                 </Text>
                             </View>
                         </View>
                     </View>
-                    <Ionicons name="chevron-forward" size={18} color={Colors.textTertiary} />
+                    <Ionicons name="chevron-forward" size={18} color={styles.iconTertiary.color} />
                 </TouchableOpacity>
             </Animated.View>
         );
-    }, [getImageUrl, router]);
+    }, [getImageUrl, router, styles]);
 
     return (
         <View style={styles.container}>
             <Stack.Screen
                 options={{
                     title: 'Lidarr',
-                    headerStyle: { backgroundColor: Colors.backgroundSecondary },
-                    headerTintColor: Colors.text,
+                    headerStyle: { backgroundColor: styles.headerBg.backgroundColor },
+                    headerTintColor: styles.headerTitle.color as string,
                     headerTitleStyle: { fontFamily: 'Inter_600SemiBold' },
                 }}
             />
@@ -100,17 +102,17 @@ export default function LidarrScreen() {
             {/* Search */}
             <View style={styles.toolbar}>
                 <View style={styles.searchRow}>
-                    <Ionicons name="search" size={18} color={Colors.textTertiary} />
+                    <Ionicons name="search" size={18} color={styles.iconTertiary.color} />
                     <TextInput
                         style={styles.searchInput}
                         placeholder="Search artists..."
-                        placeholderTextColor={Colors.textTertiary}
+                        placeholderTextColor={styles.iconTertiary.color as string}
                         value={search}
                         onChangeText={setSearch}
                     />
                     {search.length > 0 && (
                         <TouchableOpacity onPress={() => setSearch('')}>
-                            <Ionicons name="close-circle" size={18} color={Colors.textTertiary} />
+                            <Ionicons name="close-circle" size={18} color={styles.iconTertiary.color} />
                         </TouchableOpacity>
                     )}
                 </View>
@@ -118,7 +120,7 @@ export default function LidarrScreen() {
 
             {isLoading ? (
                 <View style={styles.centerLoading}>
-                    <ActivityIndicator size="large" color={Colors.lidarr} />
+                    <ActivityIndicator size="large" color={styles.lidarrColor.color as string} />
                 </View>
             ) : (
                 <FlatList
@@ -127,7 +129,7 @@ export default function LidarrScreen() {
                     renderItem={renderArtist}
                     contentContainerStyle={styles.listContent}
                     refreshControl={
-                        <RefreshControl refreshing={false} onRefresh={refetch} tintColor={Colors.lidarr} />
+                        <RefreshControl refreshing={false} onRefresh={refetch} tintColor={styles.lidarrColor.color as string} />
                     }
                     ListHeaderComponent={
                         <Text style={styles.resultCount}>
@@ -136,7 +138,7 @@ export default function LidarrScreen() {
                     }
                     ListEmptyComponent={
                         <View style={styles.emptyContainer}>
-                            <Ionicons name="musical-notes" size={48} color={Colors.textTertiary} />
+                            <Ionicons name="musical-notes" size={48} color={styles.iconTertiary.color} />
                             <Text style={styles.emptyText}>No artists in Lidarr</Text>
                         </View>
                     }
@@ -146,29 +148,38 @@ export default function LidarrScreen() {
     );
 }
 
-const styles = StyleSheet.create({
-    container: { flex: 1, backgroundColor: Colors.background },
+const createStyles = (colors: AppColors) => StyleSheet.create({
+    container: { flex: 1, backgroundColor: colors.background },
 
-    toolbar: { paddingHorizontal: Spacing.screenPadding, paddingTop: Spacing.md, paddingBottom: Spacing.sm, backgroundColor: Colors.backgroundSecondary, borderBottomWidth: 1, borderBottomColor: Colors.surfaceBorder },
-    searchRow: { flexDirection: 'row', alignItems: 'center', backgroundColor: Colors.backgroundTertiary, borderRadius: Spacing.radiusMd, paddingHorizontal: Spacing.md, paddingVertical: Spacing.sm, gap: Spacing.sm },
-    searchInput: { flex: 1, fontFamily: 'Inter_400Regular', fontSize: 15, color: Colors.text, paddingVertical: 4 },
+    toolbar: { paddingHorizontal: Spacing.screenPadding, paddingTop: Spacing.md, paddingBottom: Spacing.sm, backgroundColor: colors.backgroundSecondary, borderBottomWidth: 1, borderBottomColor: colors.surfaceBorder },
+    searchRow: { flexDirection: 'row', alignItems: 'center', backgroundColor: colors.backgroundTertiary, borderRadius: Spacing.radiusMd, paddingHorizontal: Spacing.md, paddingVertical: Spacing.sm, gap: Spacing.sm },
+    searchInput: { flex: 1, fontFamily: 'Inter_400Regular', fontSize: 15, color: colors.text, paddingVertical: 4 },
 
     listContent: { paddingBottom: 32 },
-    resultCount: { fontFamily: 'Inter_400Regular', fontSize: 13, color: Colors.textTertiary, paddingHorizontal: Spacing.screenPadding, paddingVertical: Spacing.sm },
+    resultCount: { fontFamily: 'Inter_400Regular', fontSize: 13, color: colors.textTertiary, paddingHorizontal: Spacing.screenPadding, paddingVertical: Spacing.sm },
 
-    artistCard: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: Spacing.screenPadding, paddingVertical: Spacing.md, borderBottomWidth: 0.5, borderBottomColor: Colors.surfaceBorder },
-    artistImage: { width: 56, height: 56, borderRadius: 28, backgroundColor: Colors.backgroundTertiary },
+    artistCard: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: Spacing.screenPadding, paddingVertical: Spacing.md, borderBottomWidth: 0.5, borderBottomColor: colors.surfaceBorder },
+    artistImage: { width: 56, height: 56, borderRadius: 28, backgroundColor: colors.backgroundTertiary },
     imagePlaceholder: { justifyContent: 'center', alignItems: 'center' },
     artistInfo: { flex: 1, marginHorizontal: Spacing.md },
-    artistName: { fontFamily: 'Inter_600SemiBold', fontSize: 15, color: Colors.text },
-    artistType: { fontFamily: 'Inter_400Regular', fontSize: 12, color: Colors.textTertiary, marginTop: 2 },
+    artistName: { fontFamily: 'Inter_600SemiBold', fontSize: 15, color: colors.text },
+    artistType: { fontFamily: 'Inter_400Regular', fontSize: 12, color: colors.textTertiary, marginTop: 2 },
     statsRow: { flexDirection: 'row', gap: Spacing.lg, marginTop: 4 },
-    statText: { fontFamily: 'Inter_400Regular', fontSize: 12, color: Colors.textSecondary },
+    statText: { fontFamily: 'Inter_400Regular', fontSize: 12, color: colors.textSecondary },
     badgeRow: { flexDirection: 'row', gap: Spacing.sm, marginTop: 4 },
     badge: { paddingHorizontal: 6, paddingVertical: 2, borderRadius: 4 },
     badgeText: { fontFamily: 'Inter_600SemiBold', fontSize: 10, textTransform: 'uppercase', letterSpacing: 0.3 },
 
     centerLoading: { flex: 1, justifyContent: 'center', alignItems: 'center' },
     emptyContainer: { paddingTop: 80, alignItems: 'center', gap: Spacing.md },
-    emptyText: { fontFamily: 'Inter_400Regular', fontSize: 15, color: Colors.textTertiary },
+    emptyText: { fontFamily: 'Inter_400Regular', fontSize: 15, color: colors.textTertiary },
+
+    // Header
+    headerBg: { backgroundColor: colors.backgroundSecondary },
+    headerTitle: { color: colors.text },
+
+    // Color tokens for inline use
+    iconTertiary: { color: colors.textTertiary },
+    lidarrColor: { color: colors.lidarr },
+    successColor: { color: colors.success },
 });

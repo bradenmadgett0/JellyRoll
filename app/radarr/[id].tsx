@@ -17,8 +17,9 @@ import {
     View,
 } from 'react-native';
 import Animated, { FadeIn, FadeInDown } from 'react-native-reanimated';
-import { Colors } from '../../constants/Colors';
 import { Spacing } from '../../constants/Spacing';
+import { AppColors } from '../../hooks/useColors';
+import { useThemedStyles } from '../../hooks/useThemedStyles';
 import { useRadarrImageUrl, useRadarrMovieDetail, useRadarrRefresh } from '../../services/hooks/useRadarr';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
@@ -33,6 +34,7 @@ function formatSize(bytes: number): string {
 export default function RadarrDetailScreen() {
     const { id } = useLocalSearchParams<{ id: string }>();
     const router = useRouter();
+    const styles = useThemedStyles(createStyles);
     const numericId = id ? parseInt(id, 10) : undefined;
     const getImageUrl = useRadarrImageUrl();
 
@@ -50,7 +52,7 @@ export default function RadarrDetailScreen() {
         return (
             <View style={styles.loadingContainer}>
                 <Stack.Screen options={{ title: 'Loading...' }} />
-                <ActivityIndicator size="large" color={Colors.radarr} />
+                <ActivityIndicator size="large" color={styles.radarrColor.color as string} />
             </View>
         );
     }
@@ -64,8 +66,8 @@ export default function RadarrDetailScreen() {
             <Stack.Screen
                 options={{
                     title: movie.title,
-                    headerStyle: { backgroundColor: Colors.backgroundSecondary },
-                    headerTintColor: Colors.text,
+                    headerStyle: { backgroundColor: styles.headerBg.backgroundColor },
+                    headerTintColor: styles.headerTitle.color as string,
                     headerTitleStyle: { fontFamily: 'Inter_600SemiBold' },
                 }}
             />
@@ -75,10 +77,10 @@ export default function RadarrDetailScreen() {
                     {bannerUrl ? (
                         <Image source={{ uri: bannerUrl }} style={styles.banner} resizeMode="cover" />
                     ) : (
-                        <View style={[styles.banner, { backgroundColor: Colors.backgroundSecondary }]} />
+                        <View style={[styles.banner, styles.bannerPlaceholder]} />
                     )}
                     <LinearGradient
-                        colors={['transparent', 'rgba(13,17,23,0.8)', Colors.background]}
+                        colors={['transparent', 'rgba(13,17,23,0.8)', styles.container.backgroundColor as string]}
                         style={styles.heroGradient}
                     />
                     <View style={styles.heroContent}>
@@ -91,13 +93,13 @@ export default function RadarrDetailScreen() {
                                 {movie.year} · {runtimeText} · {movie.certification ?? 'NR'}
                             </Text>
                             <View style={styles.statusRow}>
-                                <View style={[styles.badge, { backgroundColor: movie.hasFile ? Colors.success + '20' : Colors.badgeMissing + '20' }]}>
-                                    <Text style={[styles.badgeText, { color: movie.hasFile ? Colors.success : Colors.badgeMissing }]}>
+                                <View style={[styles.badge, { backgroundColor: movie.hasFile ? styles.successColor.color + '20' : styles.missingColor.color + '20' }]}>
+                                    <Text style={[styles.badgeText, { color: movie.hasFile ? (styles.successColor.color as string) : (styles.missingColor.color as string) }]}>
                                         {movie.hasFile ? 'Available' : 'Missing'}
                                     </Text>
                                 </View>
-                                <View style={[styles.badge, { backgroundColor: movie.monitored ? Colors.radarr + '20' : Colors.textTertiary + '20' }]}>
-                                    <Text style={[styles.badgeText, { color: movie.monitored ? Colors.radarr : Colors.textTertiary }]}>
+                                <View style={[styles.badge, { backgroundColor: movie.monitored ? styles.radarrColor.color + '20' : styles.iconTertiary.color + '20' }]}>
+                                    <Text style={[styles.badgeText, { color: movie.monitored ? (styles.radarrColor.color as string) : (styles.iconTertiary.color as string) }]}>
                                         {movie.monitored ? 'Monitored' : 'Unmonitored'}
                                     </Text>
                                 </View>
@@ -109,19 +111,19 @@ export default function RadarrDetailScreen() {
                 {/* Stats */}
                 <Animated.View entering={FadeInDown.duration(400).delay(100)} style={styles.statsRow}>
                     <View style={styles.stat}>
-                        <Ionicons name="calendar" size={18} color={Colors.radarr} />
+                        <Ionicons name="calendar" size={18} color={styles.radarrColor.color} />
                         <Text style={styles.statValue}>{movie.year}</Text>
                         <Text style={styles.statLabel}>Year</Text>
                     </View>
                     {movie.studio && (
                         <View style={styles.stat}>
-                            <Ionicons name="business" size={18} color={Colors.radarr} />
+                            <Ionicons name="business" size={18} color={styles.radarrColor.color} />
                             <Text style={styles.statValue} numberOfLines={1}>{movie.studio}</Text>
                             <Text style={styles.statLabel}>Studio</Text>
                         </View>
                     )}
                     <View style={styles.stat}>
-                        <Ionicons name="server" size={18} color={Colors.radarr} />
+                        <Ionicons name="server" size={18} color={styles.radarrColor.color} />
                         <Text style={styles.statValue}>{movie.hasFile ? formatSize(movie.sizeOnDisk) : '--'}</Text>
                         <Text style={styles.statLabel}>Size</Text>
                     </View>
@@ -130,7 +132,7 @@ export default function RadarrDetailScreen() {
                 {/* Actions */}
                 <Animated.View entering={FadeInDown.duration(400).delay(200)} style={styles.actionsRow}>
                     <TouchableOpacity style={styles.actionBtn} onPress={handleRefresh}>
-                        <Ionicons name="refresh" size={20} color={Colors.radarr} />
+                        <Ionicons name="refresh" size={20} color={styles.radarrColor.color} />
                         <Text style={styles.actionBtnText}>Refresh</Text>
                     </TouchableOpacity>
                 </Animated.View>
@@ -188,47 +190,58 @@ export default function RadarrDetailScreen() {
     );
 }
 
-const styles = StyleSheet.create({
-    container: { flex: 1, backgroundColor: Colors.background },
+const createStyles = (colors: AppColors) => StyleSheet.create({
+    container: { flex: 1, backgroundColor: colors.background },
     contentContainer: { paddingBottom: 40 },
-    loadingContainer: { flex: 1, backgroundColor: Colors.background, justifyContent: 'center', alignItems: 'center' },
+    loadingContainer: { flex: 1, backgroundColor: colors.background, justifyContent: 'center', alignItems: 'center' },
 
     // Hero
     heroContainer: { width: SCREEN_WIDTH, height: 260, position: 'relative' },
     banner: { width: '100%', height: '100%' },
+    bannerPlaceholder: { backgroundColor: colors.backgroundSecondary },
     heroGradient: { position: 'absolute', bottom: 0, left: 0, right: 0, height: 180 },
     heroContent: { position: 'absolute', bottom: Spacing.lg, left: Spacing.screenPadding, right: Spacing.screenPadding, flexDirection: 'row', gap: Spacing.md },
     poster: { width: 80, height: 120, borderRadius: Spacing.radiusSm },
     heroInfo: { flex: 1, justifyContent: 'flex-end' },
-    title: { fontFamily: 'Inter_700Bold', fontSize: 22, color: Colors.text },
-    meta: { fontFamily: 'Inter_400Regular', fontSize: 13, color: Colors.textSecondary, marginTop: 4 },
+    title: { fontFamily: 'Inter_700Bold', fontSize: 22, color: colors.text },
+    meta: { fontFamily: 'Inter_400Regular', fontSize: 13, color: colors.textSecondary, marginTop: 4 },
     statusRow: { flexDirection: 'row', gap: Spacing.sm, marginTop: 6 },
     badge: { paddingHorizontal: 8, paddingVertical: 2, borderRadius: 4 },
     badgeText: { fontFamily: 'Inter_600SemiBold', fontSize: 10, textTransform: 'uppercase', letterSpacing: 0.3 },
 
     // Stats
-    statsRow: { flexDirection: 'row', justifyContent: 'space-around', paddingVertical: Spacing.lg, marginHorizontal: Spacing.screenPadding, borderBottomWidth: 1, borderBottomColor: Colors.surfaceBorder },
+    statsRow: { flexDirection: 'row', justifyContent: 'space-around', paddingVertical: Spacing.lg, marginHorizontal: Spacing.screenPadding, borderBottomWidth: 1, borderBottomColor: colors.surfaceBorder },
     stat: { alignItems: 'center', gap: 4, maxWidth: 100 },
-    statValue: { fontFamily: 'Inter_600SemiBold', fontSize: 14, color: Colors.text, textAlign: 'center' },
-    statLabel: { fontFamily: 'Inter_400Regular', fontSize: 11, color: Colors.textTertiary },
+    statValue: { fontFamily: 'Inter_600SemiBold', fontSize: 14, color: colors.text, textAlign: 'center' },
+    statLabel: { fontFamily: 'Inter_400Regular', fontSize: 11, color: colors.textTertiary },
 
     // Actions
     actionsRow: { flexDirection: 'row', paddingHorizontal: Spacing.screenPadding, marginTop: Spacing.lg, gap: Spacing.md },
-    actionBtn: { flexDirection: 'row', alignItems: 'center', gap: 6, backgroundColor: Colors.backgroundTertiary, paddingHorizontal: Spacing.lg, paddingVertical: Spacing.sm, borderRadius: Spacing.radiusMd, borderWidth: 1, borderColor: Colors.surfaceBorder },
-    actionBtnText: { fontFamily: 'Inter_500Medium', fontSize: 13, color: Colors.text },
+    actionBtn: { flexDirection: 'row', alignItems: 'center', gap: 6, backgroundColor: colors.backgroundTertiary, paddingHorizontal: Spacing.lg, paddingVertical: Spacing.sm, borderRadius: Spacing.radiusMd, borderWidth: 1, borderColor: colors.surfaceBorder },
+    actionBtnText: { fontFamily: 'Inter_500Medium', fontSize: 13, color: colors.text },
 
     // Sections
     section: { paddingHorizontal: Spacing.screenPadding, marginTop: Spacing.xxl },
-    sectionTitle: { fontFamily: 'Inter_600SemiBold', fontSize: 18, color: Colors.text, marginBottom: Spacing.md },
-    overview: { fontFamily: 'Inter_400Regular', fontSize: 15, color: Colors.textSecondary, lineHeight: 24 },
+    sectionTitle: { fontFamily: 'Inter_600SemiBold', fontSize: 18, color: colors.text, marginBottom: Spacing.md },
+    overview: { fontFamily: 'Inter_400Regular', fontSize: 15, color: colors.textSecondary, lineHeight: 24 },
     genreRow: { flexDirection: 'row', flexWrap: 'wrap', gap: Spacing.sm, paddingHorizontal: Spacing.screenPadding, marginTop: Spacing.md },
-    genreChip: { paddingHorizontal: Spacing.md, paddingVertical: 4, borderRadius: Spacing.radiusFull, backgroundColor: Colors.backgroundTertiary, borderWidth: 1, borderColor: Colors.surfaceBorder },
-    genreText: { fontFamily: 'Inter_400Regular', fontSize: 12, color: Colors.textSecondary },
+    genreChip: { paddingHorizontal: Spacing.md, paddingVertical: 4, borderRadius: Spacing.radiusFull, backgroundColor: colors.backgroundTertiary, borderWidth: 1, borderColor: colors.surfaceBorder },
+    genreText: { fontFamily: 'Inter_400Regular', fontSize: 12, color: colors.textSecondary },
 
     // File info
-    fileCard: { backgroundColor: Colors.backgroundTertiary, borderRadius: Spacing.radiusMd, padding: Spacing.lg, borderWidth: 1, borderColor: Colors.surfaceBorder },
-    fileName: { fontFamily: 'Inter_500Medium', fontSize: 13, color: Colors.text, marginBottom: Spacing.sm },
+    fileCard: { backgroundColor: colors.backgroundTertiary, borderRadius: Spacing.radiusMd, padding: Spacing.lg, borderWidth: 1, borderColor: colors.surfaceBorder },
+    fileName: { fontFamily: 'Inter_500Medium', fontSize: 13, color: colors.text, marginBottom: Spacing.sm },
     fileInfoRow: { flexDirection: 'row', flexWrap: 'wrap', gap: Spacing.sm },
-    fileChip: { paddingHorizontal: Spacing.sm, paddingVertical: 2, borderRadius: 4, backgroundColor: Colors.surfaceHover },
-    fileChipText: { fontFamily: 'Inter_500Medium', fontSize: 11, color: Colors.textSecondary },
+    fileChip: { paddingHorizontal: Spacing.sm, paddingVertical: 2, borderRadius: 4, backgroundColor: colors.surfaceHover },
+    fileChipText: { fontFamily: 'Inter_500Medium', fontSize: 11, color: colors.textSecondary },
+
+    // Header
+    headerBg: { backgroundColor: colors.backgroundSecondary },
+    headerTitle: { color: colors.text },
+
+    // Color tokens for inline use
+    iconTertiary: { color: colors.textTertiary },
+    radarrColor: { color: colors.radarr },
+    successColor: { color: colors.success },
+    missingColor: { color: colors.badgeMissing },
 });

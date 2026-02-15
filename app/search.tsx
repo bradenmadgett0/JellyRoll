@@ -17,13 +17,15 @@ import {
     View,
 } from 'react-native';
 import Animated, { FadeIn, FadeInDown } from 'react-native-reanimated';
-import { Colors } from '../constants/Colors';
 import { SOURCE_COLORS, SOURCE_ICONS, SOURCE_LABELS } from '../constants/Sources';
 import { Spacing } from '../constants/Spacing';
+import { AppColors } from '../hooks/useColors';
+import { useThemedStyles } from '../hooks/useThemedStyles';
 import { SearchResult, useGlobalSearch } from '../services/hooks/useSearch';
 
 export default function SearchScreen() {
     const router = useRouter();
+    const styles = useThemedStyles(createStyles);
     const [query, setQuery] = useState('');
     const { groupedResults, isLoading, isSearching, totalResults } = useGlobalSearch(query);
 
@@ -34,7 +36,6 @@ export default function SearchScreen() {
                 router.push(`/media/${result.sourceId}` as any);
                 break;
             case 'sonarr':
-                // Navigate to sonarr if we have a local series ID
                 break;
             case 'radarr':
                 break;
@@ -65,14 +66,14 @@ export default function SearchScreen() {
             {/* Search bar */}
             <Animated.View entering={FadeInDown.duration(400)} style={styles.searchBar}>
                 <TouchableOpacity onPress={() => router.back()} style={styles.backBtn}>
-                    <Ionicons name="arrow-back" size={24} color={Colors.text} />
+                    <Ionicons name="arrow-back" size={24} color={styles.iconText.color} />
                 </TouchableOpacity>
                 <View style={styles.inputContainer}>
-                    <Ionicons name="search" size={18} color={Colors.textTertiary} />
+                    <Ionicons name="search" size={18} color={styles.iconTertiary.color} />
                     <TextInput
                         style={styles.input}
                         placeholder="Search all services..."
-                        placeholderTextColor={Colors.textTertiary}
+                        placeholderTextColor={styles.iconTertiary.color as string}
                         value={query}
                         onChangeText={setQuery}
                         autoFocus
@@ -82,7 +83,7 @@ export default function SearchScreen() {
                     />
                     {query.length > 0 && (
                         <TouchableOpacity onPress={() => setQuery('')}>
-                            <Ionicons name="close-circle" size={18} color={Colors.textTertiary} />
+                            <Ionicons name="close-circle" size={18} color={styles.iconTertiary.color} />
                         </TouchableOpacity>
                     )}
                 </View>
@@ -91,7 +92,7 @@ export default function SearchScreen() {
             {/* Loading */}
             {isLoading && (
                 <View style={styles.loadingRow}>
-                    <ActivityIndicator size="small" color={Colors.primary} />
+                    <ActivityIndicator size="small" color={styles.iconPrimary.color as string} />
                     <Text style={styles.loadingText}>Searching...</Text>
                 </View>
             )}
@@ -99,7 +100,7 @@ export default function SearchScreen() {
             {/* Results */}
             {isSearching && !isLoading && totalResults === 0 && (
                 <View style={styles.emptyContainer}>
-                    <Ionicons name="search" size={48} color={Colors.textTertiary} />
+                    <Ionicons name="search" size={48} color={styles.iconTertiary.color} />
                     <Text style={styles.emptyText}>No results for "{query}"</Text>
                     <Text style={styles.emptySubtext}>Try a different search term</Text>
                 </View>
@@ -107,7 +108,7 @@ export default function SearchScreen() {
 
             {!isSearching && (
                 <View style={styles.emptyContainer}>
-                    <Ionicons name="telescope" size={56} color={Colors.textTertiary} />
+                    <Ionicons name="telescope" size={56} color={styles.iconTertiary.color} />
                     <Text style={styles.emptyText}>Search across all your services</Text>
                     <Text style={styles.emptySubtext}>
                         Find movies, series, artists, and more
@@ -125,7 +126,7 @@ export default function SearchScreen() {
                     contentContainerStyle={styles.listContent}
                     renderItem={({ item, index }) => {
                         if (item.type === 'header') {
-                            const color = SOURCE_COLORS[item.source] ?? Colors.primary;
+                            const color = SOURCE_COLORS[item.source] ?? (styles.iconPrimary.color as string);
                             const icon = SOURCE_ICONS[item.source] ?? 'server';
                             const label = SOURCE_LABELS[item.source] ?? item.source;
                             const count = groupedResults[item.source]?.length ?? 0;
@@ -141,7 +142,7 @@ export default function SearchScreen() {
                         }
 
                         const result = item.item;
-                        const color = SOURCE_COLORS[result.source] ?? Colors.primary;
+                        const color = SOURCE_COLORS[result.source] ?? (styles.iconPrimary.color as string);
 
                         return (
                             <Animated.View entering={FadeIn.duration(250).delay(Math.min(index * 30, 400))}>
@@ -185,7 +186,7 @@ export default function SearchScreen() {
                                             </View>
                                         </View>
                                     </View>
-                                    <Ionicons name="chevron-forward" size={16} color={Colors.textTertiary} />
+                                    <Ionicons name="chevron-forward" size={16} color={styles.iconTertiary.color} />
                                 </TouchableOpacity>
                             </Animated.View>
                         );
@@ -196,8 +197,8 @@ export default function SearchScreen() {
     );
 }
 
-const styles = StyleSheet.create({
-    container: { flex: 1, backgroundColor: Colors.background },
+const createStyles = (colors: AppColors) => StyleSheet.create({
+    container: { flex: 1, backgroundColor: colors.background },
 
     // Search bar
     searchBar: {
@@ -206,9 +207,9 @@ const styles = StyleSheet.create({
         paddingTop: 52,
         paddingHorizontal: Spacing.screenPadding,
         paddingBottom: Spacing.md,
-        backgroundColor: Colors.backgroundSecondary,
+        backgroundColor: colors.backgroundSecondary,
         borderBottomWidth: 1,
-        borderBottomColor: Colors.surfaceBorder,
+        borderBottomColor: colors.surfaceBorder,
         gap: Spacing.sm,
     },
     backBtn: { width: 40, height: 40, justifyContent: 'center', alignItems: 'center' },
@@ -216,7 +217,7 @@ const styles = StyleSheet.create({
         flex: 1,
         flexDirection: 'row',
         alignItems: 'center',
-        backgroundColor: Colors.backgroundTertiary,
+        backgroundColor: colors.backgroundTertiary,
         borderRadius: Spacing.radiusMd,
         paddingHorizontal: Spacing.md,
         paddingVertical: Spacing.sm,
@@ -226,7 +227,7 @@ const styles = StyleSheet.create({
         flex: 1,
         fontFamily: 'Inter_400Regular',
         fontSize: 16,
-        color: Colors.text,
+        color: colors.text,
         paddingVertical: 4,
     },
 
@@ -238,7 +239,7 @@ const styles = StyleSheet.create({
         gap: Spacing.sm,
         paddingVertical: Spacing.lg,
     },
-    loadingText: { fontFamily: 'Inter_400Regular', fontSize: 14, color: Colors.textSecondary },
+    loadingText: { fontFamily: 'Inter_400Regular', fontSize: 14, color: colors.textSecondary },
 
     // Empty
     emptyContainer: {
@@ -248,8 +249,8 @@ const styles = StyleSheet.create({
         gap: Spacing.md,
         paddingBottom: 80,
     },
-    emptyText: { fontFamily: 'Inter_500Medium', fontSize: 16, color: Colors.textSecondary },
-    emptySubtext: { fontFamily: 'Inter_400Regular', fontSize: 14, color: Colors.textTertiary },
+    emptyText: { fontFamily: 'Inter_500Medium', fontSize: 16, color: colors.textSecondary },
+    emptySubtext: { fontFamily: 'Inter_400Regular', fontSize: 14, color: colors.textTertiary },
 
     // Results
     listContent: { paddingBottom: 32 },
@@ -262,7 +263,7 @@ const styles = StyleSheet.create({
         paddingBottom: Spacing.sm,
     },
     sectionTitle: { fontFamily: 'Inter_600SemiBold', fontSize: 13, textTransform: 'uppercase', letterSpacing: 0.3 },
-    sectionCount: { fontFamily: 'Inter_400Regular', fontSize: 12, color: Colors.textTertiary },
+    sectionCount: { fontFamily: 'Inter_400Regular', fontSize: 12, color: colors.textTertiary },
 
     resultCard: {
         flexDirection: 'row',
@@ -270,20 +271,25 @@ const styles = StyleSheet.create({
         paddingHorizontal: Spacing.screenPadding,
         paddingVertical: Spacing.md,
         borderBottomWidth: 0.5,
-        borderBottomColor: Colors.surfaceBorder,
+        borderBottomColor: colors.surfaceBorder,
     },
     resultImage: {
         width: 44,
         height: 44,
         borderRadius: Spacing.radiusSm,
-        backgroundColor: Colors.backgroundTertiary,
+        backgroundColor: colors.backgroundTertiary,
     },
     resultImagePlaceholder: { justifyContent: 'center', alignItems: 'center' },
     resultInfo: { flex: 1, marginHorizontal: Spacing.md },
-    resultTitle: { fontFamily: 'Inter_600SemiBold', fontSize: 15, color: Colors.text },
-    resultSubtitle: { fontFamily: 'Inter_400Regular', fontSize: 12, color: Colors.textSecondary, marginTop: 2 },
+    resultTitle: { fontFamily: 'Inter_600SemiBold', fontSize: 15, color: colors.text },
+    resultSubtitle: { fontFamily: 'Inter_400Regular', fontSize: 12, color: colors.textSecondary, marginTop: 2 },
     resultMeta: { flexDirection: 'row', alignItems: 'center', gap: Spacing.sm, marginTop: 4 },
-    resultYear: { fontFamily: 'Inter_400Regular', fontSize: 12, color: Colors.textTertiary },
+    resultYear: { fontFamily: 'Inter_400Regular', fontSize: 12, color: colors.textTertiary },
     typeBadge: { paddingHorizontal: 6, paddingVertical: 1, borderRadius: 4 },
     typeBadgeText: { fontFamily: 'Inter_600SemiBold', fontSize: 10, textTransform: 'uppercase', letterSpacing: 0.3 },
+
+    // Color tokens for inline use
+    iconPrimary: { color: colors.primary },
+    iconTertiary: { color: colors.textTertiary },
+    iconText: { color: colors.text },
 });

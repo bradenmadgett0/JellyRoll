@@ -14,8 +14,9 @@ import {
     View,
 } from 'react-native';
 import Animated, { FadeIn } from 'react-native-reanimated';
-import { Colors } from '../../constants/Colors';
 import { Spacing } from '../../constants/Spacing';
+import { AppColors } from '../../hooks/useColors';
+import { useThemedStyles } from '../../hooks/useThemedStyles';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
 
@@ -58,6 +59,7 @@ function MediaCardBase({
     onPress,
     variant = 'poster',
 }: MediaCardProps) {
+    const styles = useThemedStyles(createStyles);
     const isBackdrop = variant === 'backdrop';
     const isGrid = variant === 'grid';
     const cardW = isBackdrop ? BACKDROP_W : isGrid ? (SCREEN_WIDTH - Spacing.screenPadding * 2 - Spacing.md) / 2 : POSTER_W;
@@ -83,7 +85,7 @@ function MediaCardBase({
                             <Ionicons
                                 name={isBackdrop ? 'image' : 'film'}
                                 size={32}
-                                color={Colors.textTertiary}
+                                color={styles.iconTertiary.color}
                             />
                         </View>
                     )}
@@ -105,7 +107,7 @@ function MediaCardBase({
                     {/* Rating */}
                     {rating !== undefined && rating > 0 && (
                         <View style={styles.ratingBadge}>
-                            <Ionicons name="star" size={10} color={Colors.warning} />
+                            <Ionicons name="star" size={10} color={styles.warningColor.color} />
                             <Text style={styles.ratingText}>{rating.toFixed(1)}</Text>
                         </View>
                     )}
@@ -129,14 +131,14 @@ function MediaCardBase({
 
 export const MediaCard = memo(MediaCardBase);
 
-const styles = StyleSheet.create({
+const createStyles = (colors: AppColors) => StyleSheet.create({
     container: {
         marginRight: Spacing.md,
     },
     imageContainer: {
         borderRadius: Spacing.radiusMd,
         overflow: 'hidden',
-        backgroundColor: Colors.backgroundTertiary,
+        backgroundColor: colors.backgroundTertiary,
         marginBottom: Spacing.sm,
     },
     image: {
@@ -148,7 +150,7 @@ const styles = StyleSheet.create({
         height: '100%',
         justifyContent: 'center',
         alignItems: 'center',
-        backgroundColor: Colors.backgroundTertiary,
+        backgroundColor: colors.backgroundTertiary,
     },
 
     // Progress
@@ -158,11 +160,11 @@ const styles = StyleSheet.create({
         left: 0,
         right: 0,
         height: 3,
-        backgroundColor: Colors.surfaceBorder,
+        backgroundColor: colors.surfaceBorder,
     },
     progressBar: {
         height: '100%',
-        backgroundColor: Colors.primary,
+        backgroundColor: colors.primary,
         borderRadius: 2,
     },
 
@@ -171,7 +173,7 @@ const styles = StyleSheet.create({
         position: 'absolute',
         top: Spacing.sm,
         left: Spacing.sm,
-        backgroundColor: Colors.primary,
+        backgroundColor: colors.primary,
         paddingHorizontal: Spacing.sm,
         paddingVertical: 2,
         borderRadius: Spacing.radiusSm,
@@ -179,7 +181,7 @@ const styles = StyleSheet.create({
     badgeText: {
         fontFamily: 'Inter_600SemiBold',
         fontSize: 9,
-        color: Colors.text,
+        color: colors.text,
         textTransform: 'uppercase',
         letterSpacing: 0.5,
     },
@@ -200,20 +202,24 @@ const styles = StyleSheet.create({
     ratingText: {
         fontFamily: 'Inter_600SemiBold',
         fontSize: 10,
-        color: Colors.text,
+        color: colors.text,
     },
 
     // Text
     title: {
         fontFamily: 'Inter_500Medium',
         fontSize: 13,
-        color: Colors.text,
+        color: colors.text,
         lineHeight: 17,
     },
     subtitle: {
         fontFamily: 'Inter_400Regular',
         fontSize: 11,
-        color: Colors.textSecondary,
+        color: colors.textSecondary,
         marginTop: 2,
     },
+
+    // Color tokens for inline use
+    iconTertiary: { color: colors.textTertiary },
+    warningColor: { color: colors.warning },
 });

@@ -12,8 +12,9 @@ import Animated, {
     withDelay,
     withTiming,
 } from 'react-native-reanimated';
-import { Colors } from '../../constants/Colors';
 import { Spacing } from '../../constants/Spacing';
+import { AppColors } from '../../hooks/useColors';
+import { useThemedStyles } from '../../hooks/useThemedStyles';
 
 interface ConnectionBannerProps {
     serverName: string;
@@ -22,6 +23,7 @@ interface ConnectionBannerProps {
 }
 
 export function ConnectionBanner({ serverName, isConnected, onRetry }: ConnectionBannerProps) {
+    const styles = useThemedStyles(createStyles);
     const height = useSharedValue(0);
     const opacity = useSharedValue(0);
 
@@ -43,13 +45,13 @@ export function ConnectionBanner({ serverName, isConnected, onRetry }: Connectio
     return (
         <Animated.View style={[styles.container, animatedStyle]}>
             <View style={styles.content}>
-                <Ionicons name="cloud-offline" size={16} color={Colors.warning} />
+                <Ionicons name="cloud-offline" size={16} color={styles.warningColor.color} />
                 <Text style={styles.text} numberOfLines={1}>
                     {serverName} is unreachable
                 </Text>
                 {onRetry && (
                     <TouchableOpacity onPress={onRetry} style={styles.retryBtn} activeOpacity={0.7}>
-                        <Ionicons name="refresh" size={14} color={Colors.text} />
+                        <Ionicons name="refresh" size={14} color={styles.retryText.color} />
                         <Text style={styles.retryText}>Retry</Text>
                     </TouchableOpacity>
                 )}
@@ -58,12 +60,12 @@ export function ConnectionBanner({ serverName, isConnected, onRetry }: Connectio
     );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (colors: AppColors) => StyleSheet.create({
     container: {
         overflow: 'hidden',
-        backgroundColor: Colors.warning + '12',
+        backgroundColor: colors.warning + '12',
         borderBottomWidth: 1,
-        borderBottomColor: Colors.warning + '30',
+        borderBottomColor: colors.warning + '30',
     },
     content: {
         flexDirection: 'row',
@@ -77,7 +79,7 @@ const styles = StyleSheet.create({
         flex: 1,
         fontFamily: 'Inter_500Medium',
         fontSize: 13,
-        color: Colors.warning,
+        color: colors.warning,
     },
     retryBtn: {
         flexDirection: 'row',
@@ -86,11 +88,14 @@ const styles = StyleSheet.create({
         paddingHorizontal: Spacing.md,
         paddingVertical: 4,
         borderRadius: Spacing.radiusSm,
-        backgroundColor: Colors.surfaceHover,
+        backgroundColor: colors.surfaceHover,
     },
     retryText: {
         fontFamily: 'Inter_500Medium',
         fontSize: 12,
-        color: Colors.text,
+        color: colors.text,
     },
+
+    // Color tokens for inline use
+    warningColor: { color: colors.warning },
 });

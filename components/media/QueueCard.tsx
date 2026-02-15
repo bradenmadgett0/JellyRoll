@@ -5,9 +5,10 @@
 import { Ionicons } from '@expo/vector-icons';
 import { memo } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
-import { Colors } from '../../constants/Colors';
 import { SOURCE_COLORS, SOURCE_ICONS } from '../../constants/Sources';
 import { Spacing } from '../../constants/Spacing';
+import { AppColors, useColors } from '../../hooks/useColors';
+import { useThemedStyles } from '../../hooks/useThemedStyles';
 
 interface QueueCardProps {
     title: string;
@@ -22,22 +23,20 @@ interface QueueCardProps {
     source?: 'sonarr' | 'radarr' | 'lidarr';
 }
 
-
-
-function getStatusColor(status: string): string {
+function getStatusColor(status: string, colors: AppColors): string {
     switch (status.toLowerCase()) {
         case 'downloading':
-            return Colors.badgeDownloading;
+            return colors.badgeDownloading;
         case 'completed':
         case 'imported':
-            return Colors.success;
+            return colors.success;
         case 'failed':
         case 'warning':
-            return Colors.error;
+            return colors.error;
         case 'paused':
-            return Colors.warning;
+            return colors.warning;
         default:
-            return Colors.textSecondary;
+            return colors.textSecondary;
     }
 }
 
@@ -51,8 +50,10 @@ function QueueCardBase({
     quality,
     source,
 }: QueueCardProps) {
-    const sourceColor = source ? SOURCE_COLORS[source] : Colors.primary;
-    const statusColor = getStatusColor(status);
+    const styles = useThemedStyles(createStyles);
+    const colors = useColors();
+    const sourceColor = source ? SOURCE_COLORS[source] : (styles.primaryColor.color as string);
+    const statusColor = getStatusColor(status, colors);
 
     return (
         <View style={[styles.container, { borderLeftColor: sourceColor }]}>
@@ -91,7 +92,7 @@ function QueueCardBase({
                 {quality && <Text style={styles.infoText}>{quality}</Text>}
                 {timeLeft && (
                     <Text style={styles.infoText}>
-                        <Ionicons name="time-outline" size={10} color={Colors.textTertiary} />{' '}
+                        <Ionicons name="time-outline" size={10} color={styles.iconTertiary.color} />{' '}
                         {timeLeft}
                     </Text>
                 )}
@@ -102,13 +103,13 @@ function QueueCardBase({
 
 export const QueueCard = memo(QueueCardBase);
 
-const styles = StyleSheet.create({
+const createStyles = (colors: AppColors) => StyleSheet.create({
     container: {
-        backgroundColor: Colors.backgroundTertiary,
+        backgroundColor: colors.backgroundTertiary,
         borderRadius: Spacing.radiusMd,
         padding: Spacing.lg,
         borderWidth: 1,
-        borderColor: Colors.surfaceBorder,
+        borderColor: colors.surfaceBorder,
         borderLeftWidth: 3,
         marginBottom: Spacing.sm,
     },
@@ -127,7 +128,7 @@ const styles = StyleSheet.create({
     title: {
         fontFamily: 'Inter_600SemiBold',
         fontSize: 14,
-        color: Colors.text,
+        color: colors.text,
         flex: 1,
     },
     statusBadge: {
@@ -144,12 +145,12 @@ const styles = StyleSheet.create({
     subtitle: {
         fontFamily: 'Inter_400Regular',
         fontSize: 12,
-        color: Colors.textSecondary,
+        color: colors.textSecondary,
         marginBottom: Spacing.sm,
     },
     progressContainer: {
         height: 4,
-        backgroundColor: Colors.surfaceBorder,
+        backgroundColor: colors.surfaceBorder,
         borderRadius: 2,
         marginBottom: Spacing.sm,
         overflow: 'hidden',
@@ -165,6 +166,10 @@ const styles = StyleSheet.create({
     infoText: {
         fontFamily: 'Inter_400Regular',
         fontSize: 11,
-        color: Colors.textTertiary,
+        color: colors.textTertiary,
     },
+
+    // Color tokens for inline use
+    primaryColor: { color: colors.primary },
+    iconTertiary: { color: colors.textTertiary },
 });

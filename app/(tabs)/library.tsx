@@ -17,8 +17,9 @@ import {
 } from 'react-native';
 import Animated, { FadeIn, FadeInDown } from 'react-native-reanimated';
 import { MediaCard } from '../../components/media/MediaCard';
-import { Colors } from '../../constants/Colors';
 import { Spacing } from '../../constants/Spacing';
+import { AppColors } from '../../hooks/useColors';
+import { useThemedStyles } from '../../hooks/useThemedStyles';
 import { useJellyfinImageUrl, useJellyfinItems, useJellyfinLibraries } from '../../services/hooks/useJellyfin';
 import { useServerStore } from '../../services/stores/serverStore';
 import { JellyfinItem } from '../../types/jellyfin';
@@ -40,6 +41,7 @@ const LIBRARY_ICONS: Record<string, keyof typeof Ionicons.glyphMap> = {
 
 export default function LibraryScreen() {
     const router = useRouter();
+    const styles = useThemedStyles(createStyles);
     const servers = useServerStore((s) => s.servers);
     const jellyfinServers = servers.filter((s) => s.type === 'jellyfin');
     const hasJellyfin = jellyfinServers.length > 0;
@@ -94,14 +96,14 @@ export default function LibraryScreen() {
                 </TouchableOpacity>
             </Animated.View>
         );
-    }, [getImageUrl, router]);
+    }, [getImageUrl, router, styles]);
 
     // Empty state
     if (!hasJellyfin) {
         return (
             <View style={styles.emptyContainer}>
                 <Animated.View entering={FadeInDown.duration(800)} style={styles.emptyContent}>
-                    <Ionicons name="library" size={64} color={Colors.textTertiary} />
+                    <Ionicons name="library" size={64} color={styles.iconTertiary.color} />
                     <Text style={styles.emptyTitle}>No Library Connected</Text>
                     <Text style={styles.emptySubtitle}>
                         Add a Jellyfin server to browse your media library.
@@ -111,7 +113,7 @@ export default function LibraryScreen() {
                         onPress={() => router.push('/server/add')}
                         activeOpacity={0.8}
                     >
-                        <Ionicons name="add-circle" size={20} color={Colors.textInverse} />
+                        <Ionicons name="add-circle" size={20} color={styles.addButtonText.color} />
                         <Text style={styles.addButtonText}>Add Jellyfin Server</Text>
                     </TouchableOpacity>
                 </Animated.View>
@@ -124,7 +126,7 @@ export default function LibraryScreen() {
             {/* Library picker */}
             {libLoading ? (
                 <View style={styles.libPickerLoading}>
-                    <ActivityIndicator size="small" color={Colors.primary} />
+                    <ActivityIndicator size="small" color={styles.iconPrimary.color as string} />
                 </View>
             ) : (
                 <Animated.View entering={FadeInDown.duration(400)}>
@@ -146,7 +148,7 @@ export default function LibraryScreen() {
                                     <Ionicons
                                         name={iconName}
                                         size={16}
-                                        color={isSelected ? Colors.textInverse : Colors.textSecondary}
+                                        color={isSelected ? (styles.libChipTextSelected.color as string) : (styles.libChipText.color as string)}
                                     />
                                     <Text style={[styles.libChipText, isSelected && styles.libChipTextSelected]}>
                                         {item.Name}
@@ -169,14 +171,14 @@ export default function LibraryScreen() {
                             <Ionicons
                                 name="grid"
                                 size={20}
-                                color={viewMode === 'grid' ? Colors.primary : Colors.textTertiary}
+                                color={viewMode === 'grid' ? (styles.iconPrimary.color as string) : (styles.iconTertiary.color as string)}
                             />
                         </TouchableOpacity>
                         <TouchableOpacity onPress={() => setViewMode('list')}>
                             <Ionicons
                                 name="list"
                                 size={20}
-                                color={viewMode === 'list' ? Colors.primary : Colors.textTertiary}
+                                color={viewMode === 'list' ? (styles.iconPrimary.color as string) : (styles.iconTertiary.color as string)}
                             />
                         </TouchableOpacity>
                     </View>
@@ -186,12 +188,12 @@ export default function LibraryScreen() {
             {/* Items grid */}
             {itemsLoading ? (
                 <View style={styles.centerLoading}>
-                    <ActivityIndicator size="large" color={Colors.primary} />
+                    <ActivityIndicator size="large" color={styles.iconPrimary.color as string} />
                     <Text style={styles.loadingText}>Loading library...</Text>
                 </View>
             ) : !selectedLibraryId ? (
                 <View style={styles.centerLoading}>
-                    <Ionicons name="albums" size={48} color={Colors.textTertiary} />
+                    <Ionicons name="albums" size={48} color={styles.iconTertiary.color} />
                     <Text style={styles.pickLibText}>Select a library above to browse</Text>
                 </View>
             ) : (
@@ -205,16 +207,16 @@ export default function LibraryScreen() {
                     onEndReached={() => hasNextPage && fetchNextPage()}
                     onEndReachedThreshold={0.5}
                     refreshControl={
-                        <RefreshControl refreshing={false} onRefresh={onRefresh} tintColor={Colors.primary} />
+                        <RefreshControl refreshing={false} onRefresh={onRefresh} tintColor={styles.iconPrimary.color as string} />
                     }
                     ListFooterComponent={
                         isFetchingNextPage ? (
-                            <ActivityIndicator size="small" color={Colors.primary} style={{ paddingVertical: 20 }} />
+                            <ActivityIndicator size="small" color={styles.iconPrimary.color as string} style={{ paddingVertical: 20 }} />
                         ) : null
                     }
                     ListEmptyComponent={
                         <View style={styles.centerLoading}>
-                            <Ionicons name="folder-open" size={48} color={Colors.textTertiary} />
+                            <Ionicons name="folder-open" size={48} color={styles.iconTertiary.color} />
                             <Text style={styles.pickLibText}>This library is empty</Text>
                         </View>
                     }
@@ -224,20 +226,20 @@ export default function LibraryScreen() {
     );
 }
 
-const styles = StyleSheet.create({
-    container: { flex: 1, backgroundColor: Colors.background },
+const createStyles = (colors: AppColors) => StyleSheet.create({
+    container: { flex: 1, backgroundColor: colors.background },
 
     // Library picker
     libPicker: { paddingHorizontal: Spacing.screenPadding, paddingVertical: Spacing.md, gap: Spacing.sm },
     libPickerLoading: { height: 56, justifyContent: 'center', alignItems: 'center' },
-    libChip: { flexDirection: 'row', alignItems: 'center', gap: 6, paddingHorizontal: Spacing.lg, paddingVertical: Spacing.sm, borderRadius: Spacing.radiusFull, backgroundColor: Colors.backgroundTertiary, borderWidth: 1, borderColor: Colors.surfaceBorder },
-    libChipSelected: { backgroundColor: Colors.primary, borderColor: Colors.primary },
-    libChipText: { fontFamily: 'Inter_500Medium', fontSize: 13, color: Colors.textSecondary },
-    libChipTextSelected: { color: Colors.textInverse },
+    libChip: { flexDirection: 'row', alignItems: 'center', gap: 6, paddingHorizontal: Spacing.lg, paddingVertical: Spacing.sm, borderRadius: Spacing.radiusFull, backgroundColor: colors.backgroundTertiary, borderWidth: 1, borderColor: colors.surfaceBorder },
+    libChipSelected: { backgroundColor: colors.primary, borderColor: colors.primary },
+    libChipText: { fontFamily: 'Inter_500Medium', fontSize: 13, color: colors.textSecondary },
+    libChipTextSelected: { color: colors.textInverse },
 
     // Toolbar
     toolbar: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingHorizontal: Spacing.screenPadding, paddingBottom: Spacing.sm },
-    resultCount: { fontFamily: 'Inter_400Regular', fontSize: 13, color: Colors.textTertiary },
+    resultCount: { fontFamily: 'Inter_400Regular', fontSize: 13, color: colors.textTertiary },
     viewToggle: { flexDirection: 'row', gap: Spacing.lg },
 
     // Grid
@@ -247,14 +249,18 @@ const styles = StyleSheet.create({
 
     // Loading/empty
     centerLoading: { flex: 1, justifyContent: 'center', alignItems: 'center', paddingTop: 80, gap: Spacing.md },
-    loadingText: { fontFamily: 'Inter_400Regular', fontSize: 14, color: Colors.textSecondary },
-    pickLibText: { fontFamily: 'Inter_400Regular', fontSize: 15, color: Colors.textTertiary, textAlign: 'center' },
+    loadingText: { fontFamily: 'Inter_400Regular', fontSize: 14, color: colors.textSecondary },
+    pickLibText: { fontFamily: 'Inter_400Regular', fontSize: 15, color: colors.textTertiary, textAlign: 'center' },
 
     // Empty state
-    emptyContainer: { flex: 1, backgroundColor: Colors.background, justifyContent: 'center', alignItems: 'center', paddingHorizontal: 32 },
+    emptyContainer: { flex: 1, backgroundColor: colors.background, justifyContent: 'center', alignItems: 'center', paddingHorizontal: 32 },
     emptyContent: { alignItems: 'center', gap: Spacing.md },
-    emptyTitle: { fontFamily: 'Inter_600SemiBold', fontSize: 22, color: Colors.text },
-    emptySubtitle: { fontFamily: 'Inter_400Regular', fontSize: 15, color: Colors.textSecondary, textAlign: 'center', lineHeight: 22 },
-    addButton: { flexDirection: 'row', alignItems: 'center', backgroundColor: Colors.jellyfin, paddingHorizontal: Spacing.xxl, paddingVertical: Spacing.md, borderRadius: Spacing.radiusFull, gap: Spacing.sm, marginTop: Spacing.md },
-    addButtonText: { fontFamily: 'Inter_600SemiBold', fontSize: 15, color: Colors.textInverse },
+    emptyTitle: { fontFamily: 'Inter_600SemiBold', fontSize: 22, color: colors.text },
+    emptySubtitle: { fontFamily: 'Inter_400Regular', fontSize: 15, color: colors.textSecondary, textAlign: 'center', lineHeight: 22 },
+    addButton: { flexDirection: 'row', alignItems: 'center', backgroundColor: colors.jellyfin, paddingHorizontal: Spacing.xxl, paddingVertical: Spacing.md, borderRadius: Spacing.radiusFull, gap: Spacing.sm, marginTop: Spacing.md },
+    addButtonText: { fontFamily: 'Inter_600SemiBold', fontSize: 15, color: colors.textInverse },
+
+    // Color tokens for inline use
+    iconPrimary: { color: colors.primary },
+    iconTertiary: { color: colors.textTertiary },
 });

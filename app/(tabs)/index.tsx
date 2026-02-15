@@ -20,30 +20,17 @@ import { MediaCardProps } from '../../components/media/MediaCard';
 import { MediaRow } from '../../components/media/MediaRow';
 import { QueueCard } from '../../components/media/QueueCard';
 import { SkeletonRow } from '../../components/ui/Skeleton';
-import { Colors } from '../../constants/Colors';
+import { SOURCE_COLORS, SOURCE_ICONS } from '../../constants/Sources';
 import { Spacing } from '../../constants/Spacing';
+import { AppColors } from '../../hooks/useColors';
+import { useThemedStyles } from '../../hooks/useThemedStyles';
 import { useJellyfinImageUrl, useLatestItems, useResumeItems } from '../../services/hooks/useJellyfin';
 import { useLidarrQueue } from '../../services/hooks/useLidarr';
 import { useRadarrCalendar, useRadarrQueue } from '../../services/hooks/useRadarr';
 import { useSonarrCalendar, useSonarrQueue } from '../../services/hooks/useSonarr';
 import { useServerStore } from '../../services/stores/serverStore';
-import { ServerType } from '../../types/server';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
-
-const SERVER_COLORS: Record<ServerType, string> = {
-  jellyfin: Colors.jellyfin,
-  sonarr: Colors.sonarr,
-  radarr: Colors.radarr,
-  lidarr: Colors.lidarr,
-};
-
-const SERVER_ICONS: Record<ServerType, keyof typeof Ionicons.glyphMap> = {
-  jellyfin: 'play-circle',
-  sonarr: 'tv',
-  radarr: 'film',
-  lidarr: 'musical-notes',
-};
 
 // Get date range for calendar (today + 7 days)
 function getCalendarRange() {
@@ -55,6 +42,7 @@ function getCalendarRange() {
 
 export default function HomeScreen() {
   const router = useRouter();
+  const styles = useThemedStyles(createStyles);
   const queryClient = useQueryClient();
   const { servers, isLoaded } = useServerStore();
   const [refreshing, setRefreshing] = useState(false);
@@ -191,7 +179,7 @@ export default function HomeScreen() {
         title: ep.series?.title ?? ep.title,
         subtitle: `S${ep.seasonNumber}E${ep.episodeNumber} · ${ep.title}`,
         badge: 'TV',
-        badgeColor: Colors.sonarr,
+        badgeColor: styles.sonarrColor.color as string,
         onPress: () => { },
       });
     });
@@ -204,14 +192,14 @@ export default function HomeScreen() {
           ? `Digital: ${new Date(movie.digitalRelease).toLocaleDateString()}`
           : undefined,
         badge: 'Movie',
-        badgeColor: Colors.radarr,
+        badgeColor: styles.radarrColor.color as string,
         year: movie.year,
         onPress: () => { },
       });
     });
 
     return items;
-  }, [sonarrCalendar, radarrCalendar]);
+  }, [sonarrCalendar, radarrCalendar, styles]);
 
   if (!isLoaded) {
     return (
@@ -233,7 +221,7 @@ export default function HomeScreen() {
       <View style={styles.emptyContainer}>
         <Animated.View entering={FadeInDown.duration(800).delay(200)} style={styles.emptyContent}>
           <View style={styles.emptyIconContainer}>
-            <Ionicons name="planet" size={80} color={Colors.primary} />
+            <Ionicons name="planet" size={80} color={styles.iconPrimary.color} />
           </View>
           <Text style={styles.emptyTitle}>Welcome to JellyRoll</Text>
           <Text style={styles.emptySubtitle}>
@@ -245,7 +233,7 @@ export default function HomeScreen() {
             onPress={() => router.push('/server/add')}
             activeOpacity={0.8}
           >
-            <Ionicons name="add-circle" size={22} color={Colors.textInverse} />
+            <Ionicons name="add-circle" size={22} color={styles.addServerButtonText.color} />
             <Text style={styles.addServerButtonText}>Add Your First Server</Text>
           </TouchableOpacity>
         </Animated.View>
@@ -258,7 +246,7 @@ export default function HomeScreen() {
       style={styles.container}
       contentContainerStyle={styles.contentContainer}
       refreshControl={
-        <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={Colors.primary} />
+        <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={styles.iconPrimary.color as string} />
       }
     >
       {/* Header */}
@@ -274,13 +262,13 @@ export default function HomeScreen() {
             style={styles.headerBtn}
             onPress={() => router.push('/search' as any)}
           >
-            <Ionicons name="search" size={22} color={Colors.text} />
+            <Ionicons name="search" size={22} color={styles.greeting.color} />
           </TouchableOpacity>
           <TouchableOpacity
             style={styles.headerBtn}
             onPress={() => router.push('/server/add')}
           >
-            <Ionicons name="add" size={24} color={Colors.primary} />
+            <Ionicons name="add" size={24} color={styles.iconPrimary.color} />
           </TouchableOpacity>
         </View>
       </Animated.View>
@@ -295,12 +283,12 @@ export default function HomeScreen() {
           {servers.map((server, index) => (
             <Animated.View key={server.id} entering={FadeInRight.duration(400).delay(index * 80)}>
               <TouchableOpacity
-                style={[styles.serverCard, { borderLeftColor: SERVER_COLORS[server.type] }]}
+                style={[styles.serverCard, { borderLeftColor: SOURCE_COLORS[server.type] }]}
                 onPress={() => router.push(`/server/${server.id}`)}
                 activeOpacity={0.7}
               >
-                <View style={[styles.serverIconBg, { backgroundColor: SERVER_COLORS[server.type] + '20' }]}>
-                  <Ionicons name={SERVER_ICONS[server.type]} size={22} color={SERVER_COLORS[server.type]} />
+                <View style={[styles.serverIconBg, { backgroundColor: SOURCE_COLORS[server.type] + '20' }]}>
+                  <Ionicons name={SOURCE_ICONS[server.type]} size={22} color={SOURCE_COLORS[server.type]} />
                 </View>
                 <Text style={styles.serverCardName} numberOfLines={1}>{server.name}</Text>
                 <Text style={styles.serverCardType}>{server.type}</Text>
@@ -388,11 +376,11 @@ export default function HomeScreen() {
           <Text style={styles.sectionTitle}>Quick Actions</Text>
           <View style={styles.quickActionsGrid}>
             <TouchableOpacity style={styles.quickAction} onPress={() => router.push('/(tabs)/manage')}>
-              <Ionicons name="download" size={28} color={Colors.sonarr} />
+              <Ionicons name="download" size={28} color={styles.sonarrColor.color} />
               <Text style={styles.quickActionText}>Download Queue</Text>
             </TouchableOpacity>
             <TouchableOpacity style={styles.quickAction} onPress={() => router.push('/server/add')}>
-              <Ionicons name="add-circle" size={28} color={Colors.primary} />
+              <Ionicons name="add-circle" size={28} color={styles.iconPrimary.color} />
               <Text style={styles.quickActionText}>Add Server</Text>
             </TouchableOpacity>
           </View>
@@ -402,43 +390,48 @@ export default function HomeScreen() {
   );
 }
 
-const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: Colors.background },
+const createStyles = (colors: AppColors) => StyleSheet.create({
+  container: { flex: 1, backgroundColor: colors.background },
   contentContainer: { paddingBottom: 32 },
-  loadingContainer: { flex: 1, backgroundColor: Colors.background, justifyContent: 'center', alignItems: 'center' },
-  loadingText: { color: Colors.textSecondary, fontSize: 16, fontFamily: 'Inter_500Medium' },
+  loadingContainer: { flex: 1, backgroundColor: colors.background, justifyContent: 'center', alignItems: 'center' },
+  loadingText: { color: colors.textSecondary, fontSize: 16, fontFamily: 'Inter_500Medium' },
 
   // Empty state
-  emptyContainer: { flex: 1, backgroundColor: Colors.background, justifyContent: 'center', alignItems: 'center', paddingHorizontal: Spacing.screenPadding },
+  emptyContainer: { flex: 1, backgroundColor: colors.background, justifyContent: 'center', alignItems: 'center', paddingHorizontal: Spacing.screenPadding },
   emptyContent: { alignItems: 'center', maxWidth: 320 },
-  emptyIconContainer: { width: 140, height: 140, borderRadius: 70, backgroundColor: Colors.glassHighlight, justifyContent: 'center', alignItems: 'center', marginBottom: Spacing.xxl },
-  emptyTitle: { fontFamily: 'Inter_700Bold', fontSize: 28, color: Colors.text, marginBottom: Spacing.md, textAlign: 'center' },
-  emptySubtitle: { fontFamily: 'Inter_400Regular', fontSize: 16, color: Colors.textSecondary, textAlign: 'center', lineHeight: 24, marginBottom: Spacing.xxxl },
-  addServerButton: { flexDirection: 'row', alignItems: 'center', backgroundColor: Colors.primary, paddingHorizontal: Spacing.xxl, paddingVertical: Spacing.lg, borderRadius: Spacing.radiusFull, gap: Spacing.sm },
-  addServerButtonText: { fontFamily: 'Inter_600SemiBold', fontSize: 16, color: Colors.textInverse },
+  emptyIconContainer: { width: 140, height: 140, borderRadius: 70, backgroundColor: colors.glassHighlight, justifyContent: 'center', alignItems: 'center', marginBottom: Spacing.xxl },
+  emptyTitle: { fontFamily: 'Inter_700Bold', fontSize: 28, color: colors.text, marginBottom: Spacing.md, textAlign: 'center' },
+  emptySubtitle: { fontFamily: 'Inter_400Regular', fontSize: 16, color: colors.textSecondary, textAlign: 'center', lineHeight: 24, marginBottom: Spacing.xxxl },
+  addServerButton: { flexDirection: 'row', alignItems: 'center', backgroundColor: colors.primary, paddingHorizontal: Spacing.xxl, paddingVertical: Spacing.lg, borderRadius: Spacing.radiusFull, gap: Spacing.sm },
+  addServerButtonText: { fontFamily: 'Inter_600SemiBold', fontSize: 16, color: colors.textInverse },
 
   // Header
   header: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingHorizontal: Spacing.screenPadding, paddingTop: Spacing.xl, paddingBottom: Spacing.lg },
-  greeting: { fontFamily: 'Inter_700Bold', fontSize: 28, color: Colors.text },
-  subtitle: { fontFamily: 'Inter_400Regular', fontSize: 14, color: Colors.textSecondary, marginTop: 2 },
+  greeting: { fontFamily: 'Inter_700Bold', fontSize: 28, color: colors.text },
+  subtitle: { fontFamily: 'Inter_400Regular', fontSize: 14, color: colors.textSecondary, marginTop: 2 },
   headerActions: { flexDirection: 'row', gap: Spacing.sm },
-  headerBtn: { width: 44, height: 44, borderRadius: 22, backgroundColor: Colors.backgroundTertiary, justifyContent: 'center', alignItems: 'center', borderWidth: 1, borderColor: Colors.surfaceBorder },
+  headerBtn: { width: 44, height: 44, borderRadius: 22, backgroundColor: colors.backgroundTertiary, justifyContent: 'center', alignItems: 'center', borderWidth: 1, borderColor: colors.surfaceBorder },
 
   // Server cards
   serverCardsContainer: { paddingHorizontal: Spacing.screenPadding, gap: Spacing.md, marginBottom: Spacing.lg },
-  serverCard: { width: 130, backgroundColor: Colors.backgroundTertiary, borderRadius: Spacing.radiusMd, padding: Spacing.md, borderLeftWidth: 3, borderWidth: 1, borderColor: Colors.surfaceBorder },
+  serverCard: { width: 130, backgroundColor: colors.backgroundTertiary, borderRadius: Spacing.radiusMd, padding: Spacing.md, borderLeftWidth: 3, borderWidth: 1, borderColor: colors.surfaceBorder },
   serverIconBg: { width: 36, height: 36, borderRadius: Spacing.radiusSm, justifyContent: 'center', alignItems: 'center', marginBottom: Spacing.sm },
-  serverCardName: { fontFamily: 'Inter_600SemiBold', fontSize: 13, color: Colors.text, marginBottom: 2 },
-  serverCardType: { fontFamily: 'Inter_400Regular', fontSize: 11, color: Colors.textTertiary, textTransform: 'capitalize' },
+  serverCardName: { fontFamily: 'Inter_600SemiBold', fontSize: 13, color: colors.text, marginBottom: 2 },
+  serverCardType: { fontFamily: 'Inter_400Regular', fontSize: 11, color: colors.textTertiary, textTransform: 'capitalize' },
 
   // Sections
-  sectionTitle: { fontFamily: 'Inter_600SemiBold', fontSize: 18, color: Colors.text, paddingHorizontal: Spacing.screenPadding, marginTop: Spacing.xl, marginBottom: Spacing.md },
+  sectionTitle: { fontFamily: 'Inter_600SemiBold', fontSize: 18, color: colors.text, paddingHorizontal: Spacing.screenPadding, marginTop: Spacing.xl, marginBottom: Spacing.md },
   queueContainer: { paddingHorizontal: Spacing.screenPadding },
   seeMoreQueue: { alignItems: 'center', paddingVertical: Spacing.md },
-  seeMoreText: { fontFamily: 'Inter_500Medium', fontSize: 13, color: Colors.primary },
+  seeMoreText: { fontFamily: 'Inter_500Medium', fontSize: 13, color: colors.primary },
 
   // Quick actions
   quickActionsGrid: { flexDirection: 'row', flexWrap: 'wrap', paddingHorizontal: Spacing.screenPadding, gap: Spacing.md },
-  quickAction: { width: (SCREEN_WIDTH - Spacing.screenPadding * 2 - Spacing.md) / 2, backgroundColor: Colors.backgroundTertiary, borderRadius: Spacing.radiusMd, padding: Spacing.lg, borderWidth: 1, borderColor: Colors.surfaceBorder, gap: Spacing.sm },
-  quickActionText: { fontFamily: 'Inter_500Medium', fontSize: 13, color: Colors.text },
+  quickAction: { width: (SCREEN_WIDTH - Spacing.screenPadding * 2 - Spacing.md) / 2, backgroundColor: colors.backgroundTertiary, borderRadius: Spacing.radiusMd, padding: Spacing.lg, borderWidth: 1, borderColor: colors.surfaceBorder, gap: Spacing.sm },
+  quickActionText: { fontFamily: 'Inter_500Medium', fontSize: 13, color: colors.text },
+
+  // Color tokens for inline use
+  iconPrimary: { color: colors.primary },
+  sonarrColor: { color: colors.sonarr },
+  radarrColor: { color: colors.radarr },
 });

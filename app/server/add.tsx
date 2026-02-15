@@ -17,8 +17,10 @@ import {
     View
 } from 'react-native';
 import Animated, { FadeInDown, FadeInRight } from 'react-native-reanimated';
-import { Colors } from '../../constants/Colors';
+import { SOURCE_COLORS } from '../../constants/Sources';
 import { Spacing } from '../../constants/Spacing';
+import { AppColors } from '../../hooks/useColors';
+import { useThemedStyles } from '../../hooks/useThemedStyles';
 import { JellyfinClient } from '../../services/api/jellyfin';
 import { LidarrClient } from '../../services/api/lidarr';
 import { RadarrClient } from '../../services/api/radarr';
@@ -28,15 +30,16 @@ import { SERVER_TYPE_DESCRIPTIONS, SERVER_TYPE_LABELS, ServerType } from '../../
 
 type Step = 'type' | 'connection' | 'credentials' | 'testing' | 'success';
 
-const SERVER_TYPES: { type: ServerType; icon: keyof typeof Ionicons.glyphMap; color: string }[] = [
-    { type: 'jellyfin', icon: 'play-circle', color: Colors.jellyfin },
-    { type: 'sonarr', icon: 'tv', color: Colors.sonarr },
-    { type: 'radarr', icon: 'film', color: Colors.radarr },
-    { type: 'lidarr', icon: 'musical-notes', color: Colors.lidarr },
+const SERVER_TYPES: { type: ServerType; icon: keyof typeof Ionicons.glyphMap }[] = [
+    { type: 'jellyfin', icon: 'play-circle' },
+    { type: 'sonarr', icon: 'tv' },
+    { type: 'radarr', icon: 'film' },
+    { type: 'lidarr', icon: 'musical-notes' },
 ];
 
 export default function AddServerScreen() {
     const router = useRouter();
+    const styles = useThemedStyles(createStyles);
     const addServer = useServerStore((s) => s.addServer);
 
     const [step, setStep] = useState<Step>('type');
@@ -56,9 +59,7 @@ export default function AddServerScreen() {
 
     const normalizeUrl = (input: string): string => {
         let normalized = input.trim();
-        // Remove trailing slash
         if (normalized.endsWith('/')) normalized = normalized.slice(0, -1);
-        // Add protocol if missing
         if (!normalized.startsWith('http://') && !normalized.startsWith('https://')) {
             normalized = (useHttp ? 'http://' : 'https://') + normalized;
         }
@@ -114,19 +115,16 @@ export default function AddServerScreen() {
                     sortOrder: 0,
                 });
 
-                // First test basic connectivity
                 const connResult = await client.testConnection();
                 if (!connResult.success) {
                     throw new Error(connResult.error || 'Could not reach server');
                 }
 
-                // Then authenticate
                 const authResult = await client.authenticateByName(username, password);
 
                 setServerName(connResult.serverName || 'Jellyfin Server');
                 setServerVersion(connResult.serverVersion || '');
 
-                // Save server
                 await addServer({
                     name: connResult.serverName || 'Jellyfin Server',
                     type: 'jellyfin',
@@ -141,7 +139,6 @@ export default function AddServerScreen() {
 
                 setStep('success');
             } else {
-                // *arr servers
                 const tempConfig = {
                     id: 'temp',
                     name: '',
@@ -176,7 +173,6 @@ export default function AddServerScreen() {
                 setServerName(result.serverName || SERVER_TYPE_LABELS[serverType!]);
                 setServerVersion(result.serverVersion || '');
 
-                // Save server
                 await addServer({
                     name: result.serverName || SERVER_TYPE_LABELS[serverType!],
                     type: serverType!,
@@ -216,24 +212,27 @@ export default function AddServerScreen() {
                         </Text>
 
                         <View style={styles.typeGrid}>
-                            {SERVER_TYPES.map((st, index) => (
-                                <Animated.View
-                                    key={st.type}
-                                    entering={FadeInDown.duration(400).delay(100 + index * 80)}
-                                >
-                                    <TouchableOpacity
-                                        style={styles.typeCard}
-                                        onPress={() => handleSelectType(st.type)}
-                                        activeOpacity={0.7}
+                            {SERVER_TYPES.map((st, index) => {
+                                const color = SOURCE_COLORS[st.type];
+                                return (
+                                    <Animated.View
+                                        key={st.type}
+                                        entering={FadeInDown.duration(400).delay(100 + index * 80)}
                                     >
-                                        <View style={[styles.typeIconBg, { backgroundColor: st.color + '20' }]}>
-                                            <Ionicons name={st.icon} size={32} color={st.color} />
-                                        </View>
-                                        <Text style={styles.typeLabel}>{SERVER_TYPE_LABELS[st.type]}</Text>
-                                        <Text style={styles.typeDescription}>{SERVER_TYPE_DESCRIPTIONS[st.type]}</Text>
-                                    </TouchableOpacity>
-                                </Animated.View>
-                            ))}
+                                        <TouchableOpacity
+                                            style={styles.typeCard}
+                                            onPress={() => handleSelectType(st.type)}
+                                            activeOpacity={0.7}
+                                        >
+                                            <View style={[styles.typeIconBg, { backgroundColor: color + '20' }]}>
+                                                <Ionicons name={st.icon} size={32} color={color} />
+                                            </View>
+                                            <Text style={styles.typeLabel}>{SERVER_TYPE_LABELS[st.type]}</Text>
+                                            <Text style={styles.typeDescription}>{SERVER_TYPE_DESCRIPTIONS[st.type]}</Text>
+                                        </TouchableOpacity>
+                                    </Animated.View>
+                                );
+                            })}
                         </View>
                     </Animated.View>
                 )}
@@ -242,7 +241,7 @@ export default function AddServerScreen() {
                 {step === 'connection' && (
                     <Animated.View entering={FadeInRight.duration(400)}>
                         <TouchableOpacity style={styles.backButton} onPress={() => setStep('type')}>
-                            <Ionicons name="arrow-back" size={20} color={Colors.primary} />
+                            <Ionicons name="arrow-back" size={20} color={styles.backButtonText.color} />
                             <Text style={styles.backButtonText}>Back</Text>
                         </TouchableOpacity>
 
@@ -256,7 +255,7 @@ export default function AddServerScreen() {
                             <TextInput
                                 style={styles.textInput}
                                 placeholder="https://your-server.com:8096"
-                                placeholderTextColor={Colors.textTertiary}
+                                placeholderTextColor={styles.inputHint.color as string}
                                 value={url}
                                 onChangeText={setUrl}
                                 autoCapitalize="none"
@@ -274,7 +273,7 @@ export default function AddServerScreen() {
                             <Ionicons
                                 name={useHttp ? 'checkbox' : 'square-outline'}
                                 size={22}
-                                color={useHttp ? Colors.warning : Colors.textTertiary}
+                                color={useHttp ? (styles.httpWarning.color as string) : (styles.inputHint.color as string)}
                             />
                             <View>
                                 <Text style={styles.httpToggleText}>Allow HTTP (local network)</Text>
@@ -292,7 +291,7 @@ export default function AddServerScreen() {
                                 <TextInput
                                     style={styles.textInput}
                                     placeholder="Enter your API key"
-                                    placeholderTextColor={Colors.textTertiary}
+                                    placeholderTextColor={styles.inputHint.color as string}
                                     value={apiKey}
                                     onChangeText={setApiKey}
                                     autoCapitalize="none"
@@ -307,7 +306,7 @@ export default function AddServerScreen() {
 
                         {testError && (
                             <View style={styles.errorBanner}>
-                                <Ionicons name="alert-circle" size={18} color={Colors.error} />
+                                <Ionicons name="alert-circle" size={18} color={styles.errorText.color} />
                                 <Text style={styles.errorText}>{testError}</Text>
                             </View>
                         )}
@@ -320,7 +319,7 @@ export default function AddServerScreen() {
                             <Text style={styles.primaryButtonText}>
                                 {isJellyfin ? 'Next' : 'Test Connection'}
                             </Text>
-                            <Ionicons name="arrow-forward" size={18} color={Colors.textInverse} />
+                            <Ionicons name="arrow-forward" size={18} color={styles.primaryButtonText.color} />
                         </TouchableOpacity>
                     </Animated.View>
                 )}
@@ -329,7 +328,7 @@ export default function AddServerScreen() {
                 {step === 'credentials' && isJellyfin && (
                     <Animated.View entering={FadeInRight.duration(400)}>
                         <TouchableOpacity style={styles.backButton} onPress={() => setStep('connection')}>
-                            <Ionicons name="arrow-back" size={20} color={Colors.primary} />
+                            <Ionicons name="arrow-back" size={20} color={styles.backButtonText.color} />
                             <Text style={styles.backButtonText}>Back</Text>
                         </TouchableOpacity>
 
@@ -343,7 +342,7 @@ export default function AddServerScreen() {
                             <TextInput
                                 style={styles.textInput}
                                 placeholder="Your Jellyfin username"
-                                placeholderTextColor={Colors.textTertiary}
+                                placeholderTextColor={styles.inputHint.color as string}
                                 value={username}
                                 onChangeText={setUsername}
                                 autoCapitalize="none"
@@ -358,7 +357,7 @@ export default function AddServerScreen() {
                                 <TextInput
                                     style={[styles.textInput, styles.passwordInput]}
                                     placeholder="Your password"
-                                    placeholderTextColor={Colors.textTertiary}
+                                    placeholderTextColor={styles.inputHint.color as string}
                                     value={password}
                                     onChangeText={setPassword}
                                     secureTextEntry={!showPassword}
@@ -373,7 +372,7 @@ export default function AddServerScreen() {
                                     <Ionicons
                                         name={showPassword ? 'eye-off' : 'eye'}
                                         size={20}
-                                        color={Colors.textSecondary}
+                                        color={styles.iconSecondary.color}
                                     />
                                 </TouchableOpacity>
                             </View>
@@ -381,7 +380,7 @@ export default function AddServerScreen() {
 
                         {testError && (
                             <View style={styles.errorBanner}>
-                                <Ionicons name="alert-circle" size={18} color={Colors.error} />
+                                <Ionicons name="alert-circle" size={18} color={styles.errorText.color} />
                                 <Text style={styles.errorText}>{testError}</Text>
                             </View>
                         )}
@@ -392,7 +391,7 @@ export default function AddServerScreen() {
                             activeOpacity={0.8}
                         >
                             <Text style={styles.primaryButtonText}>Connect</Text>
-                            <Ionicons name="arrow-forward" size={18} color={Colors.textInverse} />
+                            <Ionicons name="arrow-forward" size={18} color={styles.primaryButtonText.color} />
                         </TouchableOpacity>
                     </Animated.View>
                 )}
@@ -400,7 +399,7 @@ export default function AddServerScreen() {
                 {/* Step 4: Testing Connection */}
                 {step === 'testing' && (
                     <Animated.View entering={FadeInDown.duration(400)} style={styles.testingContainer}>
-                        <ActivityIndicator size="large" color={Colors.primary} />
+                        <ActivityIndicator size="large" color={styles.iconPrimary.color as string} />
                         <Text style={styles.testingText}>
                             Connecting to {SERVER_TYPE_LABELS[serverType!]}...
                         </Text>
@@ -414,7 +413,7 @@ export default function AddServerScreen() {
                 {step === 'success' && (
                     <Animated.View entering={FadeInDown.duration(600)} style={styles.successContainer}>
                         <View style={styles.successIconBg}>
-                            <Ionicons name="checkmark-circle" size={64} color={Colors.success} />
+                            <Ionicons name="checkmark-circle" size={64} color={styles.successTitle.color} />
                         </View>
                         <Text style={styles.successTitle}>Connected!</Text>
                         <Text style={styles.successServerName}>{serverName}</Text>
@@ -449,7 +448,7 @@ export default function AddServerScreen() {
                             }}
                             activeOpacity={0.8}
                         >
-                            <Ionicons name="add" size={18} color={Colors.primary} />
+                            <Ionicons name="add" size={18} color={styles.secondaryButtonText.color} />
                             <Text style={styles.secondaryButtonText}>Add Another Server</Text>
                         </TouchableOpacity>
                     </Animated.View>
@@ -459,10 +458,10 @@ export default function AddServerScreen() {
     );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (colors: AppColors) => StyleSheet.create({
     container: {
         flex: 1,
-        backgroundColor: Colors.background,
+        backgroundColor: colors.background,
     },
     contentContainer: {
         padding: Spacing.screenPadding,
@@ -475,13 +474,13 @@ const styles = StyleSheet.create({
     stepTitle: {
         fontFamily: 'Inter_700Bold',
         fontSize: 24,
-        color: Colors.text,
+        color: colors.text,
         marginBottom: Spacing.sm,
     },
     stepSubtitle: {
         fontFamily: 'Inter_400Regular',
         fontSize: 15,
-        color: Colors.textSecondary,
+        color: colors.textSecondary,
         lineHeight: 22,
         marginBottom: Spacing.xxl,
     },
@@ -496,7 +495,7 @@ const styles = StyleSheet.create({
     backButtonText: {
         fontFamily: 'Inter_500Medium',
         fontSize: 14,
-        color: Colors.primary,
+        color: colors.primary,
     },
 
     // Type selection
@@ -504,11 +503,11 @@ const styles = StyleSheet.create({
         gap: Spacing.md,
     },
     typeCard: {
-        backgroundColor: Colors.backgroundTertiary,
+        backgroundColor: colors.backgroundTertiary,
         borderRadius: Spacing.radiusMd,
         padding: Spacing.xl,
         borderWidth: 1,
-        borderColor: Colors.surfaceBorder,
+        borderColor: colors.surfaceBorder,
     },
     typeIconBg: {
         width: 56,
@@ -521,13 +520,13 @@ const styles = StyleSheet.create({
     typeLabel: {
         fontFamily: 'Inter_600SemiBold',
         fontSize: 18,
-        color: Colors.text,
+        color: colors.text,
         marginBottom: 4,
     },
     typeDescription: {
         fontFamily: 'Inter_400Regular',
         fontSize: 13,
-        color: Colors.textSecondary,
+        color: colors.textSecondary,
         lineHeight: 18,
     },
 
@@ -538,23 +537,23 @@ const styles = StyleSheet.create({
     inputLabel: {
         fontFamily: 'Inter_500Medium',
         fontSize: 14,
-        color: Colors.text,
+        color: colors.text,
         marginBottom: Spacing.sm,
     },
     textInput: {
-        backgroundColor: Colors.backgroundTertiary,
+        backgroundColor: colors.backgroundTertiary,
         borderRadius: Spacing.radiusMd,
         padding: Spacing.lg,
         fontSize: 15,
         fontFamily: 'Inter_400Regular',
-        color: Colors.text,
+        color: colors.text,
         borderWidth: 1,
-        borderColor: Colors.surfaceBorder,
+        borderColor: colors.surfaceBorder,
     },
     inputHint: {
         fontFamily: 'Inter_400Regular',
         fontSize: 12,
-        color: Colors.textTertiary,
+        color: colors.textTertiary,
         marginTop: Spacing.sm,
         lineHeight: 18,
     },
@@ -583,12 +582,12 @@ const styles = StyleSheet.create({
     httpToggleText: {
         fontFamily: 'Inter_500Medium',
         fontSize: 14,
-        color: Colors.text,
+        color: colors.text,
     },
     httpWarning: {
         fontFamily: 'Inter_400Regular',
         fontSize: 12,
-        color: Colors.warning,
+        color: colors.warning,
         marginTop: 4,
         lineHeight: 18,
     },
@@ -597,10 +596,10 @@ const styles = StyleSheet.create({
     errorBanner: {
         flexDirection: 'row',
         alignItems: 'center',
-        backgroundColor: Colors.error + '15',
+        backgroundColor: colors.error + '15',
         borderRadius: Spacing.radiusMd,
         borderWidth: 1,
-        borderColor: Colors.error + '30',
+        borderColor: colors.error + '30',
         padding: Spacing.lg,
         gap: Spacing.sm,
         marginBottom: Spacing.xl,
@@ -608,7 +607,7 @@ const styles = StyleSheet.create({
     errorText: {
         fontFamily: 'Inter_400Regular',
         fontSize: 13,
-        color: Colors.error,
+        color: colors.error,
         flex: 1,
         lineHeight: 18,
     },
@@ -618,7 +617,7 @@ const styles = StyleSheet.create({
         flexDirection: 'row',
         alignItems: 'center',
         justifyContent: 'center',
-        backgroundColor: Colors.primary,
+        backgroundColor: colors.primary,
         padding: Spacing.lg,
         borderRadius: Spacing.radiusMd,
         gap: Spacing.sm,
@@ -627,7 +626,7 @@ const styles = StyleSheet.create({
     primaryButtonText: {
         fontFamily: 'Inter_600SemiBold',
         fontSize: 16,
-        color: Colors.textInverse,
+        color: colors.textInverse,
     },
     secondaryButton: {
         flexDirection: 'row',
@@ -638,12 +637,12 @@ const styles = StyleSheet.create({
         gap: Spacing.sm,
         marginTop: Spacing.md,
         borderWidth: 1,
-        borderColor: Colors.surfaceBorder,
+        borderColor: colors.surfaceBorder,
     },
     secondaryButtonText: {
         fontFamily: 'Inter_500Medium',
         fontSize: 14,
-        color: Colors.primary,
+        color: colors.primary,
     },
 
     // Testing state
@@ -656,13 +655,13 @@ const styles = StyleSheet.create({
     testingText: {
         fontFamily: 'Inter_600SemiBold',
         fontSize: 18,
-        color: Colors.text,
+        color: colors.text,
         marginTop: Spacing.xxl,
     },
     testingSubtext: {
         fontFamily: 'Inter_400Regular',
         fontSize: 13,
-        color: Colors.textTertiary,
+        color: colors.textTertiary,
         marginTop: Spacing.sm,
     },
 
@@ -679,28 +678,32 @@ const styles = StyleSheet.create({
     successTitle: {
         fontFamily: 'Inter_700Bold',
         fontSize: 28,
-        color: Colors.success,
+        color: colors.success,
         marginBottom: Spacing.sm,
     },
     successServerName: {
         fontFamily: 'Inter_600SemiBold',
         fontSize: 18,
-        color: Colors.text,
+        color: colors.text,
         marginBottom: 4,
     },
     successVersion: {
         fontFamily: 'Inter_400Regular',
         fontSize: 14,
-        color: Colors.textSecondary,
+        color: colors.textSecondary,
         marginBottom: Spacing.xl,
     },
     successMessage: {
         fontFamily: 'Inter_400Regular',
         fontSize: 14,
-        color: Colors.textSecondary,
+        color: colors.textSecondary,
         textAlign: 'center',
         lineHeight: 22,
         marginBottom: Spacing.xxl,
         maxWidth: 300,
     },
+
+    // Color tokens for inline use
+    iconPrimary: { color: colors.primary },
+    iconSecondary: { color: colors.textSecondary },
 });

@@ -4,8 +4,9 @@
 
 import { Ionicons } from '@expo/vector-icons';
 import { ActivityIndicator, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
-import { Colors } from '../../constants/Colors';
 import { Spacing } from '../../constants/Spacing';
+import { AppColors } from '../../hooks/useColors';
+import { useThemedStyles } from '../../hooks/useThemedStyles';
 import { MediaCard, MediaCardProps } from './MediaCard';
 
 interface MediaRowProps {
@@ -25,6 +26,8 @@ export function MediaRow({
     variant = 'poster',
     emptyMessage,
 }: MediaRowProps) {
+    const styles = useThemedStyles(createStyles);
+
     return (
         <View style={styles.container}>
             {/* Header */}
@@ -34,7 +37,7 @@ export function MediaRow({
                     <TouchableOpacity onPress={onSeeAll} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
                         <View style={styles.seeAllBtn}>
                             <Text style={styles.seeAllText}>See All</Text>
-                            <Ionicons name="chevron-forward" size={14} color={Colors.primary} />
+                            <Ionicons name="chevron-forward" size={14} color={styles.iconPrimary.color} />
                         </View>
                     </TouchableOpacity>
                 )}
@@ -43,7 +46,7 @@ export function MediaRow({
             {/* Content */}
             {isLoading ? (
                 <View style={styles.loadingContainer}>
-                    <ActivityIndicator size="small" color={Colors.primary} />
+                    <ActivityIndicator size="small" color={styles.iconPrimary.color as string} />
                 </View>
             ) : items.length === 0 ? (
                 <View style={styles.emptyContainer}>
@@ -64,7 +67,7 @@ export function MediaRow({
     );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (colors: AppColors) => StyleSheet.create({
     container: {
         marginBottom: Spacing.xxl,
     },
@@ -78,7 +81,7 @@ const styles = StyleSheet.create({
     title: {
         fontFamily: 'Inter_600SemiBold',
         fontSize: 18,
-        color: Colors.text,
+        color: colors.text,
     },
     seeAllBtn: {
         flexDirection: 'row',
@@ -88,7 +91,7 @@ const styles = StyleSheet.create({
     seeAllText: {
         fontFamily: 'Inter_500Medium',
         fontSize: 13,
-        color: Colors.primary,
+        color: colors.primary,
     },
     scrollContent: {
         paddingHorizontal: Spacing.screenPadding,
@@ -103,14 +106,17 @@ const styles = StyleSheet.create({
         justifyContent: 'center',
         alignItems: 'center',
         marginHorizontal: Spacing.screenPadding,
-        backgroundColor: Colors.backgroundTertiary,
+        backgroundColor: colors.backgroundTertiary,
         borderRadius: Spacing.radiusMd,
         borderWidth: 1,
-        borderColor: Colors.surfaceBorder,
+        borderColor: colors.surfaceBorder,
     },
     emptyText: {
         fontFamily: 'Inter_400Regular',
         fontSize: 13,
-        color: Colors.textTertiary,
+        color: colors.textTertiary,
     },
+
+    // Color tokens for inline use
+    iconPrimary: { color: colors.primary },
 });
