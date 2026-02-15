@@ -47,6 +47,14 @@ async function loadFromSecureStore(): Promise<ServerConfig[]> {
     try {
         let serialized: string | null = null;
         if (Platform.OS === 'web') {
+            // ⚠ Web fallback: localStorage is NOT secure — values are visible in
+            // DevTools and accessible to any same-origin JS. expo-secure-store
+            // does not support web, so this is the only option. Acceptable for
+            // local dev; consider a backend proxy for production web deployments.
+            console.warn(
+                '[JellyRoll] Server credentials are stored in localStorage (web). ' +
+                'This is NOT secure for production use.'
+            );
             serialized = localStorage.getItem(SERVERS_KEY);
         } else {
             serialized = await SecureStore.getItemAsync(SERVERS_KEY);

@@ -18,29 +18,9 @@ import {
 } from 'react-native';
 import Animated, { FadeIn, FadeInDown } from 'react-native-reanimated';
 import { Colors } from '../constants/Colors';
+import { SOURCE_COLORS, SOURCE_ICONS, SOURCE_LABELS } from '../constants/Sources';
 import { Spacing } from '../constants/Spacing';
 import { SearchResult, useGlobalSearch } from '../services/hooks/useSearch';
-
-const SOURCE_COLORS: Record<string, string> = {
-    jellyfin: Colors.jellyfin,
-    sonarr: Colors.sonarr,
-    radarr: Colors.radarr,
-    lidarr: Colors.lidarr,
-};
-
-const SOURCE_ICONS: Record<string, keyof typeof Ionicons.glyphMap> = {
-    jellyfin: 'play-circle',
-    sonarr: 'tv',
-    radarr: 'film',
-    lidarr: 'musical-notes',
-};
-
-const SOURCE_LABELS: Record<string, string> = {
-    jellyfin: 'Jellyfin',
-    sonarr: 'Sonarr',
-    radarr: 'Radarr',
-    lidarr: 'Lidarr',
-};
 
 export default function SearchScreen() {
     const router = useRouter();

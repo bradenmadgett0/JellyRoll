@@ -4,15 +4,17 @@
  */
 
 import { Inter_400Regular, Inter_500Medium, Inter_600SemiBold, Inter_700Bold, useFonts } from '@expo-google-fonts/inter';
-import { DarkTheme, ThemeProvider } from '@react-navigation/native';
+import type { Theme } from '@react-navigation/native';
+import { ThemeProvider } from '@react-navigation/native';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { Stack } from 'expo-router';
 import * as SplashScreen from 'expo-splash-screen';
 import { StatusBar } from 'expo-status-bar';
 import { useEffect } from 'react';
+import { useColorScheme } from 'react-native';
 import 'react-native-reanimated';
 
-import { Colors } from '../constants/Colors';
+import { Themes } from '../constants/Colors';
 import { useServerStore } from '../services/stores/serverStore';
 
 // Keep splash visible while loading
@@ -28,19 +30,27 @@ const queryClient = new QueryClient({
   },
 });
 
-// Custom dark theme matching our design system
-const JellyRollDarkTheme = {
-  ...DarkTheme,
-  colors: {
-    ...DarkTheme.colors,
-    primary: Colors.primary,
-    background: Colors.background,
-    card: Colors.backgroundSecondary,
-    text: Colors.text,
-    border: Colors.surfaceBorder,
-    notification: Colors.accent,
-  },
-};
+// Build React Navigation theme entirely from our design tokens
+function buildNavTheme(scheme: 'dark' | 'light'): Theme {
+  const palette = Themes[scheme];
+  return {
+    dark: scheme === 'dark',
+    colors: {
+      primary: palette.primary,
+      background: palette.background,
+      card: palette.backgroundSecondary,
+      text: palette.text,
+      border: palette.surfaceBorder,
+      notification: palette.accent,
+    },
+    fonts: {
+      regular: { fontFamily: 'Inter_400Regular', fontWeight: '400' },
+      medium: { fontFamily: 'Inter_500Medium', fontWeight: '500' },
+      bold: { fontFamily: 'Inter_700Bold', fontWeight: '700' },
+      heavy: { fontFamily: 'Inter_700Bold', fontWeight: '700' },
+    },
+  };
+}
 
 export const unstable_settings = {
   anchor: '(tabs)',
@@ -48,6 +58,8 @@ export const unstable_settings = {
 
 export default function RootLayout() {
   const loadServers = useServerStore((s) => s.loadServers);
+  const scheme = useColorScheme() ?? 'dark';
+  const navTheme = buildNavTheme(scheme);
 
   const [fontsLoaded] = useFonts({
     Inter_400Regular,
@@ -72,13 +84,10 @@ export default function RootLayout() {
 
   return (
     <QueryClientProvider client={queryClient}>
-      <ThemeProvider value={JellyRollDarkTheme}>
+      <ThemeProvider value={navTheme}>
         <Stack
           screenOptions={{
-            headerStyle: { backgroundColor: Colors.backgroundSecondary },
-            headerTintColor: Colors.text,
             headerTitleStyle: { fontFamily: 'Inter_600SemiBold' },
-            contentStyle: { backgroundColor: Colors.background },
           }}
         >
           <Stack.Screen name="(tabs)" options={{ headerShown: false }} />

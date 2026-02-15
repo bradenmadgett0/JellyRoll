@@ -6,6 +6,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { memo } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 import { Colors } from '../../constants/Colors';
+import { SOURCE_COLORS, SOURCE_ICONS } from '../../constants/Sources';
 import { Spacing } from '../../constants/Spacing';
 
 interface QueueCardProps {
@@ -21,17 +22,7 @@ interface QueueCardProps {
     source?: 'sonarr' | 'radarr' | 'lidarr';
 }
 
-const SOURCE_COLORS = {
-    sonarr: Colors.sonarr,
-    radarr: Colors.radarr,
-    lidarr: Colors.lidarr,
-};
 
-const SOURCE_ICONS: Record<string, keyof typeof Ionicons.glyphMap> = {
-    sonarr: 'tv',
-    radarr: 'film',
-    lidarr: 'musical-notes',
-};
 
 function getStatusColor(status: string): string {
     switch (status.toLowerCase()) {
