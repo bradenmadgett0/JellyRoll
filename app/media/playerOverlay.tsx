@@ -22,6 +22,7 @@ import {
 import Animated, { FadeIn, FadeOut } from 'react-native-reanimated';
 import { Spacing } from '../../constants/Spacing';
 import { JellyfinItem } from '../../types/jellyfin';
+import { QUALITY_PRESETS, QualityPreset } from './player';
 
 // ─── Time formatting ────────────────────────────────────────
 function formatTime(seconds: number): string {
@@ -46,6 +47,8 @@ interface PlayerOverlayProps {
     item?: JellyfinItem | null;
     showOverlay: boolean;
     toggleOverlay: () => void;
+    selectedQuality: QualityPreset;
+    onQualityChange: (preset: QualityPreset) => void;
 }
 
 const SCRUBBER_UPDATE_MS = 500;
@@ -56,6 +59,8 @@ export default function PlayerOverlay({
     item,
     showOverlay,
     toggleOverlay,
+    selectedQuality,
+    onQualityChange,
 }: PlayerOverlayProps) {
     const router = useRouter();
 
@@ -63,6 +68,7 @@ export default function PlayerOverlay({
     const [currentTime, setCurrentTime] = useState(player.currentTime);
     const [duration, setDuration] = useState(player.duration);
     const [bitrate, setBitrate] = useState<number | null>(null);
+    const [showQualityPicker, setShowQualityPicker] = useState(false);
     const [isScrubbing, setIsScrubbing] = useState(false);
     const [scrubberWidth, setScrubberWidth] = useState(0);
 
@@ -96,13 +102,13 @@ export default function PlayerOverlay({
 
     // ─── Auto-hide overlay ──────────────────────────────────
     useEffect(() => {
-        if (showOverlay && !isScrubbing) {
+        if (showOverlay && !isScrubbing && !showQualityPicker) {
             autoHideTimer.current = setTimeout(() => toggleOverlay(), AUTO_HIDE_MS);
             return () => {
                 if (autoHideTimer.current) clearTimeout(autoHideTimer.current);
             };
         }
-    }, [showOverlay, isScrubbing, toggleOverlay]);
+    }, [showOverlay, isScrubbing, showQualityPicker, toggleOverlay]);
 
     // ─── Controls ───────────────────────────────────────────
     const handlePlayPause = useCallback(() => {
@@ -260,11 +266,60 @@ export default function PlayerOverlay({
                     <Text style={styles.timeLabel}>-{formatTime(remaining)}</Text>
                 </View>
 
-                {/* Bitrate indicator */}
-                {formatBitrate(bitrate) && (
-                    <Text style={styles.bitrateLabel}>{formatBitrate(bitrate)}</Text>
-                )}
+                {/* Bitrate indicator + quality gear */}
+                <View style={styles.bottomMeta}>
+                    {formatBitrate(bitrate) && (
+                        <Text style={styles.bitrateLabel}>{formatBitrate(bitrate)}</Text>
+                    )}
+                    <TouchableOpacity
+                        onPress={() => setShowQualityPicker(true)}
+                        style={styles.qualityBtn}
+                        hitSlop={12}
+                    >
+                        <Ionicons name="settings-sharp" size={18} color="rgba(255,255,255,0.8)" />
+                        <Text style={styles.qualityBtnLabel}>{selectedQuality.label}</Text>
+                    </TouchableOpacity>
+                </View>
             </View>
+
+            {/* ─── Quality Picker Modal ────────────────────── */}
+            {showQualityPicker && (
+                <TouchableOpacity
+                    style={styles.pickerBackdrop}
+                    activeOpacity={1}
+                    onPress={() => setShowQualityPicker(false)}
+                >
+                    <View style={styles.pickerContainer}>
+                        <Text style={styles.pickerTitle}>Stream Quality</Text>
+                        {QUALITY_PRESETS?.map((preset) => {
+                            const isActive = preset.label === selectedQuality.label;
+                            return (
+                                <TouchableOpacity
+                                    key={preset.label}
+                                    style={[
+                                        styles.pickerOption,
+                                        isActive && styles.pickerOptionActive,
+                                    ]}
+                                    onPress={() => {
+                                        onQualityChange(preset);
+                                        setShowQualityPicker(false);
+                                    }}
+                                >
+                                    <Text style={[
+                                        styles.pickerOptionText,
+                                        isActive && styles.pickerOptionTextActive,
+                                    ]}>
+                                        {preset.label}
+                                    </Text>
+                                    {isActive && (
+                                        <Ionicons name="checkmark" size={18} color="#fff" />
+                                    )}
+                                </TouchableOpacity>
+                            );
+                        })}
+                    </View>
+                </TouchableOpacity>
+            )}
         </Animated.View>
     );
 }
@@ -409,5 +464,69 @@ const styles = StyleSheet.create({
         color: 'rgba(255,255,255,0.5)',
         textAlign: 'right',
         marginTop: 4,
+    },
+    bottomMeta: {
+        flexDirection: 'row',
+        justifyContent: 'space-between',
+        alignItems: 'center',
+        marginTop: 6,
+    },
+    qualityBtn: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: 4,
+        paddingVertical: 4,
+        paddingHorizontal: 8,
+        borderRadius: 6,
+        backgroundColor: 'rgba(255,255,255,0.12)',
+    },
+    qualityBtnLabel: {
+        fontFamily: 'Inter_500Medium',
+        fontSize: 11,
+        color: 'rgba(255,255,255,0.85)',
+    },
+
+    // Quality picker modal
+    pickerBackdrop: {
+        ...StyleSheet.absoluteFillObject,
+        backgroundColor: 'rgba(0,0,0,0.6)',
+        justifyContent: 'center',
+        alignItems: 'center',
+        zIndex: 20,
+    },
+    pickerContainer: {
+        backgroundColor: 'rgba(30,30,30,0.95)',
+        borderRadius: 16,
+        paddingVertical: 16,
+        paddingHorizontal: 8,
+        minWidth: 240,
+        maxWidth: 300,
+    },
+    pickerTitle: {
+        fontFamily: 'Inter_600SemiBold',
+        fontSize: 15,
+        color: '#fff',
+        textAlign: 'center',
+        marginBottom: 12,
+    },
+    pickerOption: {
+        flexDirection: 'row',
+        justifyContent: 'space-between',
+        alignItems: 'center',
+        paddingVertical: 10,
+        paddingHorizontal: 16,
+        borderRadius: 8,
+    },
+    pickerOptionActive: {
+        backgroundColor: 'rgba(255,255,255,0.12)',
+    },
+    pickerOptionText: {
+        fontFamily: 'Inter_400Regular',
+        fontSize: 14,
+        color: 'rgba(255,255,255,0.7)',
+    },
+    pickerOptionTextActive: {
+        fontFamily: 'Inter_600SemiBold',
+        color: '#fff',
     },
 });

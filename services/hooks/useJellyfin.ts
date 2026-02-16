@@ -163,12 +163,12 @@ export function useJellyfinImageUrl() {
 export function useJellyfinStreamUrl() {
     const server = useJellyfinServer();
 
-    return (itemId: string): { streamUrl: string; hlsUrl: string } | null => {
+    return (itemId: string, maxBitrate?: number | null): { streamUrl: string; hlsUrl: string } | null => {
         if (!server) return null;
         const client = createClient(server);
         return {
             streamUrl: client.getStreamUrl(itemId),
-            hlsUrl: client.getHlsStreamUrl(itemId),
+            hlsUrl: client.getHlsStreamUrl(itemId, maxBitrate),
         };
     };
 }

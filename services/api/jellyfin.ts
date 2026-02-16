@@ -206,9 +206,13 @@ export class JellyfinClient {
         return `${this.server.url}/Videos/${itemId}/stream?static=true&api_key=${token}`;
     }
 
-    getHlsStreamUrl(itemId: string): string {
+    getHlsStreamUrl(itemId: string, maxBitrate?: number | null): string {
         const token = this.server.accessToken ?? '';
-        return `${this.server.url}/Videos/${itemId}/master.m3u8?api_key=${token}&DeviceId=${this.deviceId}&MediaSourceId=${itemId}&VideoCodec=h264&AudioCodec=aac&MaxAudioChannels=6&TranscodingMaxAudioChannels=6&SegmentContainer=ts`;
+        let url = `${this.server.url}/Videos/${itemId}/master.m3u8?api_key=${token}&DeviceId=${this.deviceId}&MediaSourceId=${itemId}&VideoCodec=h264&AudioCodec=aac&MaxAudioChannels=6&TranscodingMaxAudioChannels=6&SegmentContainer=ts`;
+        if (maxBitrate && maxBitrate > 0) {
+            url += `&videoBitRate=${maxBitrate}`;
+        }
+        return url;
     }
 
     // ─── Image URLs ─────────────────────────────────────

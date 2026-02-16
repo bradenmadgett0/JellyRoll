@@ -23,6 +23,23 @@ const TICKS_PER_SECOND = 10_000_000;
 const POSITION_TRACK_MS = 1_000;     // cache position every 1s
 const PROGRESS_REPORT_MS = 10_000;   // report to Jellyfin every 10s
 
+// ─── Quality presets (bitrate in bps, null = no cap / direct stream) ──
+export interface QualityPreset {
+    label: string;
+    maxBitrate: number | null;
+}
+
+export const QUALITY_PRESETS: QualityPreset[] = [
+    { label: 'Auto (Max)', maxBitrate: null },
+    { label: '1080p - 20 Mbps', maxBitrate: 20_000_000 },
+    { label: '1080p - 10 Mbps', maxBitrate: 10_000_000 },
+    { label: '720p - 8 Mbps', maxBitrate: 8_000_000 },
+    { label: '720p - 4 Mbps', maxBitrate: 4_000_000 },
+    { label: '480p - 3 Mbps', maxBitrate: 3_000_000 },
+    { label: '480p - 1.5 Mbps', maxBitrate: 1_500_000 },
+    { label: '360p - 800 Kbps', maxBitrate: 800_000 },
+];
+
 export default function PlayerScreen() {
     const { itemId, startTicks: startTicksParam } = useLocalSearchParams<{
         itemId: string;
@@ -35,6 +52,7 @@ export default function PlayerScreen() {
     const { reportStart, reportProgress, reportStop } = usePlaybackReporter();
 
     const [showOverlay, setShowOverlay] = useState(true);
+    const [selectedQuality, setSelectedQuality] = useState<QualityPreset>(QUALITY_PRESETS[0]);
 
     const startTicks = startTicksParam ? parseInt(startTicksParam, 10) : 0;
     const startSeconds = startTicks > 0 ? startTicks / TICKS_PER_SECOND : 0;
@@ -125,6 +143,27 @@ export default function PlayerScreen() {
         setShowOverlay((prev) => !prev);
     }, []);
 
+    // ─── Quality change handler ──────────────────────────────────
+    const handleQualityChange = useCallback((preset: QualityPreset) => {
+        setSelectedQuality(preset);
+        if (!itemId || !player) return;
+        // Remember current position
+        const resumeTime = player.currentTime;
+        // Build new URL with selected bitrate
+        const urls = getStreamUrl(itemId, preset.maxBitrate);
+        if (!urls?.hlsUrl) return;
+        // Replace the source and seek back
+        player.replace(urls.hlsUrl);
+        // Seek after a brief delay to let the new source initialize
+        setTimeout(() => {
+            try {
+                player.currentTime = resumeTime;
+                player.play();
+            } catch { /* player may not be ready */ }
+        }, 500);
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [itemId, player, getStreamUrl]);
+
     // Memoize VideoPlayer to prevent re-renders from overlay toggle
     const videoView = useMemo(() => (
         <VideoPlayer player={player} toggleOverlay={toggleOverlay} />
@@ -154,6 +193,8 @@ export default function PlayerScreen() {
                 item={item}
                 showOverlay={showOverlay}
                 toggleOverlay={toggleOverlay}
+                selectedQuality={selectedQuality}
+                onQualityChange={handleQualityChange}
             />
         </View>
     );
