@@ -3,20 +3,26 @@
  * Wraps app with providers: React Query, Theme, Server Loading
  */
 
-import { Inter_400Regular, Inter_500Medium, Inter_600SemiBold, Inter_700Bold, useFonts } from '@expo-google-fonts/inter';
-import type { Theme } from '@react-navigation/native';
-import { ThemeProvider } from '@react-navigation/native';
-import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import { Stack } from 'expo-router';
-import * as SplashScreen from 'expo-splash-screen';
-import { StatusBar } from 'expo-status-bar';
-import { useEffect } from 'react';
-import 'react-native-reanimated';
+import {
+  Inter_400Regular,
+  Inter_500Medium,
+  Inter_600SemiBold,
+  Inter_700Bold,
+  useFonts,
+} from "@expo-google-fonts/inter";
+import type { Theme } from "@react-navigation/native";
+import { ThemeProvider } from "@react-navigation/native";
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { Stack } from "expo-router";
+import * as SplashScreen from "expo-splash-screen";
+import { StatusBar } from "expo-status-bar";
+import { useEffect } from "react";
+import "react-native-reanimated";
 
-import { Themes } from '../constants/Colors';
-import { useEffectiveScheme } from '../hooks/useEffectiveScheme';
-import { useServerStore } from '../services/stores/serverStore';
-import { useSettingsStore } from '../services/stores/settingsStore';
+import { Themes } from "../constants/Colors";
+import { useEffectiveScheme } from "../hooks/useEffectiveScheme";
+import { useServerStore } from "../services/stores/serverStore";
+import { useSettingsStore } from "../services/stores/settingsStore";
 
 // Keep splash visible while loading
 SplashScreen.preventAutoHideAsync();
@@ -32,10 +38,10 @@ const queryClient = new QueryClient({
 });
 
 // Build React Navigation theme entirely from our design tokens
-function buildNavTheme(scheme: 'dark' | 'light'): Theme {
+function buildNavTheme(scheme: "dark" | "light"): Theme {
   const palette = Themes[scheme];
   return {
-    dark: scheme === 'dark',
+    dark: scheme === "dark",
     colors: {
       primary: palette.primary,
       background: palette.background,
@@ -45,16 +51,16 @@ function buildNavTheme(scheme: 'dark' | 'light'): Theme {
       notification: palette.accent,
     },
     fonts: {
-      regular: { fontFamily: 'Inter_400Regular', fontWeight: '400' },
-      medium: { fontFamily: 'Inter_500Medium', fontWeight: '500' },
-      bold: { fontFamily: 'Inter_700Bold', fontWeight: '700' },
-      heavy: { fontFamily: 'Inter_700Bold', fontWeight: '700' },
+      regular: { fontFamily: "Inter_400Regular", fontWeight: "400" },
+      medium: { fontFamily: "Inter_500Medium", fontWeight: "500" },
+      bold: { fontFamily: "Inter_700Bold", fontWeight: "700" },
+      heavy: { fontFamily: "Inter_700Bold", fontWeight: "700" },
     },
   };
 }
 
 export const unstable_settings = {
-  anchor: '(tabs)',
+  anchor: "(tabs)",
 };
 
 export default function RootLayout() {
@@ -89,7 +95,7 @@ export default function RootLayout() {
       <ThemeProvider value={navTheme}>
         <Stack
           screenOptions={{
-            headerTitleStyle: { fontFamily: 'Inter_600SemiBold' },
+            headerTitleStyle: { fontFamily: "Inter_600SemiBold" },
           }}
         >
           <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
@@ -97,29 +103,29 @@ export default function RootLayout() {
             name="search"
             options={{
               headerShown: false,
-              animation: 'fade',
+              animation: "fade",
             }}
           />
           <Stack.Screen
             name="server/add"
             options={{
-              presentation: 'modal',
-              title: 'Add Server',
+              presentation: "modal",
+              title: "Add Server",
               headerShown: true,
             }}
           />
           <Stack.Screen
             name="server/[id]"
             options={{
-              presentation: 'modal',
-              title: 'Server Details',
+              presentation: "modal",
+              title: "Server Details",
               headerShown: true,
             }}
           />
           <Stack.Screen
             name="media/[id]"
             options={{
-              title: '',
+              title: "",
               headerShown: false,
             }}
           />
@@ -127,54 +133,54 @@ export default function RootLayout() {
             name="media/player"
             options={{
               headerShown: false,
-              presentation: 'fullScreenModal',
-              animation: 'fade',
+              presentation: "fullScreenModal",
+              animation: "fade",
             }}
           />
           <Stack.Screen
             name="sonarr/index"
             options={{
-              title: 'Sonarr',
+              title: "Sonarr",
               headerShown: true,
             }}
           />
           <Stack.Screen
             name="sonarr/[id]"
             options={{
-              title: 'Series',
+              title: "Series",
               headerShown: true,
             }}
           />
           <Stack.Screen
             name="radarr/index"
             options={{
-              title: 'Radarr',
+              title: "Radarr",
               headerShown: true,
             }}
           />
           <Stack.Screen
             name="radarr/[id]"
             options={{
-              title: 'Movie',
+              title: "Movie",
               headerShown: true,
             }}
           />
           <Stack.Screen
             name="lidarr/index"
             options={{
-              title: 'Lidarr',
+              title: "Lidarr",
               headerShown: true,
             }}
           />
           <Stack.Screen
             name="lidarr/[id]"
             options={{
-              title: 'Artist',
+              title: "Artist",
               headerShown: true,
             }}
           />
         </Stack>
-        <StatusBar style={scheme === 'dark' ? 'light' : 'dark'} />
+        <StatusBar style={scheme === "dark" ? "light" : "dark"} />
       </ThemeProvider>
     </QueryClientProvider>
   );

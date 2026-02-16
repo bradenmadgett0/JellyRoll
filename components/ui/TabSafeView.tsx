@@ -5,8 +5,8 @@
  * Accounts for the absolute-positioned iOS tab bar and safe area insets.
  */
 
-import React, { ReactNode } from 'react';
-import { Platform, StyleSheet, View, ViewStyle } from 'react-native';
+import React, { ReactNode } from "react";
+import { Platform, StyleSheet, View, ViewStyle } from "react-native";
 
 /**
  * Bottom inset constant matching the tab bar height + comfortable margin.
@@ -16,11 +16,11 @@ import { Platform, StyleSheet, View, ViewStyle } from 'react-native';
  * Import this directly if you need the raw value (e.g. for FlatList
  * `contentContainerStyle` or `ListFooterComponent`).
  */
-export const TAB_BAR_BOTTOM_INSET = Platform.OS === 'ios' ? 100 : 16;
+export const TAB_BAR_BOTTOM_INSET = Platform.OS === "ios" ? 100 : 16;
 
 interface TabSafeViewProps {
-    children: ReactNode;
-    style?: ViewStyle;
+  children: ReactNode;
+  style?: ViewStyle;
 }
 
 /**
@@ -35,15 +35,11 @@ interface TabSafeViewProps {
  * ```
  */
 export default function TabSafeView({ children, style }: TabSafeViewProps) {
-    return (
-        <View style={[styles.container, style]}>
-            {children}
-        </View>
-    );
+  return <View style={[styles.container, style]}>{children}</View>;
 }
 
 const styles = StyleSheet.create({
-    container: {
-        paddingBottom: TAB_BAR_BOTTOM_INSET,
-    },
+  container: {
+    paddingBottom: TAB_BAR_BOTTOM_INSET,
+  },
 });

@@ -3,27 +3,30 @@
  * Premium glassmorphic tab bar with blur effect
  */
 
-import { Ionicons } from '@expo/vector-icons';
-import { BlurView } from 'expo-blur';
-import { Tabs } from 'expo-router';
-import { Platform, StyleSheet, Text, View } from 'react-native';
-import { AppColors } from '../../hooks/useColors';
-import { useThemedStyles } from '../../hooks/useThemedStyles';
-import { useLidarrQueue } from '../../services/hooks/useLidarr';
-import { useRadarrQueue } from '../../services/hooks/useRadarr';
-import { useSonarrQueue } from '../../services/hooks/useSonarr';
-import { useServerStore } from '../../services/stores/serverStore';
+import { Ionicons } from "@expo/vector-icons";
+import { BlurView } from "expo-blur";
+import { Tabs } from "expo-router";
+import { Platform, StyleSheet, Text, View } from "react-native";
+import { AppColors } from "../../hooks/useColors";
+import { useThemedStyles } from "../../hooks/useThemedStyles";
+import { useLidarrQueue } from "../../services/hooks/useLidarr";
+import { useRadarrQueue } from "../../services/hooks/useRadarr";
+import { useSonarrQueue } from "../../services/hooks/useSonarr";
+import { useServerStore } from "../../services/stores/serverStore";
 
 export default function TabLayout() {
   const styles = useThemedStyles(createStyles);
   const servers = useServerStore((s) => s.servers);
-  const hasArr = servers.some((s) => s.type !== 'jellyfin');
+  const hasArr = servers.some((s) => s.type !== "jellyfin");
 
   const { data: sonarrQ } = useSonarrQueue();
   const { data: radarrQ } = useRadarrQueue();
   const { data: lidarrQ } = useLidarrQueue();
 
-  const totalQueue = (sonarrQ?.totalRecords ?? 0) + (radarrQ?.totalRecords ?? 0) + (lidarrQ?.totalRecords ?? 0);
+  const totalQueue =
+    (sonarrQ?.totalRecords ?? 0) +
+    (radarrQ?.totalRecords ?? 0) +
+    (lidarrQ?.totalRecords ?? 0);
 
   return (
     <Tabs
@@ -37,8 +40,12 @@ export default function TabLayout() {
         headerTitleStyle: styles.headerTitle,
         headerShadowVisible: false,
         tabBarBackground: () =>
-          Platform.OS === 'ios' ? (
-            <BlurView intensity={80} tint="dark" style={StyleSheet.absoluteFill} />
+          Platform.OS === "ios" ? (
+            <BlurView
+              intensity={80}
+              tint="dark"
+              style={StyleSheet.absoluteFill}
+            />
           ) : (
             <View style={[StyleSheet.absoluteFill, styles.tabBarBg]} />
           ),
@@ -47,32 +54,44 @@ export default function TabLayout() {
       <Tabs.Screen
         name="index"
         options={{
-          title: 'Home',
+          title: "Home",
           tabBarIcon: ({ color, focused }) => (
-            <Ionicons name={focused ? 'home' : 'home-outline'} size={24} color={color} />
+            <Ionicons
+              name={focused ? "home" : "home-outline"}
+              size={24}
+              color={color}
+            />
           ),
         }}
       />
       <Tabs.Screen
         name="library"
         options={{
-          title: 'Library',
+          title: "Library",
           tabBarIcon: ({ color, focused }) => (
-            <Ionicons name={focused ? 'grid' : 'grid-outline'} size={24} color={color} />
+            <Ionicons
+              name={focused ? "grid" : "grid-outline"}
+              size={24}
+              color={color}
+            />
           ),
         }}
       />
       <Tabs.Screen
         name="manage"
         options={{
-          title: 'Manage',
+          title: "Manage",
           tabBarIcon: ({ color, focused }) => (
             <View>
-              <Ionicons name={focused ? 'layers' : 'layers-outline'} size={24} color={color} />
+              <Ionicons
+                name={focused ? "layers" : "layers-outline"}
+                size={24}
+                color={color}
+              />
               {totalQueue > 0 && (
                 <View style={styles.badge}>
                   <Text style={styles.badgeText}>
-                    {totalQueue > 99 ? '99+' : totalQueue}
+                    {totalQueue > 99 ? "99+" : totalQueue}
                   </Text>
                 </View>
               )}
@@ -83,9 +102,13 @@ export default function TabLayout() {
       <Tabs.Screen
         name="settings"
         options={{
-          title: 'Settings',
+          title: "Settings",
           tabBarIcon: ({ color, focused }) => (
-            <Ionicons name={focused ? 'person-circle' : 'person-circle-outline'} size={24} color={color} />
+            <Ionicons
+              name={focused ? "person-circle" : "person-circle-outline"}
+              size={24}
+              color={color}
+            />
           ),
         }}
       />
@@ -93,46 +116,48 @@ export default function TabLayout() {
   );
 }
 
-const createStyles = (colors: AppColors) => StyleSheet.create({
-  tabBar: {
-    backgroundColor: Platform.OS === 'ios' ? 'transparent' : colors.backgroundSecondary,
-    borderTopColor: colors.glassBorder,
-    borderTopWidth: 0.5,
-    paddingTop: 4,
-    height: Platform.OS === 'ios' ? 88 : 64,
-    position: Platform.OS === 'ios' ? 'absolute' : 'relative',
-  },
-  tabBarLabel: {
-    fontFamily: 'Inter_500Medium',
-    fontSize: 11,
-    marginBottom: Platform.OS === 'ios' ? 0 : 8,
-  },
-  tabBarBg: { backgroundColor: colors.backgroundSecondary },
-  tabBarActive: { color: colors.primary },
-  tabBarInactive: { color: colors.textTertiary },
-  header: {
-    backgroundColor: colors.background,
-  },
-  headerTitle: {
-    fontFamily: 'Inter_700Bold',
-    fontSize: 18,
-    color: colors.text,
-  },
-  badge: {
-    position: 'absolute',
-    top: -4,
-    right: -10,
-    backgroundColor: colors.accent,
-    borderRadius: 9,
-    minWidth: 18,
-    height: 18,
-    justifyContent: 'center',
-    alignItems: 'center',
-    paddingHorizontal: 4,
-  },
-  badgeText: {
-    fontFamily: 'Inter_600SemiBold',
-    fontSize: 9,
-    color: '#FFFFFF',
-  },
-});
+const createStyles = (colors: AppColors) =>
+  StyleSheet.create({
+    tabBar: {
+      backgroundColor:
+        Platform.OS === "ios" ? "transparent" : colors.backgroundSecondary,
+      borderTopColor: colors.glassBorder,
+      borderTopWidth: 0.5,
+      paddingTop: 4,
+      height: Platform.OS === "ios" ? 88 : 64,
+      position: Platform.OS === "ios" ? "absolute" : "relative",
+    },
+    tabBarLabel: {
+      fontFamily: "Inter_500Medium",
+      fontSize: 11,
+      marginBottom: Platform.OS === "ios" ? 0 : 8,
+    },
+    tabBarBg: { backgroundColor: colors.backgroundSecondary },
+    tabBarActive: { color: colors.primary },
+    tabBarInactive: { color: colors.textTertiary },
+    header: {
+      backgroundColor: colors.background,
+    },
+    headerTitle: {
+      fontFamily: "Inter_700Bold",
+      fontSize: 18,
+      color: colors.text,
+    },
+    badge: {
+      position: "absolute",
+      top: -4,
+      right: -10,
+      backgroundColor: colors.accent,
+      borderRadius: 9,
+      minWidth: 18,
+      height: 18,
+      justifyContent: "center",
+      alignItems: "center",
+      paddingHorizontal: 4,
+    },
+    badgeText: {
+      fontFamily: "Inter_600SemiBold",
+      fontSize: 9,
+      color: "#FFFFFF",
+    },
+  });
