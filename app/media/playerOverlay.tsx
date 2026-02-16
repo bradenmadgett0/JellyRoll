@@ -8,11 +8,12 @@
 
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
-import { VideoPlayer } from 'expo-video';
+import { VideoAirPlayButton, VideoPlayer } from 'expo-video';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import {
     GestureResponderEvent,
     LayoutChangeEvent,
+    Platform,
     StyleSheet,
     Text,
     TouchableOpacity,
@@ -190,14 +191,8 @@ export default function PlayerOverlay({
                         </Text>
                     )}
                 </View>
-                {/* AirPlay — native iOS button via expo-video, icon placeholder elsewhere */}
-                <TouchableOpacity style={styles.controlBtn} hitSlop={12}>
-                    <Ionicons
-                        name={'share-outline' as any}
-                        size={22}
-                        color="#fff"
-                    />
-                </TouchableOpacity>
+
+                {Platform.OS === 'ios' && <VideoAirPlayButton />}
             </View>
 
             {/* ─── Center Controls ─────────────────────────── */}

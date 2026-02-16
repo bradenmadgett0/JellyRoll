@@ -59,6 +59,7 @@ export default function PlayerScreen() {
 
     const player = useVideoPlayer(hlsUrl ?? '', (p) => {
         p.loop = false;
+        p.allowsExternalPlayback = true;
         if (startSeconds > 0 && !hasSeeked.current) {
             p.currentTime = startSeconds;
             hasSeeked.current = true;
