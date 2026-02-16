@@ -33,6 +33,13 @@ function formatTime(seconds: number): string {
     return `${m}:${String(s).padStart(2, '0')}`;
 }
 
+function formatBitrate(bps: number | null): string | null {
+    if (!bps || bps <= 0) return null;
+    if (bps >= 1_000_000) return `${(bps / 1_000_000).toFixed(1)} Mbps`;
+    if (bps >= 1_000) return `${Math.round(bps / 1_000)} Kbps`;
+    return `${bps} bps`;
+}
+
 // ─── Props ──────────────────────────────────────────────────
 interface PlayerOverlayProps {
     player: VideoPlayer;
@@ -55,6 +62,7 @@ export default function PlayerOverlay({
     const [isPlaying, setIsPlaying] = useState(player.playing);
     const [currentTime, setCurrentTime] = useState(player.currentTime);
     const [duration, setDuration] = useState(player.duration);
+    const [bitrate, setBitrate] = useState<number | null>(null);
     const [isScrubbing, setIsScrubbing] = useState(false);
     const [scrubberWidth, setScrubberWidth] = useState(0);
 
@@ -73,6 +81,11 @@ export default function PlayerOverlay({
                 if (player.duration > 0) {
                     setDuration(player.duration);
                 }
+                // Read bitrate from current video track
+                try {
+                    const track = (player as any).videoTrack;
+                    if (track?.bitrate) setBitrate(track.bitrate);
+                } catch { /* not available */ }
             } catch {
                 // player may have been released
             }
@@ -246,6 +259,11 @@ export default function PlayerOverlay({
 
                     <Text style={styles.timeLabel}>-{formatTime(remaining)}</Text>
                 </View>
+
+                {/* Bitrate indicator */}
+                {formatBitrate(bitrate) && (
+                    <Text style={styles.bitrateLabel}>{formatBitrate(bitrate)}</Text>
+                )}
             </View>
         </Animated.View>
     );
@@ -384,5 +402,12 @@ const styles = StyleSheet.create({
         shadowOffset: { width: 0, height: 1 },
         shadowOpacity: 0.3,
         shadowRadius: 2,
+    },
+    bitrateLabel: {
+        fontFamily: 'Inter_400Regular',
+        fontSize: 11,
+        color: 'rgba(255,255,255,0.5)',
+        textAlign: 'right',
+        marginTop: 4,
     },
 });
