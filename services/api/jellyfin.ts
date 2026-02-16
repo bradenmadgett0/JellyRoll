@@ -228,6 +228,39 @@ export class JellyfinClient {
         return url;
     }
 
+    // ─── Playback Session Reporting ─────────────────────
+
+    async reportPlaybackStart(itemId: string, positionTicks: number = 0): Promise<void> {
+        await this.client.post('/Sessions/Playing', {
+            ItemId: itemId,
+            PositionTicks: positionTicks,
+            PlayMethod: 'Transcode',
+            PlaySessionId: this.deviceId,
+        });
+    }
+
+    async reportPlaybackProgress(
+        itemId: string,
+        positionTicks: number,
+        isPaused: boolean = false,
+    ): Promise<void> {
+        await this.client.post('/Sessions/Playing/Progress', {
+            ItemId: itemId,
+            PositionTicks: positionTicks,
+            IsPaused: isPaused,
+            PlayMethod: 'Transcode',
+            PlaySessionId: this.deviceId,
+        });
+    }
+
+    async reportPlaybackStopped(itemId: string, positionTicks: number): Promise<void> {
+        await this.client.post('/Sessions/Playing/Stopped', {
+            ItemId: itemId,
+            PositionTicks: positionTicks,
+            PlaySessionId: this.deviceId,
+        });
+    }
+
     // ─── Search ──────────────────────────────────────────
 
     async search(searchTerm: string, limit: number = 20): Promise<JellyfinItemsResponse> {

@@ -39,6 +39,15 @@ function formatRuntime(ticks?: number): string {
     return `${mins}m`;
 }
 
+function formatResumeTime(ticks: number): string {
+    const totalSeconds = Math.floor(ticks / 10_000_000);
+    const hours = Math.floor(totalSeconds / 3600);
+    const minutes = Math.floor((totalSeconds % 3600) / 60);
+    const seconds = totalSeconds % 60;
+    if (hours > 0) return `${hours}:${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`;
+    return `${minutes}:${String(seconds).padStart(2, '0')}`;
+}
+
 export default function MediaDetailScreen() {
     const { id } = useLocalSearchParams<{ id: string }>();
     const router = useRouter();
@@ -157,17 +166,38 @@ export default function MediaDetailScreen() {
                         </View>
                     </View>
 
-                    {/* Play button */}
-                    {(item.Type === 'Movie' || item.Type === 'Episode') && (
-                        <TouchableOpacity
-                            style={styles.playButton}
-                            onPress={() => router.push({ pathname: '/media/player', params: { itemId: item.Id } })}
-                            activeOpacity={0.8}
-                        >
-                            <Ionicons name="play" size={22} color={styles.playButtonText.color} />
-                            <Text style={styles.playButtonText}>Play</Text>
-                        </TouchableOpacity>
-                    )}
+                    {/* Play / Resume button */}
+                    {(item.Type === 'Movie' || item.Type === 'Episode') && (() => {
+                        const positionTicks = item.UserData?.PlaybackPositionTicks ?? 0;
+                        const isResumable = positionTicks > 0;
+                        const playedPct = item.UserData?.PlayedPercentage ?? 0;
+
+                        return (
+                            <View>
+                                <TouchableOpacity
+                                    style={styles.playButton}
+                                    onPress={() => router.push({
+                                        pathname: '/media/player',
+                                        params: {
+                                            itemId: item.Id,
+                                            startTicks: String(positionTicks),
+                                        },
+                                    })}
+                                    activeOpacity={0.8}
+                                >
+                                    <Ionicons name="play" size={22} color={styles.playButtonText.color} />
+                                    <Text style={styles.playButtonText}>
+                                        {isResumable ? `Resume · ${formatResumeTime(positionTicks)}` : 'Play'}
+                                    </Text>
+                                </TouchableOpacity>
+                                {isResumable && (
+                                    <View style={styles.resumeProgressContainer}>
+                                        <View style={[styles.resumeProgressBar, { width: `${Math.min(playedPct, 100)}%` }]} />
+                                    </View>
+                                )}
+                            </View>
+                        );
+                    })()}
 
                     {/* Genres */}
                     {genreText && (
@@ -315,6 +345,8 @@ const createStyles = (colors: AppColors) => StyleSheet.create({
     // Play button
     playButton: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', backgroundColor: colors.primary, paddingVertical: Spacing.md, borderRadius: Spacing.radiusMd, gap: Spacing.sm, marginBottom: Spacing.lg },
     playButtonText: { fontFamily: 'Inter_600SemiBold', fontSize: 16, color: colors.textInverse },
+    resumeProgressContainer: { position: 'absolute', bottom: 0, left: 0, right: 0, height: 4, backgroundColor: colors.surfaceBorder, borderBottomLeftRadius: Spacing.radiusMd, borderBottomRightRadius: Spacing.radiusMd, overflow: 'hidden' },
+    resumeProgressBar: { height: '100%', backgroundColor: colors.jellyfin },
 
     // Genres
     genres: { fontFamily: 'Inter_400Regular', fontSize: 13, color: colors.primary, marginBottom: Spacing.md },

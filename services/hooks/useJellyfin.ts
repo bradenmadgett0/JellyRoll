@@ -3,7 +3,8 @@
  * Bridges JellyfinClient to UI components with caching and refetching
  */
 
-import { useInfiniteQuery, useQuery } from '@tanstack/react-query';
+import { useInfiniteQuery, useQuery, useQueryClient } from '@tanstack/react-query';
+import { useCallback } from 'react';
 import { ServerConfig } from '../../types/server';
 import { JellyfinClient } from '../api/jellyfin';
 import { useServerStore } from '../stores/serverStore';
@@ -214,4 +215,56 @@ export function useJellyfinEpisodes(seasonId: string | undefined) {
         enabled: !!server && !!seasonId,
         staleTime: 2 * 60 * 1000,
     });
+}
+
+// ─── Playback Reporting ─────────────────────────────
+
+export function usePlaybackReporter() {
+    const server = useJellyfinServer();
+    const queryClient = useQueryClient();
+
+    const reportStart = useCallback(
+        async (itemId: string, positionTicks: number = 0) => {
+            if (!server) return;
+            try {
+                const client = createClient(server);
+                await client.reportPlaybackStart(itemId, positionTicks);
+            } catch (e) {
+                console.warn('[Playback] Failed to report start', e);
+            }
+        },
+        [server],
+    );
+
+    const reportProgress = useCallback(
+        async (itemId: string, positionTicks: number, isPaused: boolean = false) => {
+            if (!server) return;
+            try {
+                const client = createClient(server);
+                await client.reportPlaybackProgress(itemId, positionTicks, isPaused);
+            } catch (e) {
+                console.warn('[Playback] Failed to report progress', e);
+            }
+        },
+        [server],
+    );
+
+    const reportStop = useCallback(
+        async (itemId: string, positionTicks: number) => {
+            if (!server) return;
+            try {
+                const client = createClient(server);
+                await client.reportPlaybackStopped(itemId, positionTicks);
+                // Invalidate resume cache so Continue Watching refreshes
+                queryClient.invalidateQueries({ queryKey: ['jellyfin', 'resume'] });
+                // Also invalidate the detail cache for this item
+                queryClient.invalidateQueries({ queryKey: ['jellyfin', 'detail', server.id, itemId] });
+            } catch (e) {
+                console.warn('[Playback] Failed to report stop', e);
+            }
+        },
+        [server, queryClient],
+    );
+
+    return { reportStart, reportProgress, reportStop };
 }

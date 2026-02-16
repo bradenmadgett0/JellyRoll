@@ -1,46 +1,135 @@
 /**
- * Video Player — expo-video HLS streaming player
+ * Video Player — Parent screen owning the player instance, progress tracking,
+ * and playback reporting. Renders VideoPlayer + PlayerOverlay as children.
  */
 
 import { Ionicons } from '@expo/vector-icons';
 import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
-import { useVideoPlayer, VideoView } from 'expo-video';
-import { useEffect, useState } from 'react';
-import { Dimensions, StatusBar, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { useVideoPlayer } from 'expo-video';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { StatusBar, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { Spacing } from '../../constants/Spacing';
 import { AppColors } from '../../hooks/useColors';
 import { useThemedStyles } from '../../hooks/useThemedStyles';
-import { useJellyfinDetail, useJellyfinStreamUrl } from '../../services/hooks/useJellyfin';
+import {
+    useJellyfinDetail,
+    useJellyfinStreamUrl,
+    usePlaybackReporter,
+} from '../../services/hooks/useJellyfin';
+import PlayerOverlay from './playerOverlay';
+import VideoPlayer from './videoPlayer';
 
-const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get('window');
+const TICKS_PER_SECOND = 10_000_000;
+const POSITION_TRACK_MS = 1_000;     // cache position every 1s
+const PROGRESS_REPORT_MS = 10_000;   // report to Jellyfin every 10s
 
 export default function PlayerScreen() {
-    const { itemId } = useLocalSearchParams<{ itemId: string }>();
+    const { itemId, startTicks: startTicksParam } = useLocalSearchParams<{
+        itemId: string;
+        startTicks?: string;
+    }>();
     const router = useRouter();
     const styles = useThemedStyles(createStyles);
     const getStreamUrl = useJellyfinStreamUrl();
     const { data: item } = useJellyfinDetail(itemId);
+    const { reportStart, reportProgress, reportStop } = usePlaybackReporter();
 
-    const [showControls, setShowControls] = useState(true);
-    const [isPlaying, setIsPlaying] = useState(false);
-    const [error, setError] = useState<string | null>(null);
+    const [showOverlay, setShowOverlay] = useState(true);
 
-    const urls = itemId ? getStreamUrl(itemId) : null;
-    const hlsUrl = urls?.hlsUrl;
+    const startTicks = startTicksParam ? parseInt(startTicksParam, 10) : 0;
+    const startSeconds = startTicks > 0 ? startTicks / TICKS_PER_SECOND : 0;
+
+    // Initialize with startTicks so we never fall back to 0
+    const lastKnownTicks = useRef(startTicks);
+    const hasSeeked = useRef(false);
+    const positionTracker = useRef<ReturnType<typeof setInterval> | null>(null);
+    const progressReporter = useRef<ReturnType<typeof setInterval> | null>(null);
+
+    // IMPORTANT: getStreamUrl is intentionally excluded from deps.
+    // Each call creates a new JellyfinClient with a fresh random deviceId,
+    // producing a different URL string. If included, every re-render would
+    // change hlsUrl → useVideoPlayer would release the old player and create
+    // a new one → playback resets to 0.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    const hlsUrl = useMemo(() => {
+        if (!itemId) return null;
+        const urls = getStreamUrl(itemId);
+        return urls?.hlsUrl ?? null;
+    }, [itemId]);
 
     const player = useVideoPlayer(hlsUrl ?? '', (p) => {
         p.loop = false;
+        if (startSeconds > 0 && !hasSeeked.current) {
+            p.currentTime = startSeconds;
+            hasSeeked.current = true;
+        }
         p.play();
     });
 
-    // Auto-hide controls after 3 seconds
+    // ─── Position tracker (1s) — caches currentTime locally ─────
     useEffect(() => {
-        if (showControls) {
-            const timer = setTimeout(() => setShowControls(false), 4000);
-            return () => clearTimeout(timer);
-        }
-    }, [showControls]);
+        if (!player) return;
 
+        positionTracker.current = setInterval(() => {
+            try {
+                const ticks = Math.round(player.currentTime * TICKS_PER_SECOND);
+                if (ticks > 0) lastKnownTicks.current = ticks;
+            } catch {
+                // player may have been released
+            }
+        }, POSITION_TRACK_MS);
+
+        return () => {
+            if (positionTracker.current) {
+                clearInterval(positionTracker.current);
+                positionTracker.current = null;
+            }
+        };
+    }, [player]);
+
+    // ─── Report playback start ──────────────────────────────────
+    useEffect(() => {
+        if (!itemId || !hlsUrl) return;
+        reportStart(itemId, startTicks);
+    }, [itemId, hlsUrl, startTicks, reportStart]);
+
+    // ─── Report progress to Jellyfin (10s) ──────────────────────
+    useEffect(() => {
+        if (!itemId || !player) return;
+
+        progressReporter.current = setInterval(() => {
+            reportProgress(itemId, lastKnownTicks.current, !player.playing);
+        }, PROGRESS_REPORT_MS);
+
+        return () => {
+            if (progressReporter.current) {
+                clearInterval(progressReporter.current);
+                progressReporter.current = null;
+            }
+        };
+    }, [itemId, player, reportProgress]);
+
+    // ─── Report stop on unmount (uses cached ticks, never 0) ────
+    useEffect(() => {
+        return () => {
+            if (itemId && lastKnownTicks.current > 0) {
+                reportStop(itemId, lastKnownTicks.current);
+            }
+        };
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [itemId]);
+
+    // ─── Overlay toggle ─────────────────────────────────────────
+    const toggleOverlay = useCallback(() => {
+        setShowOverlay((prev) => !prev);
+    }, []);
+
+    // Memoize VideoPlayer to prevent re-renders from overlay toggle
+    const videoView = useMemo(() => (
+        <VideoPlayer player={player} toggleOverlay={toggleOverlay} />
+    ), [player, toggleOverlay]);
+
+    // ─── Error state ────────────────────────────────────────────
     if (!itemId || !hlsUrl) {
         return (
             <View style={styles.errorContainer}>
@@ -58,43 +147,13 @@ export default function PlayerScreen() {
         <View style={styles.container}>
             <Stack.Screen options={{ headerShown: false }} />
             <StatusBar hidden />
-
-            <TouchableOpacity
-                style={styles.videoTouchable}
-                activeOpacity={1}
-                onPress={() => setShowControls(!showControls)}
-            >
-                <VideoView
-                    style={styles.video}
-                    player={player}
-                    allowsFullscreen
-                    allowsPictureInPicture
-                    nativeControls={true}
-                />
-            </TouchableOpacity>
-
-            {/* Custom overlay controls */}
-            {showControls && (
-                <View style={styles.controlsOverlay} pointerEvents="box-none">
-                    {/* Top bar */}
-                    <View style={styles.topBar}>
-                        <TouchableOpacity onPress={() => router.back()} style={styles.controlBtn}>
-                            <Ionicons name="arrow-back" size={24} color="#fff" />
-                        </TouchableOpacity>
-                        <View style={styles.titleContainer}>
-                            <Text style={styles.title} numberOfLines={1}>
-                                {item?.Name ?? 'Playing...'}
-                            </Text>
-                            {item?.Type === 'Episode' && item.SeriesName && (
-                                <Text style={styles.subtitle}>
-                                    {item.SeriesName} · S{item.ParentIndexNumber}E{item.IndexNumber}
-                                </Text>
-                            )}
-                        </View>
-                        <View style={{ width: 40 }} />
-                    </View>
-                </View>
-            )}
+            {videoView}
+            <PlayerOverlay
+                player={player}
+                item={item}
+                showOverlay={showOverlay}
+                toggleOverlay={toggleOverlay}
+            />
         </View>
     );
 }
@@ -104,48 +163,6 @@ const createStyles = (colors: AppColors) => StyleSheet.create({
         flex: 1,
         backgroundColor: '#000',
     },
-    videoTouchable: {
-        flex: 1,
-    },
-    video: {
-        width: SCREEN_WIDTH,
-        height: SCREEN_HEIGHT,
-    },
-    controlsOverlay: {
-        ...StyleSheet.absoluteFillObject,
-        justifyContent: 'space-between',
-    },
-    topBar: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        paddingTop: 50,
-        paddingHorizontal: Spacing.screenPadding,
-        backgroundColor: 'rgba(0,0,0,0.5)',
-        paddingBottom: Spacing.md,
-    },
-    controlBtn: {
-        width: 40,
-        height: 40,
-        justifyContent: 'center',
-        alignItems: 'center',
-    },
-    titleContainer: {
-        flex: 1,
-        marginHorizontal: Spacing.md,
-    },
-    title: {
-        fontFamily: 'Inter_600SemiBold',
-        fontSize: 16,
-        color: '#fff',
-    },
-    subtitle: {
-        fontFamily: 'Inter_400Regular',
-        fontSize: 12,
-        color: 'rgba(255,255,255,0.7)',
-        marginTop: 2,
-    },
-
-    // Error
     errorContainer: {
         flex: 1,
         backgroundColor: '#000',
@@ -170,7 +187,5 @@ const createStyles = (colors: AppColors) => StyleSheet.create({
         fontFamily: 'Inter_600SemiBold',
         fontSize: 15,
     },
-
-    // Color tokens for inline use
     iconError: { color: colors.error },
 });
