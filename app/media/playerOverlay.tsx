@@ -50,7 +50,7 @@ interface PlayerOverlayProps {
   toggleOverlay: () => void;
   selectedQuality: QualityPreset;
   onQualityChange: (preset: QualityPreset) => void;
-  onLanguageChange?: (streamIndex: number) => void;
+  onAudioStreamChange: (streamIndex: number) => void;
 }
 
 const SCRUBBER_UPDATE_MS = 500;
@@ -63,7 +63,7 @@ export default function PlayerOverlay({
   toggleOverlay,
   selectedQuality,
   onQualityChange,
-  onLanguageChange,
+  onAudioStreamChange,
 }: PlayerOverlayProps) {
   const router = useRouter();
 
@@ -399,9 +399,8 @@ export default function PlayerOverlay({
         >
           <View style={styles.pickerContainer}>
             <Text style={styles.pickerTitle}>Audio Language</Text>
-            {audioStreams?.map((lang, index) => {
-              const isActive =
-                lang.Language === audioStreams?.[selectedAudioIndex]?.Language;
+            {audioStreams?.map((lang) => {
+              const isActive = lang.Index === selectedAudioIndex;
               return (
                 <TouchableOpacity
                   key={lang.Language}
@@ -410,7 +409,8 @@ export default function PlayerOverlay({
                     isActive && styles.pickerOptionActive,
                   ]}
                   onPress={() => {
-                    setSelectedAudioIndex(index);
+                    onAudioStreamChange(lang.Index);
+                    setSelectedAudioIndex(lang.Index);
                     setShowLanguagePicker(false);
                   }}
                 >

@@ -61,6 +61,8 @@ export default function PlayerScreen() {
   const [selectedQuality, setSelectedQuality] = useState<QualityPreset>(
     QUALITY_PRESETS[0],
   );
+  const [selectedAudioStreamIndex, setSelectedAudioStreamIndex] =
+    useState<number>();
 
   const startTicks = startTicksParam ? parseInt(startTicksParam, 10) : 0;
   const startSeconds = startTicks > 0 ? startTicks / TICKS_PER_SECOND : 0;
@@ -159,7 +161,41 @@ export default function PlayerScreen() {
       // Remember current position
       const resumeTime = player.currentTime;
       // Build new URL with selected bitrate
-      const urls = getStreamUrl(itemId, preset.maxBitrate);
+      const urls = getStreamUrl(
+        itemId,
+        preset.maxBitrate,
+        selectedAudioStreamIndex,
+      );
+      if (!urls?.hlsUrl) return;
+      // Replace the source and seek back
+      player.replace(urls.hlsUrl);
+      // Seek after a brief delay to let the new source initialize
+      setTimeout(() => {
+        try {
+          player.currentTime = resumeTime;
+          player.play();
+        } catch {
+          /* player may not be ready */
+        }
+      }, 500);
+      // eslint-disable-next-line react-hooks/exhaustive-deps
+    },
+    [itemId, player, getStreamUrl],
+  );
+
+  // ─── Audio stream change handler ────────────────────────────
+  const handleAudioStreamChange = useCallback(
+    (audioStreamIndex: number) => {
+      setSelectedAudioStreamIndex(audioStreamIndex);
+      if (!itemId || !player) return;
+      // Remember current position
+      const resumeTime = player.currentTime;
+      // Build new URL with selected bitrate
+      const urls = getStreamUrl(
+        itemId,
+        selectedQuality.maxBitrate,
+        audioStreamIndex,
+      );
       if (!urls?.hlsUrl) return;
       // Replace the source and seek back
       player.replace(urls.hlsUrl);
@@ -213,6 +249,7 @@ export default function PlayerScreen() {
         toggleOverlay={toggleOverlay}
         selectedQuality={selectedQuality}
         onQualityChange={handleQualityChange}
+        onAudioStreamChange={handleAudioStreamChange}
       />
     </View>
   );
