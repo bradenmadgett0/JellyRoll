@@ -11,13 +11,13 @@ import { useRouter } from "expo-router";
 import { VideoAirPlayButton, VideoPlayer } from "expo-video";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
-    GestureResponderEvent,
-    LayoutChangeEvent,
-    Platform,
-    StyleSheet,
-    Text,
-    TouchableOpacity,
-    View,
+  GestureResponderEvent,
+  LayoutChangeEvent,
+  Platform,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View,
 } from "react-native";
 import Animated, { FadeIn, FadeOut } from "react-native-reanimated";
 import { Spacing } from "../../constants/Spacing";
@@ -80,6 +80,7 @@ export default function PlayerOverlay({
   const scrubRef = useRef(currentTime);
   const autoHideTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
+  // ─── Audio streams ───────────────────────────────────────
   const audioStreams = useMemo(() => {
     if (!item?.MediaSources?.[0]?.MediaStreams) return [];
     return item.MediaSources[0].MediaStreams.filter((s) => s.Type === "Audio");
@@ -330,6 +331,21 @@ export default function PlayerOverlay({
             />
             <Text style={styles.qualityBtnLabel}>{selectedQuality.label}</Text>
           </TouchableOpacity>
+
+          <TouchableOpacity
+            onPress={() => setShowLanguagePicker(true)}
+            style={styles.qualityBtn}
+            hitSlop={12}
+          >
+            <Ionicons
+              name="language-outline"
+              size={18}
+              color="rgba(255,255,255,0.8)"
+            />
+            <Text style={styles.qualityBtnLabel}>
+              {audioStreams?.[selectedAudioIndex]?.Language}
+            </Text>
+          </TouchableOpacity>
         </View>
       </View>
 
@@ -363,6 +379,48 @@ export default function PlayerOverlay({
                     ]}
                   >
                     {preset.label}
+                  </Text>
+                  {isActive && (
+                    <Ionicons name="checkmark" size={18} color="#fff" />
+                  )}
+                </TouchableOpacity>
+              );
+            })}
+          </View>
+        </TouchableOpacity>
+      )}
+
+      {/* ─── Audio Language Picker Modal ────────────────────── */}
+      {showLanguagePicker && (
+        <TouchableOpacity
+          style={styles.pickerBackdrop}
+          activeOpacity={1}
+          onPress={() => setShowLanguagePicker(false)}
+        >
+          <View style={styles.pickerContainer}>
+            <Text style={styles.pickerTitle}>Audio Language</Text>
+            {audioStreams?.map((lang, index) => {
+              const isActive =
+                lang.Language === audioStreams?.[selectedAudioIndex]?.Language;
+              return (
+                <TouchableOpacity
+                  key={lang.Language}
+                  style={[
+                    styles.pickerOption,
+                    isActive && styles.pickerOptionActive,
+                  ]}
+                  onPress={() => {
+                    setSelectedAudioIndex(index);
+                    setShowLanguagePicker(false);
+                  }}
+                >
+                  <Text
+                    style={[
+                      styles.pickerOptionText,
+                      isActive && styles.pickerOptionTextActive,
+                    ]}
+                  >
+                    {lang.Language}
                   </Text>
                   {isActive && (
                     <Ionicons name="checkmark" size={18} color="#fff" />
