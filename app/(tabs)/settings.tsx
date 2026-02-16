@@ -15,6 +15,7 @@ import {
     View,
 } from 'react-native';
 import Animated, { FadeInDown } from 'react-native-reanimated';
+import TabSafeView from '../../components/ui/TabSafeView';
 import { SOURCE_COLORS, SOURCE_ICONS } from '../../constants/Sources';
 import { Spacing } from '../../constants/Spacing';
 import { AppColors } from '../../hooks/useColors';
@@ -82,228 +83,223 @@ export default function SettingsScreen() {
     };
 
     return (
-        <ScrollView style={styles.container} contentContainerStyle={styles.contentContainer}>
-            <Animated.View entering={FadeInDown.duration(500)}>
-                <Text style={styles.header}>Settings</Text>
-            </Animated.View>
-
-            {/* Servers Section */}
-            <Animated.View entering={FadeInDown.duration(500).delay(100)}>
-                <View style={styles.sectionHeader}>
-                    <Text style={styles.sectionTitle}>Servers</Text>
-                    <TouchableOpacity onPress={() => router.push('/server/add')}>
-                        <Ionicons name="add-circle" size={24} color={styles.iconPrimary.color} />
-                    </TouchableOpacity>
-                </View>
-
-                {servers.length === 0 ? (
-                    <View style={styles.emptyServers}>
-                        <Text style={styles.emptyServersText}>No servers connected</Text>
-                    </View>
-                ) : (
-                    servers.map((server) => (
-                        <TouchableOpacity
-                            key={server.id}
-                            style={styles.serverRow}
-                            onPress={() => router.push(`/server/${server.id}`)}
-                            activeOpacity={0.7}
-                        >
-                            <View style={styles.serverRowLeft}>
-                                <View style={[styles.serverIcon, { backgroundColor: SOURCE_COLORS[server.type] + '20' }]}>
-                                    <Ionicons
-                                        name={SOURCE_ICONS[server.type]}
-                                        size={20}
-                                        color={SOURCE_COLORS[server.type]}
-                                    />
-                                </View>
-                                <View style={styles.serverInfo}>
-                                    <Text style={styles.serverName}>{server.name}</Text>
-                                    <Text style={styles.serverMeta}>
-                                        {SERVER_TYPE_LABELS[server.type]}
-                                        {server.serverVersion ? ` • v${server.serverVersion}` : ''}
-                                    </Text>
-                                </View>
-                            </View>
-                            <TouchableOpacity
-                                onPress={() => handleDeleteServer(server.id, server.name)}
-                                hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
-                            >
-                                <Ionicons name="trash-outline" size={18} color={styles.iconError.color} />
-                            </TouchableOpacity>
+        <ScrollView style={styles.container}>
+            <TabSafeView>
+                {/* Servers Section */}
+                <Animated.View entering={FadeInDown.duration(500).delay(100)}>
+                    <View style={styles.sectionHeader}>
+                        <Text style={styles.sectionTitle}>Servers</Text>
+                        <TouchableOpacity onPress={() => router.push('/server/add')}>
+                            <Ionicons name="add-circle" size={24} color={styles.iconPrimary.color} />
                         </TouchableOpacity>
-                    ))
-                )}
-            </Animated.View>
-
-            {/* Playback Section */}
-            <Animated.View entering={FadeInDown.duration(500).delay(150)}>
-                <Text style={styles.sectionTitle}>Playback</Text>
-
-                {/* Stream Quality */}
-                <View style={styles.settingCard}>
-                    <View style={styles.settingCardHeader}>
-                        <Ionicons name="speedometer" size={20} color={styles.iconPrimary.color} />
-                        <Text style={styles.settingLabel}>Stream Quality</Text>
                     </View>
-                    <View style={styles.segmentRow}>
-                        {QUALITY_OPTIONS.map((opt) => (
+
+                    {servers.length === 0 ? (
+                        <View style={styles.emptyServers}>
+                            <Text style={styles.emptyServersText}>No servers connected</Text>
+                        </View>
+                    ) : (
+                        servers.map((server) => (
                             <TouchableOpacity
-                                key={opt.value}
-                                style={[
-                                    styles.segmentBtn,
-                                    streamQuality === opt.value && styles.segmentBtnActive,
-                                ]}
-                                onPress={() => setStreamQuality(opt.value as any)}
+                                key={server.id}
+                                style={styles.serverRow}
+                                onPress={() => router.push(`/server/${server.id}`)}
                                 activeOpacity={0.7}
                             >
-                                <Text style={[
-                                    styles.segmentText,
-                                    streamQuality === opt.value && styles.segmentTextActive,
-                                ]}>
-                                    {opt.label}
-                                </Text>
+                                <View style={styles.serverRowLeft}>
+                                    <View style={[styles.serverIcon, { backgroundColor: SOURCE_COLORS[server.type] + '20' }]}>
+                                        <Ionicons
+                                            name={SOURCE_ICONS[server.type]}
+                                            size={20}
+                                            color={SOURCE_COLORS[server.type]}
+                                        />
+                                    </View>
+                                    <View style={styles.serverInfo}>
+                                        <Text style={styles.serverName}>{server.name}</Text>
+                                        <Text style={styles.serverMeta}>
+                                            {SERVER_TYPE_LABELS[server.type]}
+                                            {server.serverVersion ? ` • v${server.serverVersion}` : ''}
+                                        </Text>
+                                    </View>
+                                </View>
+                                <TouchableOpacity
+                                    onPress={() => handleDeleteServer(server.id, server.name)}
+                                    hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
+                                >
+                                    <Ionicons name="trash-outline" size={18} color={styles.iconError.color} />
+                                </TouchableOpacity>
                             </TouchableOpacity>
-                        ))}
-                    </View>
-                </View>
+                        ))
+                    )}
+                </Animated.View>
 
-                {/* Subtitles */}
-                <View style={styles.settingRow}>
-                    <View style={styles.settingLeft}>
-                        <Ionicons name="text" size={20} color={styles.iconSecondary.color} />
-                        <Text style={styles.settingLabel}>Show Subtitles</Text>
-                    </View>
-                    <Switch
-                        value={showSubtitles}
-                        onValueChange={setShowSubtitles}
-                        trackColor={{ false: styles.switchTrack.backgroundColor as string, true: styles.switchTrackActive.backgroundColor as string }}
-                        thumbColor={showSubtitles ? styles.switchThumbActive.backgroundColor as string : styles.switchThumb.backgroundColor as string}
-                    />
-                </View>
-            </Animated.View>
+                {/* Playback Section */}
+                <Animated.View entering={FadeInDown.duration(500).delay(150)}>
+                    <Text style={styles.sectionTitle}>Playback</Text>
 
-            {/* Data Section */}
-            <Animated.View entering={FadeInDown.duration(500).delay(200)}>
-                <Text style={styles.sectionTitle}>Data</Text>
+                    {/* Stream Quality */}
+                    <View style={styles.settingCard}>
+                        <View style={styles.settingCardHeader}>
+                            <Ionicons name="speedometer" size={20} color={styles.iconPrimary.color} />
+                            <Text style={styles.settingLabel}>Stream Quality</Text>
+                        </View>
+                        <View style={styles.segmentRow}>
+                            {QUALITY_OPTIONS.map((opt) => (
+                                <TouchableOpacity
+                                    key={opt.value}
+                                    style={[
+                                        styles.segmentBtn,
+                                        streamQuality === opt.value && styles.segmentBtnActive,
+                                    ]}
+                                    onPress={() => setStreamQuality(opt.value as any)}
+                                    activeOpacity={0.7}
+                                >
+                                    <Text style={[
+                                        styles.segmentText,
+                                        streamQuality === opt.value && styles.segmentTextActive,
+                                    ]}>
+                                        {opt.label}
+                                    </Text>
+                                </TouchableOpacity>
+                            ))}
+                        </View>
+                    </View>
 
-                {/* Auto Refresh */}
-                <View style={styles.settingCard}>
-                    <View style={styles.settingCardHeader}>
-                        <Ionicons name="refresh" size={20} color={styles.iconInfo.color} />
-                        <Text style={styles.settingLabel}>Auto Refresh Interval</Text>
+                    {/* Subtitles */}
+                    <View style={styles.settingRow}>
+                        <View style={styles.settingLeft}>
+                            <Ionicons name="text" size={20} color={styles.iconSecondary.color} />
+                            <Text style={styles.settingLabel}>Show Subtitles</Text>
+                        </View>
+                        <Switch
+                            value={showSubtitles}
+                            onValueChange={setShowSubtitles}
+                            trackColor={{ false: styles.switchTrack.backgroundColor as string, true: styles.switchTrackActive.backgroundColor as string }}
+                            thumbColor={showSubtitles ? styles.switchThumbActive.backgroundColor as string : styles.switchThumb.backgroundColor as string}
+                        />
                     </View>
-                    <View style={styles.segmentRow}>
-                        {REFRESH_OPTIONS.map((opt) => (
-                            <TouchableOpacity
-                                key={opt.value}
-                                style={[
-                                    styles.segmentBtn,
-                                    autoRefreshInterval === opt.value && styles.segmentBtnActive,
-                                ]}
-                                onPress={() => setAutoRefreshInterval(opt.value)}
-                                activeOpacity={0.7}
-                            >
-                                <Text style={[
-                                    styles.segmentText,
-                                    autoRefreshInterval === opt.value && styles.segmentTextActive,
-                                ]}>
-                                    {opt.label}
-                                </Text>
-                            </TouchableOpacity>
-                        ))}
-                    </View>
-                </View>
-            </Animated.View>
+                </Animated.View>
 
-            {/* Notifications Section */}
-            <Animated.View entering={FadeInDown.duration(500).delay(250)}>
-                <Text style={styles.sectionTitle}>Notifications</Text>
-                <View style={styles.settingRow}>
-                    <View style={styles.settingLeft}>
-                        <Ionicons name="notifications" size={20} color={styles.iconWarning.color} />
-                        <Text style={styles.settingLabel}>Download Alerts</Text>
-                    </View>
-                    <Switch
-                        value={enableNotifications}
-                        onValueChange={setEnableNotifications}
-                        trackColor={{ false: styles.switchTrack.backgroundColor as string, true: styles.switchTrackActive.backgroundColor as string }}
-                        thumbColor={enableNotifications ? styles.switchThumbActive.backgroundColor as string : styles.switchThumb.backgroundColor as string}
-                    />
-                </View>
-            </Animated.View>
+                {/* Data Section */}
+                <Animated.View entering={FadeInDown.duration(500).delay(200)}>
+                    <Text style={styles.sectionTitle}>Data</Text>
 
-            {/* Appearance Section */}
-            <Animated.View entering={FadeInDown.duration(500).delay(300)}>
-                <Text style={styles.sectionTitle}>Appearance</Text>
-                <View style={styles.settingCard}>
-                    <View style={styles.settingCardHeader}>
-                        <Ionicons name="color-palette" size={20} color={styles.iconPrimary.color} />
-                        <Text style={styles.settingLabel}>Theme</Text>
+                    {/* Auto Refresh */}
+                    <View style={styles.settingCard}>
+                        <View style={styles.settingCardHeader}>
+                            <Ionicons name="refresh" size={20} color={styles.iconInfo.color} />
+                            <Text style={styles.settingLabel}>Auto Refresh Interval</Text>
+                        </View>
+                        <View style={styles.segmentRow}>
+                            {REFRESH_OPTIONS.map((opt) => (
+                                <TouchableOpacity
+                                    key={opt.value}
+                                    style={[
+                                        styles.segmentBtn,
+                                        autoRefreshInterval === opt.value && styles.segmentBtnActive,
+                                    ]}
+                                    onPress={() => setAutoRefreshInterval(opt.value)}
+                                    activeOpacity={0.7}
+                                >
+                                    <Text style={[
+                                        styles.segmentText,
+                                        autoRefreshInterval === opt.value && styles.segmentTextActive,
+                                    ]}>
+                                        {opt.label}
+                                    </Text>
+                                </TouchableOpacity>
+                            ))}
+                        </View>
                     </View>
-                    <View style={styles.segmentRow}>
-                        {THEME_OPTIONS.map((opt) => (
-                            <TouchableOpacity
-                                key={opt.value}
-                                style={[
-                                    styles.segmentBtn,
-                                    theme === opt.value && styles.segmentBtnActive,
-                                ]}
-                                onPress={() => setTheme(opt.value)}
-                                activeOpacity={0.7}
-                            >
-                                <Ionicons
-                                    name={opt.icon}
-                                    size={14}
-                                    color={theme === opt.value ? styles.segmentTextActive.color as string : styles.segmentText.color as string}
-                                    style={{ marginBottom: 2 }}
-                                />
-                                <Text style={[
-                                    styles.segmentText,
-                                    theme === opt.value && styles.segmentTextActive,
-                                ]}>
-                                    {opt.label}
-                                </Text>
-                            </TouchableOpacity>
-                        ))}
-                    </View>
-                </View>
-            </Animated.View>
+                </Animated.View>
 
-            {/* About Section */}
-            <Animated.View entering={FadeInDown.duration(500).delay(350)}>
-                <Text style={styles.sectionTitle}>About</Text>
-                <View style={styles.aboutCard}>
-                    <View style={styles.aboutLogoContainer}>
-                        <Ionicons name="planet" size={40} color={styles.iconPrimary.color} />
+                {/* Notifications Section */}
+                <Animated.View entering={FadeInDown.duration(500).delay(250)}>
+                    <Text style={styles.sectionTitle}>Notifications</Text>
+                    <View style={styles.settingRow}>
+                        <View style={styles.settingLeft}>
+                            <Ionicons name="notifications" size={20} color={styles.iconWarning.color} />
+                            <Text style={styles.settingLabel}>Download Alerts</Text>
+                        </View>
+                        <Switch
+                            value={enableNotifications}
+                            onValueChange={setEnableNotifications}
+                            trackColor={{ false: styles.switchTrack.backgroundColor as string, true: styles.switchTrackActive.backgroundColor as string }}
+                            thumbColor={enableNotifications ? styles.switchThumbActive.backgroundColor as string : styles.switchThumb.backgroundColor as string}
+                        />
                     </View>
-                    <Text style={styles.aboutAppName}>JellyRoll</Text>
-                    <Text style={styles.aboutVersion}>Version 1.0.0 · Build 1</Text>
-                    <Text style={styles.aboutDescription}>
-                        A unified media hub for Jellyfin and *arr services.
-                    </Text>
-                </View>
-            </Animated.View>
+                </Animated.View>
 
-            {/* Security Info */}
-            <Animated.View entering={FadeInDown.duration(500).delay(400)}>
-                <Text style={styles.sectionTitle}>Security</Text>
-                <View style={styles.securityInfo}>
-                    <Ionicons name="shield-checkmark" size={20} color={styles.iconSuccess.color} />
-                    <Text style={styles.securityText}>
-                        API keys and tokens are encrypted using {Platform.OS === 'ios' ? 'iOS Keychain' : Platform.OS === 'android' ? 'Android Keystore' : 'secure storage'}.
-                        All connections use HTTPS when available.
-                    </Text>
-                </View>
-            </Animated.View>
-        </ScrollView>
+                {/* Appearance Section */}
+                <Animated.View entering={FadeInDown.duration(500).delay(300)}>
+                    <Text style={styles.sectionTitle}>Appearance</Text>
+                    <View style={styles.settingCard}>
+                        <View style={styles.settingCardHeader}>
+                            <Ionicons name="color-palette" size={20} color={styles.iconPrimary.color} />
+                            <Text style={styles.settingLabel}>Theme</Text>
+                        </View>
+                        <View style={styles.segmentRow}>
+                            {THEME_OPTIONS.map((opt) => (
+                                <TouchableOpacity
+                                    key={opt.value}
+                                    style={[
+                                        styles.segmentBtn,
+                                        theme === opt.value && styles.segmentBtnActive,
+                                    ]}
+                                    onPress={() => setTheme(opt.value)}
+                                    activeOpacity={0.7}
+                                >
+                                    <Ionicons
+                                        name={opt.icon}
+                                        size={14}
+                                        color={theme === opt.value ? styles.segmentTextActive.color as string : styles.segmentText.color as string}
+                                        style={{ marginBottom: 2 }}
+                                    />
+                                    <Text style={[
+                                        styles.segmentText,
+                                        theme === opt.value && styles.segmentTextActive,
+                                    ]}>
+                                        {opt.label}
+                                    </Text>
+                                </TouchableOpacity>
+                            ))}
+                        </View>
+                    </View>
+                </Animated.View>
+
+                {/* About Section */}
+                <Animated.View entering={FadeInDown.duration(500).delay(350)}>
+                    <Text style={styles.sectionTitle}>About</Text>
+                    <View style={styles.aboutCard}>
+                        <View style={styles.aboutLogoContainer}>
+                            <Ionicons name="planet" size={40} color={styles.iconPrimary.color} />
+                        </View>
+                        <Text style={styles.aboutAppName}>JellyRoll</Text>
+                        <Text style={styles.aboutVersion}>Version 1.0.0 · Build 1</Text>
+                        <Text style={styles.aboutDescription}>
+                            A unified media hub for Jellyfin and *arr services.
+                        </Text>
+                    </View>
+                </Animated.View>
+
+                {/* Security Info */}
+                <Animated.View entering={FadeInDown.duration(500).delay(400)}>
+                    <Text style={styles.sectionTitle}>Security</Text>
+                    <View style={styles.securityInfo}>
+                        <Ionicons name="shield-checkmark" size={20} color={styles.iconSuccess.color} />
+                        <Text style={styles.securityText}>
+                            API keys and tokens are encrypted using {Platform.OS === 'ios' ? 'iOS Keychain' : Platform.OS === 'android' ? 'Android Keystore' : 'secure storage'}.
+                            All connections use HTTPS when available.
+                        </Text>
+                    </View>
+                </Animated.View>
+            </TabSafeView>
+        </ScrollView >
     );
 }
 
 const createStyles = (colors: AppColors) => StyleSheet.create({
     container: { flex: 1, backgroundColor: colors.background },
-    contentContainer: { paddingBottom: 48 },
-    header: { fontFamily: 'Inter_700Bold', fontSize: 28, color: colors.text, paddingHorizontal: Spacing.screenPadding, paddingTop: Spacing.xl, paddingBottom: Spacing.md },
-
     // Sections
     sectionHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingHorizontal: Spacing.screenPadding, marginTop: Spacing.xxl, marginBottom: Spacing.md },
     sectionTitle: { fontFamily: 'Inter_600SemiBold', fontSize: 14, color: colors.textSecondary, textTransform: 'uppercase', letterSpacing: 0.5, paddingHorizontal: Spacing.screenPadding, marginTop: Spacing.xxl, marginBottom: Spacing.md },

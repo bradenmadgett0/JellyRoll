@@ -13,7 +13,6 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import {
     GestureResponderEvent,
     LayoutChangeEvent,
-    Platform,
     StyleSheet,
     Text,
     TouchableOpacity,
@@ -194,7 +193,7 @@ export default function PlayerOverlay({
                 {/* AirPlay — native iOS button via expo-video, icon placeholder elsewhere */}
                 <TouchableOpacity style={styles.controlBtn} hitSlop={12}>
                     <Ionicons
-                        name={Platform.OS === 'ios' ? 'airplay-outline' as any : 'cast-outline' as any}
+                        name={'share-outline' as any}
                         size={22}
                         color="#fff"
                     />

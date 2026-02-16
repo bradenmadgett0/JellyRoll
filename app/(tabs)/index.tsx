@@ -20,6 +20,7 @@ import { MediaCardProps } from '../../components/media/MediaCard';
 import { MediaRow } from '../../components/media/MediaRow';
 import { QueueCard } from '../../components/media/QueueCard';
 import { SkeletonRow } from '../../components/ui/Skeleton';
+import TabSafeView from '../../components/ui/TabSafeView';
 import { SOURCE_COLORS, SOURCE_ICONS } from '../../constants/Sources';
 import { Spacing } from '../../constants/Spacing';
 import { AppColors } from '../../hooks/useColors';
@@ -244,155 +245,155 @@ export default function HomeScreen() {
   return (
     <ScrollView
       style={styles.container}
-      contentContainerStyle={styles.contentContainer}
       refreshControl={
         <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={styles.iconPrimary.color as string} />
       }
     >
-      {/* Header */}
-      <Animated.View entering={FadeInDown.duration(500)} style={styles.header}>
-        <View>
-          <Text style={styles.greeting}>JellyRoll</Text>
-          <Text style={styles.subtitle}>
-            {servers.length} server{servers.length !== 1 ? 's' : ''} connected
-          </Text>
-        </View>
-        <View style={styles.headerActions}>
-          <TouchableOpacity
-            style={styles.headerBtn}
-            onPress={() => router.push('/search' as any)}
+      <TabSafeView>
+        {/* Header */}
+        <Animated.View entering={FadeInDown.duration(500)} style={styles.header}>
+          <View>
+            <Text style={styles.greeting}>JellyRoll</Text>
+            <Text style={styles.subtitle}>
+              {servers.length} server{servers.length !== 1 ? 's' : ''} connected
+            </Text>
+          </View>
+          <View style={styles.headerActions}>
+            <TouchableOpacity
+              style={styles.headerBtn}
+              onPress={() => router.push('/search' as any)}
+            >
+              <Ionicons name="search" size={22} color={styles.greeting.color} />
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={styles.headerBtn}
+              onPress={() => router.push('/server/add')}
+            >
+              <Ionicons name="add" size={24} color={styles.iconPrimary.color} />
+            </TouchableOpacity>
+          </View>
+        </Animated.View>
+
+        {/* Server cards */}
+        <Animated.View entering={FadeInDown.duration(500).delay(50)}>
+          <ScrollView
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            contentContainerStyle={styles.serverCardsContainer}
           >
-            <Ionicons name="search" size={22} color={styles.greeting.color} />
-          </TouchableOpacity>
-          <TouchableOpacity
-            style={styles.headerBtn}
-            onPress={() => router.push('/server/add')}
-          >
-            <Ionicons name="add" size={24} color={styles.iconPrimary.color} />
-          </TouchableOpacity>
-        </View>
-      </Animated.View>
-
-      {/* Server cards */}
-      <Animated.View entering={FadeInDown.duration(500).delay(50)}>
-        <ScrollView
-          horizontal
-          showsHorizontalScrollIndicator={false}
-          contentContainerStyle={styles.serverCardsContainer}
-        >
-          {servers.map((server, index) => (
-            <Animated.View key={server.id} entering={FadeInRight.duration(400).delay(index * 80)}>
-              <TouchableOpacity
-                style={[styles.serverCard, { borderLeftColor: SOURCE_COLORS[server.type] }]}
-                onPress={() => router.push(`/server/${server.id}`)}
-                activeOpacity={0.7}
-              >
-                <View style={[styles.serverIconBg, { backgroundColor: SOURCE_COLORS[server.type] + '20' }]}>
-                  <Ionicons name={SOURCE_ICONS[server.type]} size={22} color={SOURCE_COLORS[server.type]} />
-                </View>
-                <Text style={styles.serverCardName} numberOfLines={1}>{server.name}</Text>
-                <Text style={styles.serverCardType}>{server.type}</Text>
-              </TouchableOpacity>
-            </Animated.View>
-          ))}
-        </ScrollView>
-      </Animated.View>
-
-      {/* Continue Watching */}
-      {hasJellyfin && (
-        <Animated.View entering={FadeInDown.duration(500).delay(100)}>
-          <MediaRow
-            title="Continue Watching"
-            items={resumeCards}
-            isLoading={resumeLoading}
-            variant="backdrop"
-            emptyMessage="No in-progress items"
-          />
-        </Animated.View>
-      )}
-
-      {/* Recently Added */}
-      {hasJellyfin && (
-        <Animated.View entering={FadeInDown.duration(500).delay(200)}>
-          <MediaRow
-            title="Recently Added"
-            items={latestCards}
-            isLoading={latestLoading}
-            variant="poster"
-            emptyMessage="No recent additions"
-          />
-        </Animated.View>
-      )}
-
-      {/* Upcoming */}
-      {upcomingCards.length > 0 && (
-        <Animated.View entering={FadeInDown.duration(500).delay(300)}>
-          <MediaRow
-            title="Upcoming"
-            items={upcomingCards}
-            variant="poster"
-            emptyMessage="Nothing upcoming"
-          />
-        </Animated.View>
-      )}
-
-      {/* Download Activity */}
-      {allQueueItems.length > 0 && (
-        <Animated.View entering={FadeInDown.duration(500).delay(400)}>
-          <Text style={styles.sectionTitle}>
-            Downloads ({allQueueItems.length})
-          </Text>
-          <View style={styles.queueContainer}>
-            {allQueueItems.slice(0, 5).map((item) => (
-              <QueueCard
-                key={item.id}
-                title={item.title}
-                subtitle={item.subtitle}
-                status={item.status}
-                progress={item.progress}
-                size={item.size}
-                timeLeft={item.timeLeft}
-                quality={item.quality}
-                source={item.source}
-              />
+            {servers.map((server, index) => (
+              <Animated.View key={server.id} entering={FadeInRight.duration(400).delay(index * 80)}>
+                <TouchableOpacity
+                  style={[styles.serverCard, { borderLeftColor: SOURCE_COLORS[server.type] }]}
+                  onPress={() => router.push(`/server/${server.id}`)}
+                  activeOpacity={0.7}
+                >
+                  <View style={[styles.serverIconBg, { backgroundColor: SOURCE_COLORS[server.type] + '20' }]}>
+                    <Ionicons name={SOURCE_ICONS[server.type]} size={22} color={SOURCE_COLORS[server.type]} />
+                  </View>
+                  <Text style={styles.serverCardName} numberOfLines={1}>{server.name}</Text>
+                  <Text style={styles.serverCardType}>{server.type}</Text>
+                </TouchableOpacity>
+              </Animated.View>
             ))}
-            {allQueueItems.length > 5 && (
-              <TouchableOpacity
-                style={styles.seeMoreQueue}
-                onPress={() => router.push('/(tabs)/manage')}
-              >
-                <Text style={styles.seeMoreText}>
-                  +{allQueueItems.length - 5} more in queue
-                </Text>
-              </TouchableOpacity>
-            )}
-          </View>
+          </ScrollView>
         </Animated.View>
-      )}
 
-      {/* Quick Actions - only show if no live data yet */}
-      {!hasJellyfin && allQueueItems.length === 0 && (
-        <Animated.View entering={FadeInDown.duration(500).delay(200)}>
-          <Text style={styles.sectionTitle}>Quick Actions</Text>
-          <View style={styles.quickActionsGrid}>
-            <TouchableOpacity style={styles.quickAction} onPress={() => router.push('/(tabs)/manage')}>
-              <Ionicons name="download" size={28} color={styles.sonarrColor.color} />
-              <Text style={styles.quickActionText}>Download Queue</Text>
-            </TouchableOpacity>
-            <TouchableOpacity style={styles.quickAction} onPress={() => router.push('/server/add')}>
-              <Ionicons name="add-circle" size={28} color={styles.iconPrimary.color} />
-              <Text style={styles.quickActionText}>Add Server</Text>
-            </TouchableOpacity>
-          </View>
-        </Animated.View>
-      )}
+        {/* Continue Watching */}
+        {hasJellyfin && (
+          <Animated.View entering={FadeInDown.duration(500).delay(100)}>
+            <MediaRow
+              title="Continue Watching"
+              items={resumeCards}
+              isLoading={resumeLoading}
+              variant="backdrop"
+              emptyMessage="No in-progress items"
+            />
+          </Animated.View>
+        )}
+
+        {/* Recently Added */}
+        {hasJellyfin && (
+          <Animated.View entering={FadeInDown.duration(500).delay(200)}>
+            <MediaRow
+              title="Recently Added"
+              items={latestCards}
+              isLoading={latestLoading}
+              variant="poster"
+              emptyMessage="No recent additions"
+            />
+          </Animated.View>
+        )}
+
+        {/* Upcoming */}
+        {upcomingCards.length > 0 && (
+          <Animated.View entering={FadeInDown.duration(500).delay(300)}>
+            <MediaRow
+              title="Upcoming"
+              items={upcomingCards}
+              variant="poster"
+              emptyMessage="Nothing upcoming"
+            />
+          </Animated.View>
+        )}
+
+        {/* Download Activity */}
+        {allQueueItems.length > 0 && (
+          <Animated.View entering={FadeInDown.duration(500).delay(400)}>
+            <Text style={styles.sectionTitle}>
+              Downloads ({allQueueItems.length})
+            </Text>
+            <View style={styles.queueContainer}>
+              {allQueueItems.slice(0, 5).map((item) => (
+                <QueueCard
+                  key={item.id}
+                  title={item.title}
+                  subtitle={item.subtitle}
+                  status={item.status}
+                  progress={item.progress}
+                  size={item.size}
+                  timeLeft={item.timeLeft}
+                  quality={item.quality}
+                  source={item.source}
+                />
+              ))}
+              {allQueueItems.length > 5 && (
+                <TouchableOpacity
+                  style={styles.seeMoreQueue}
+                  onPress={() => router.push('/(tabs)/manage')}
+                >
+                  <Text style={styles.seeMoreText}>
+                    +{allQueueItems.length - 5} more in queue
+                  </Text>
+                </TouchableOpacity>
+              )}
+            </View>
+          </Animated.View>
+        )}
+
+        {/* Quick Actions - only show if no live data yet */}
+        {!hasJellyfin && allQueueItems.length === 0 && (
+          <Animated.View entering={FadeInDown.duration(500).delay(200)}>
+            <Text style={styles.sectionTitle}>Quick Actions</Text>
+            <View style={styles.quickActionsGrid}>
+              <TouchableOpacity style={styles.quickAction} onPress={() => router.push('/(tabs)/manage')}>
+                <Ionicons name="download" size={28} color={styles.sonarrColor.color} />
+                <Text style={styles.quickActionText}>Download Queue</Text>
+              </TouchableOpacity>
+              <TouchableOpacity style={styles.quickAction} onPress={() => router.push('/server/add')}>
+                <Ionicons name="add-circle" size={28} color={styles.iconPrimary.color} />
+                <Text style={styles.quickActionText}>Add Server</Text>
+              </TouchableOpacity>
+            </View>
+          </Animated.View>
+        )}
+      </TabSafeView>
     </ScrollView>
   );
 }
 
 const createStyles = (colors: AppColors) => StyleSheet.create({
   container: { flex: 1, backgroundColor: colors.background },
-  contentContainer: { paddingBottom: 32 },
   loadingContainer: { flex: 1, backgroundColor: colors.background, justifyContent: 'center', alignItems: 'center' },
   loadingText: { color: colors.textSecondary, fontSize: 16, fontFamily: 'Inter_500Medium' },
 

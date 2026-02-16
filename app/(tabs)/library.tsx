@@ -17,6 +17,7 @@ import {
 } from 'react-native';
 import Animated, { FadeIn, FadeInDown } from 'react-native-reanimated';
 import { MediaCard } from '../../components/media/MediaCard';
+import { TAB_BAR_BOTTOM_INSET } from '../../components/ui/TabSafeView';
 import { Spacing } from '../../constants/Spacing';
 import { AppColors } from '../../hooks/useColors';
 import { useThemedStyles } from '../../hooks/useThemedStyles';
@@ -243,7 +244,7 @@ const createStyles = (colors: AppColors) => StyleSheet.create({
     viewToggle: { flexDirection: 'row', gap: Spacing.lg },
 
     // Grid
-    gridContent: { paddingHorizontal: Spacing.screenPadding, paddingBottom: 32 },
+    gridContent: { paddingHorizontal: Spacing.screenPadding, paddingBottom: TAB_BAR_BOTTOM_INSET },
     gridRow: { gap: CARD_GAP, marginBottom: CARD_GAP },
     gridItem: { marginRight: 0 },
 

@@ -17,6 +17,7 @@ import {
 } from 'react-native';
 import Animated, { FadeInDown } from 'react-native-reanimated';
 import { QueueCard } from '../../components/media/QueueCard';
+import TabSafeView from '../../components/ui/TabSafeView';
 import { SOURCE_COLORS, SOURCE_ICONS } from '../../constants/Sources';
 import { Spacing } from '../../constants/Spacing';
 import { AppColors } from '../../hooks/useColors';
@@ -165,7 +166,6 @@ export default function ManageScreen() {
     return (
         <ScrollView
             style={styles.container}
-            contentContainerStyle={styles.contentContainer}
             refreshControl={
                 <RefreshControl
                     refreshing={false}
@@ -174,56 +174,57 @@ export default function ManageScreen() {
                 />
             }
         >
-            {/* Summary */}
-            <Animated.View entering={FadeInDown.duration(400)} style={styles.summaryRow}>
-                <View style={styles.summaryCard}>
-                    <Text style={styles.summaryValue}>{arrServers.length}</Text>
-                    <Text style={styles.summaryLabel}>Services</Text>
-                </View>
-                <View style={styles.summaryCard}>
-                    <Text style={[styles.summaryValue, styles.summaryValueHighlight]}>{totalQueue}</Text>
-                    <Text style={styles.summaryLabel}>In Queue</Text>
-                </View>
-            </Animated.View>
+            <TabSafeView>
+                {/* Summary */}
+                <Animated.View entering={FadeInDown.duration(400)} style={styles.summaryRow}>
+                    <View style={styles.summaryCard}>
+                        <Text style={styles.summaryValue}>{arrServers.length}</Text>
+                        <Text style={styles.summaryLabel}>Services</Text>
+                    </View>
+                    <View style={styles.summaryCard}>
+                        <Text style={[styles.summaryValue, styles.summaryValueHighlight]}>{totalQueue}</Text>
+                        <Text style={styles.summaryLabel}>In Queue</Text>
+                    </View>
+                </Animated.View>
 
-            {/* Service cards */}
-            <Text style={styles.sectionTitle}>Connected Services</Text>
-            {arrServers.map((server, index) => (
-                <ServiceCard
-                    key={server.id}
-                    type={server.type}
-                    name={server.name}
-                    queueCount={getQueueCount(server.type)}
-                    onPress={() => router.push(getRoute(server.type) as any)}
-                    delay={100 + index * 80}
-                    styles={styles}
-                />
-            ))}
+                {/* Service cards */}
+                <Text style={styles.sectionTitle}>Connected Services</Text>
+                {arrServers.map((server, index) => (
+                    <ServiceCard
+                        key={server.id}
+                        type={server.type}
+                        name={server.name}
+                        queueCount={getQueueCount(server.type)}
+                        onPress={() => router.push(getRoute(server.type) as any)}
+                        delay={100 + index * 80}
+                        styles={styles}
+                    />
+                ))}
 
-            {/* Recent downloads */}
-            {recentQueueItems.length > 0 && (
-                <>
-                    <Text style={styles.sectionTitle}>Recent Downloads</Text>
-                    {recentQueueItems.map((item) => (
-                        <View key={item.id} style={styles.queueCardWrapper}>
-                            <QueueCard
-                                title={item.title}
-                                status={item.status}
-                                progress={item.progress}
-                                size={item.size}
-                                source={item.source}
-                            />
-                        </View>
-                    ))}
-                </>
-            )}
+                {/* Recent downloads */}
+                {recentQueueItems.length > 0 && (
+                    <>
+                        <Text style={styles.sectionTitle}>Recent Downloads</Text>
+                        {recentQueueItems.map((item) => (
+                            <View key={item.id} style={styles.queueCardWrapper}>
+                                <QueueCard
+                                    title={item.title}
+                                    status={item.status}
+                                    progress={item.progress}
+                                    size={item.size}
+                                    source={item.source}
+                                />
+                            </View>
+                        ))}
+                    </>
+                )}
+            </TabSafeView>
         </ScrollView>
     );
 }
 
 const createStyles = (colors: AppColors) => StyleSheet.create({
     container: { flex: 1, backgroundColor: colors.background },
-    contentContainer: { paddingBottom: 32 },
 
     // Empty
     emptyContainer: { flex: 1, backgroundColor: colors.background, justifyContent: 'center', alignItems: 'center', paddingHorizontal: 32 },
