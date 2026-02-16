@@ -11,13 +11,13 @@ import { useRouter } from "expo-router";
 import { VideoAirPlayButton, VideoPlayer } from "expo-video";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
-  GestureResponderEvent,
-  LayoutChangeEvent,
-  Platform,
-  StyleSheet,
-  Text,
-  TouchableOpacity,
-  View,
+    GestureResponderEvent,
+    LayoutChangeEvent,
+    Platform,
+    StyleSheet,
+    Text,
+    TouchableOpacity,
+    View,
 } from "react-native";
 import Animated, { FadeIn, FadeOut } from "react-native-reanimated";
 import { Spacing } from "../../constants/Spacing";
