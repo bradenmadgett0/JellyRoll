@@ -86,6 +86,7 @@ export default function PlayerOverlay({
     return item.MediaSources[0].MediaStreams.filter((s) => s.Type === "Audio");
   }, [item]);
 
+  // TODO: Probably should persist last selected audio stream index so it doesn't revert back to default every time
   useEffect(() => {
     const defaultStream = audioStreams.find((s) => s.IsDefault);
     if (defaultStream) {
