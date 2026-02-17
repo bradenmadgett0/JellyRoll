@@ -51,6 +51,7 @@ interface PlayerOverlayProps {
   selectedQuality: QualityPreset;
   onQualityChange: (preset: QualityPreset) => void;
   onAudioStreamChange: (streamIndex: number) => void;
+  selectedAudioIndex?: number;
 }
 
 const SCRUBBER_UPDATE_MS = 500;
@@ -64,6 +65,7 @@ export default function PlayerOverlay({
   selectedQuality,
   onQualityChange,
   onAudioStreamChange,
+  selectedAudioIndex: selectedAudioIndexProp,
 }: PlayerOverlayProps) {
   const router = useRouter();
 
@@ -73,7 +75,9 @@ export default function PlayerOverlay({
   const [bitrate, setBitrate] = useState<number | null>(null);
   const [showQualityPicker, setShowQualityPicker] = useState(false);
   const [showLanguagePicker, setShowLanguagePicker] = useState(false);
-  const [selectedAudioIndex, setSelectedAudioIndex] = useState<number>(0);
+  const [selectedAudioIndex, setSelectedAudioIndex] = useState<number>(
+    selectedAudioIndexProp ?? 0,
+  );
   const [isScrubbing, setIsScrubbing] = useState(false);
   const [scrubberWidth, setScrubberWidth] = useState(0);
 
@@ -344,7 +348,7 @@ export default function PlayerOverlay({
               color="rgba(255,255,255,0.8)"
             />
             <Text style={styles.qualityBtnLabel}>
-              {audioStreams?.[selectedAudioIndex]?.Language}
+              {audioStreams?.[selectedAudioIndex - 1 || 0]?.Language}
             </Text>
           </TouchableOpacity>
         </View>
@@ -404,7 +408,7 @@ export default function PlayerOverlay({
               const isActive = lang.Index === selectedAudioIndex;
               return (
                 <TouchableOpacity
-                  key={lang.Language}
+                  key={`${lang.Index}-${lang.Language}`}
                   style={[
                     styles.pickerOption,
                     isActive && styles.pickerOptionActive,
@@ -421,7 +425,7 @@ export default function PlayerOverlay({
                       isActive && styles.pickerOptionTextActive,
                     ]}
                   >
-                    {lang.Language}
+                    {lang.DisplayTitle}
                   </Text>
                   {isActive && (
                     <Ionicons name="checkmark" size={18} color="#fff" />

@@ -295,6 +295,7 @@ export default function PlayerScreen() {
         selectedQuality={selectedQuality}
         onQualityChange={handleQualityChange}
         onAudioStreamChange={handleAudioStreamChange}
+        selectedAudioIndex={selectedAudioStreamIndex}
       />
     </View>
   );
