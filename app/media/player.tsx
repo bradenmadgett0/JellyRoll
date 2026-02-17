@@ -3,6 +3,7 @@
  * and playback reporting. Renders VideoPlayer + PlayerOverlay as children.
  */
 
+import { QUALITY_PRESETS, QualityPreset } from "@/types/player";
 import { Ionicons } from "@expo/vector-icons";
 import { Stack, useLocalSearchParams, useRouter } from "expo-router";
 import { useVideoPlayer } from "expo-video";
@@ -22,29 +23,14 @@ import {
   useJellyfinStreamUrl,
   usePlaybackReporter,
 } from "../../services/hooks/useJellyfin";
+import { useMediaSettingsStore } from "../../services/stores/mediaSettingsStore";
+import { useServerStore } from "../../services/stores/serverStore";
 import PlayerOverlay from "./playerOverlay";
 import VideoPlayer from "./videoPlayer";
 
 const TICKS_PER_SECOND = 10_000_000;
 const POSITION_TRACK_MS = 1_000; // cache position every 1s
 const PROGRESS_REPORT_MS = 10_000; // report to Jellyfin every 10s
-
-// ─── Quality presets (bitrate in bps, null = no cap / direct stream) ──
-export interface QualityPreset {
-  label: string;
-  maxBitrate: number | null;
-}
-
-export const QUALITY_PRESETS: QualityPreset[] = [
-  { label: "Auto (Max)", maxBitrate: null },
-  { label: "1080p - 20 Mbps", maxBitrate: 20_000_000 },
-  { label: "1080p - 10 Mbps", maxBitrate: 10_000_000 },
-  { label: "720p - 8 Mbps", maxBitrate: 8_000_000 },
-  { label: "720p - 4 Mbps", maxBitrate: 4_000_000 },
-  { label: "480p - 3 Mbps", maxBitrate: 3_000_000 },
-  { label: "480p - 1.5 Mbps", maxBitrate: 1_500_000 },
-  { label: "360p - 800 Kbps", maxBitrate: 800_000 },
-];
 
 export default function PlayerScreen() {
   const { itemId, startTicks: startTicksParam } = useLocalSearchParams<{
@@ -56,6 +42,11 @@ export default function PlayerScreen() {
   const getStreamUrl = useJellyfinStreamUrl();
   const { data: item } = useJellyfinDetail(itemId);
   const { reportStart, reportProgress, reportStop } = usePlaybackReporter();
+  const jellyfinServer = useServerStore(
+    (s) => s.getServersByType("jellyfin")[0],
+  );
+  const getMediaSettings = useMediaSettingsStore((s) => s.getSettings);
+  const setMediaSettings = useMediaSettingsStore((s) => s.setSettings);
 
   const [showOverlay, setShowOverlay] = useState(true);
   const [selectedQuality, setSelectedQuality] = useState<QualityPreset>(
@@ -94,6 +85,53 @@ export default function PlayerScreen() {
     }
     p.play();
   });
+
+  // ─── Load saved media settings (once, after player is ready) ──
+  const hasAppliedSaved = useRef(false);
+  useEffect(() => {
+    if (!player || !item || !jellyfinServer || hasAppliedSaved.current) return;
+    hasAppliedSaved.current = true;
+
+    const saved = getMediaSettings(jellyfinServer.id, itemId);
+    if (!saved) return;
+
+    let newBitrate: number | null = QUALITY_PRESETS[0].maxBitrate;
+    let newAudioIndex: number | undefined;
+
+    if (saved.qualityPreset) {
+      const match = QUALITY_PRESETS.find(
+        (p) => p.label === saved.qualityPreset,
+      );
+      if (match) {
+        setSelectedQuality(match);
+        newBitrate = match.maxBitrate;
+      }
+    }
+    if (saved.audioStreamIndex !== undefined) {
+      setSelectedAudioStreamIndex(saved.audioStreamIndex);
+      newAudioIndex = saved.audioStreamIndex;
+    }
+
+    // Only replace if saved settings differ from defaults
+    if (
+      newBitrate !== QUALITY_PRESETS[0].maxBitrate ||
+      newAudioIndex !== undefined
+    ) {
+      const urls = getStreamUrl(itemId, newBitrate, newAudioIndex);
+      if (urls?.hlsUrl) {
+        player.replace(urls.hlsUrl);
+        setTimeout(() => {
+          try {
+            if (startSeconds > 0) player.currentTime = startSeconds;
+            player.play();
+          } catch {
+            /* player may not be ready */
+          }
+        }, 500);
+      }
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [player, item, jellyfinServer]);
 
   // ─── Position tracker (1s) — caches currentTime locally ─────
   useEffect(() => {
@@ -158,6 +196,12 @@ export default function PlayerScreen() {
     (preset: QualityPreset) => {
       setSelectedQuality(preset);
       if (!itemId || !player) return;
+      // Persist the quality setting
+      if (jellyfinServer) {
+        setMediaSettings(jellyfinServer.id, itemId, {
+          qualityPreset: preset.label,
+        });
+      }
       // Remember current position
       const resumeTime = player.currentTime;
       // Build new URL with selected bitrate
@@ -180,7 +224,14 @@ export default function PlayerScreen() {
       }, 500);
       // eslint-disable-next-line react-hooks/exhaustive-deps
     },
-    [itemId, player, getStreamUrl],
+    [
+      itemId,
+      player,
+      getStreamUrl,
+      jellyfinServer,
+      setMediaSettings,
+      selectedAudioStreamIndex,
+    ],
   );
 
   // ─── Audio stream change handler ────────────────────────────
@@ -188,6 +239,10 @@ export default function PlayerScreen() {
     (audioStreamIndex: number) => {
       setSelectedAudioStreamIndex(audioStreamIndex);
       if (!itemId || !player) return;
+      // Persist the audio stream setting
+      if (jellyfinServer) {
+        setMediaSettings(jellyfinServer.id, itemId, { audioStreamIndex });
+      }
       // Remember current position
       const resumeTime = player.currentTime;
       // Build new URL with selected bitrate
@@ -210,7 +265,14 @@ export default function PlayerScreen() {
       }, 500);
       // eslint-disable-next-line react-hooks/exhaustive-deps
     },
-    [itemId, player, getStreamUrl],
+    [
+      itemId,
+      player,
+      getStreamUrl,
+      jellyfinServer,
+      setMediaSettings,
+      selectedQuality,
+    ],
   );
 
   // Memoize VideoPlayer to prevent re-renders from overlay toggle

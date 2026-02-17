@@ -21,6 +21,7 @@ import "react-native-reanimated";
 
 import { Themes } from "../constants/Colors";
 import { useEffectiveScheme } from "../hooks/useEffectiveScheme";
+import { useMediaSettingsStore } from "../services/stores/mediaSettingsStore";
 import { useServerStore } from "../services/stores/serverStore";
 import { useSettingsStore } from "../services/stores/settingsStore";
 
@@ -66,6 +67,7 @@ export const unstable_settings = {
 export default function RootLayout() {
   const loadServers = useServerStore((s) => s.loadServers);
   const loadSettings = useSettingsStore((s) => s.loadSettings);
+  const loadMediaSettings = useMediaSettingsStore((s) => s.loadSettings);
   const scheme = useEffectiveScheme();
   const navTheme = buildNavTheme(scheme);
 
@@ -78,13 +80,17 @@ export default function RootLayout() {
 
   useEffect(() => {
     async function init() {
-      await Promise.all([loadServers(), loadSettings()]);
+      await Promise.all([loadServers(), loadSettings(), loadMediaSettings()]);
       if (fontsLoaded) {
-        await SplashScreen.hideAsync();
+        try {
+          await SplashScreen.hideAsync();
+        } catch {
+          // Native splash screen may not be registered (e.g. web, hot reload)
+        }
       }
     }
     init();
-  }, [fontsLoaded, loadServers, loadSettings]);
+  }, [fontsLoaded, loadServers, loadSettings, loadMediaSettings]);
 
   if (!fontsLoaded) {
     return null;

@@ -22,7 +22,7 @@ import {
 import Animated, { FadeIn, FadeOut } from "react-native-reanimated";
 import { Spacing } from "../../constants/Spacing";
 import { JellyfinItem } from "../../types/jellyfin";
-import { QUALITY_PRESETS, QualityPreset } from "./player";
+import { QUALITY_PRESETS, QualityPreset } from "../../types/player";
 
 // ─── Time formatting ────────────────────────────────────────
 function formatTime(seconds: number): string {
