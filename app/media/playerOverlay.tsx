@@ -21,6 +21,7 @@ import {
 } from "react-native";
 import Animated, { FadeIn, FadeOut } from "react-native-reanimated";
 import { Spacing } from "../../constants/Spacing";
+import { useMediaSettings } from "../../services/hooks/useMediaSettings";
 import { JellyfinItem } from "../../types/jellyfin";
 import { QUALITY_PRESETS, QualityPreset } from "../../types/player";
 
@@ -46,12 +47,11 @@ function formatBitrate(bps: number | null): string | null {
 interface PlayerOverlayProps {
   player: VideoPlayer;
   item?: JellyfinItem | null;
+  itemId: string;
   showOverlay: boolean;
   toggleOverlay: () => void;
-  selectedQuality: QualityPreset;
   onQualityChange: (preset: QualityPreset) => void;
   onAudioStreamChange: (streamIndex: number) => void;
-  selectedAudioIndex?: number;
 }
 
 const SCRUBBER_UPDATE_MS = 500;
@@ -60,14 +60,15 @@ const AUTO_HIDE_MS = 4000;
 export default function PlayerOverlay({
   player,
   item,
+  itemId,
   showOverlay,
   toggleOverlay,
-  selectedQuality,
   onQualityChange,
   onAudioStreamChange,
-  selectedAudioIndex: selectedAudioIndexProp,
 }: PlayerOverlayProps) {
   const router = useRouter();
+  const { get: getMediaSettings, set: setMediaSettings } =
+    useMediaSettings(itemId);
 
   const [isPlaying, setIsPlaying] = useState(player.playing);
   const [currentTime, setCurrentTime] = useState(player.currentTime);
@@ -75,9 +76,10 @@ export default function PlayerOverlay({
   const [bitrate, setBitrate] = useState<number | null>(null);
   const [showQualityPicker, setShowQualityPicker] = useState(false);
   const [showLanguagePicker, setShowLanguagePicker] = useState(false);
-  const [selectedAudioIndex, setSelectedAudioIndex] = useState<number>(
-    selectedAudioIndexProp ?? 0,
+  const [selectedQuality, setSelectedQuality] = useState<QualityPreset>(
+    QUALITY_PRESETS[0],
   );
+  const [selectedAudioIndex, setSelectedAudioIndex] = useState<number>(0);
   const [isScrubbing, setIsScrubbing] = useState(false);
   const [scrubberWidth, setScrubberWidth] = useState(0);
 
@@ -90,15 +92,32 @@ export default function PlayerOverlay({
     return item.MediaSources[0].MediaStreams.filter((s) => s.Type === "Audio");
   }, [item]);
 
-  // TODO: Probably should persist last selected audio stream index so it doesn't revert back to default every time
+  // ─── Initialize from saved settings ──────────────────────
+  const hasInitialized = useRef(false);
   useEffect(() => {
+    if (hasInitialized.current) return;
+    const saved = getMediaSettings();
+    if (saved) {
+      hasInitialized.current = true;
+      if (saved.qualityPreset) {
+        const match = QUALITY_PRESETS.find(
+          (p) => p.label === saved.qualityPreset,
+        );
+        if (match) setSelectedQuality(match);
+      }
+      if (saved.audioStreamIndex !== undefined) {
+        setSelectedAudioIndex(saved.audioStreamIndex);
+        return;
+      }
+    }
+    // Fall back to default audio stream if no saved setting
     const defaultStream = audioStreams.find((s) => s.IsDefault);
     if (defaultStream) {
       setSelectedAudioIndex(defaultStream.Index);
     } else if (audioStreams.length > 0) {
       setSelectedAudioIndex(audioStreams[0].Index);
     }
-  }, [audioStreams]);
+  }, [audioStreams, getMediaSettings]);
 
   // ─── Poll player state ──────────────────────────────────
   useEffect(() => {
@@ -373,6 +392,8 @@ export default function PlayerOverlay({
                     isActive && styles.pickerOptionActive,
                   ]}
                   onPress={() => {
+                    setSelectedQuality(preset);
+                    setMediaSettings({ qualityPreset: preset.label });
                     onQualityChange(preset);
                     setShowQualityPicker(false);
                   }}
@@ -414,8 +435,9 @@ export default function PlayerOverlay({
                     isActive && styles.pickerOptionActive,
                   ]}
                   onPress={() => {
-                    onAudioStreamChange(lang.Index);
                     setSelectedAudioIndex(lang.Index);
+                    setMediaSettings({ audioStreamIndex: lang.Index });
+                    onAudioStreamChange(lang.Index);
                     setShowLanguagePicker(false);
                   }}
                 >

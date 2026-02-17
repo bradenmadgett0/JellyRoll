@@ -23,8 +23,7 @@ import {
   useJellyfinStreamUrl,
   usePlaybackReporter,
 } from "../../services/hooks/useJellyfin";
-import { useMediaSettingsStore } from "../../services/stores/mediaSettingsStore";
-import { useServerStore } from "../../services/stores/serverStore";
+import { useMediaSettings } from "../../services/hooks/useMediaSettings";
 import PlayerOverlay from "./playerOverlay";
 import VideoPlayer from "./videoPlayer";
 
@@ -42,11 +41,7 @@ export default function PlayerScreen() {
   const getStreamUrl = useJellyfinStreamUrl();
   const { data: item } = useJellyfinDetail(itemId);
   const { reportStart, reportProgress, reportStop } = usePlaybackReporter();
-  const jellyfinServer = useServerStore(
-    (s) => s.getServersByType("jellyfin")[0],
-  );
-  const getMediaSettings = useMediaSettingsStore((s) => s.getSettings);
-  const setMediaSettings = useMediaSettingsStore((s) => s.setSettings);
+  const { get: getMediaSettings, serverId } = useMediaSettings(itemId);
 
   const [showOverlay, setShowOverlay] = useState(true);
   const [selectedQuality, setSelectedQuality] = useState<QualityPreset>(
@@ -89,10 +84,10 @@ export default function PlayerScreen() {
   // ─── Load saved media settings (once, after player is ready) ──
   const hasAppliedSaved = useRef(false);
   useEffect(() => {
-    if (!player || !item || !jellyfinServer || hasAppliedSaved.current) return;
+    if (!player || !item || !serverId || hasAppliedSaved.current) return;
     hasAppliedSaved.current = true;
 
-    const saved = getMediaSettings(jellyfinServer.id, itemId);
+    const saved = getMediaSettings();
     if (!saved) return;
 
     let newBitrate: number | null = QUALITY_PRESETS[0].maxBitrate;
@@ -128,7 +123,7 @@ export default function PlayerScreen() {
       }
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [player, item, jellyfinServer]);
+  }, [player, item, serverId]);
 
   // ─── Position tracker (1s) — caches currentTime locally ─────
   useEffect(() => {
@@ -193,12 +188,6 @@ export default function PlayerScreen() {
     async (preset: QualityPreset) => {
       setSelectedQuality(preset);
       if (!itemId || !player) return;
-      // Persist the quality setting
-      if (jellyfinServer) {
-        setMediaSettings(jellyfinServer.id, itemId, {
-          qualityPreset: preset.label,
-        });
-      }
       // Remember current position
       const resumeTime = player.currentTime;
       // Build new URL with selected bitrate
@@ -214,14 +203,7 @@ export default function PlayerScreen() {
       player.play();
       // eslint-disable-next-line react-hooks/exhaustive-deps
     },
-    [
-      itemId,
-      player,
-      getStreamUrl,
-      jellyfinServer,
-      setMediaSettings,
-      selectedAudioStreamIndex,
-    ],
+    [itemId, player, getStreamUrl, selectedAudioStreamIndex],
   );
 
   // ─── Audio stream change handler ────────────────────────────
@@ -229,10 +211,6 @@ export default function PlayerScreen() {
     async (audioStreamIndex: number) => {
       setSelectedAudioStreamIndex(audioStreamIndex);
       if (!itemId || !player) return;
-      // Persist the audio stream setting
-      if (jellyfinServer) {
-        setMediaSettings(jellyfinServer.id, itemId, { audioStreamIndex });
-      }
       // Remember current position
       const resumeTime = player.currentTime;
       // Build new URL with selected bitrate
@@ -248,14 +226,7 @@ export default function PlayerScreen() {
       player.play();
       // eslint-disable-next-line react-hooks/exhaustive-deps
     },
-    [
-      itemId,
-      player,
-      getStreamUrl,
-      jellyfinServer,
-      setMediaSettings,
-      selectedQuality,
-    ],
+    [itemId, player, getStreamUrl, selectedQuality],
   );
 
   // Memoize VideoPlayer to prevent re-renders from overlay toggle
@@ -290,12 +261,11 @@ export default function PlayerScreen() {
       <PlayerOverlay
         player={player}
         item={item}
+        itemId={itemId}
         showOverlay={showOverlay}
         toggleOverlay={toggleOverlay}
-        selectedQuality={selectedQuality}
         onQualityChange={handleQualityChange}
         onAudioStreamChange={handleAudioStreamChange}
-        selectedAudioIndex={selectedAudioStreamIndex}
       />
     </View>
   );
