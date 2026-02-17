@@ -24,7 +24,7 @@ function VideoPlayer({ player, toggleOverlay }: VideoPlayerProps) {
       <VideoView
         style={styles.video}
         player={player}
-        allowsFullscreen
+        fullscreenOptions={{ enable: true }}
         allowsPictureInPicture
         nativeControls={false}
       />

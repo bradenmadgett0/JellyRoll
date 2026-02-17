@@ -119,15 +119,12 @@ export default function PlayerScreen() {
     ) {
       const urls = getStreamUrl(itemId, newBitrate, newAudioIndex);
       if (urls?.hlsUrl) {
-        player.replace(urls.hlsUrl);
-        setTimeout(() => {
-          try {
-            if (startSeconds > 0) player.currentTime = startSeconds;
-            player.play();
-          } catch {
-            /* player may not be ready */
-          }
-        }, 500);
+        // eslint-disable-next-line @typescript-eslint/no-floating-promises
+        (async () => {
+          await player.replaceAsync(urls.hlsUrl);
+          if (startSeconds > 0) player.currentTime = startSeconds;
+          player.play();
+        })();
       }
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -193,7 +190,7 @@ export default function PlayerScreen() {
 
   // ─── Quality change handler ──────────────────────────────────
   const handleQualityChange = useCallback(
-    (preset: QualityPreset) => {
+    async (preset: QualityPreset) => {
       setSelectedQuality(preset);
       if (!itemId || !player) return;
       // Persist the quality setting
@@ -212,16 +209,9 @@ export default function PlayerScreen() {
       );
       if (!urls?.hlsUrl) return;
       // Replace the source and seek back
-      player.replace(urls.hlsUrl);
-      // Seek after a brief delay to let the new source initialize
-      setTimeout(() => {
-        try {
-          player.currentTime = resumeTime;
-          player.play();
-        } catch {
-          /* player may not be ready */
-        }
-      }, 500);
+      await player.replaceAsync(urls.hlsUrl);
+      player.currentTime = resumeTime;
+      player.play();
       // eslint-disable-next-line react-hooks/exhaustive-deps
     },
     [
@@ -236,7 +226,7 @@ export default function PlayerScreen() {
 
   // ─── Audio stream change handler ────────────────────────────
   const handleAudioStreamChange = useCallback(
-    (audioStreamIndex: number) => {
+    async (audioStreamIndex: number) => {
       setSelectedAudioStreamIndex(audioStreamIndex);
       if (!itemId || !player) return;
       // Persist the audio stream setting
@@ -253,16 +243,9 @@ export default function PlayerScreen() {
       );
       if (!urls?.hlsUrl) return;
       // Replace the source and seek back
-      player.replace(urls.hlsUrl);
-      // Seek after a brief delay to let the new source initialize
-      setTimeout(() => {
-        try {
-          player.currentTime = resumeTime;
-          player.play();
-        } catch {
-          /* player may not be ready */
-        }
-      }, 500);
+      await player.replaceAsync(urls.hlsUrl);
+      player.currentTime = resumeTime;
+      player.play();
       // eslint-disable-next-line react-hooks/exhaustive-deps
     },
     [
