@@ -86,6 +86,20 @@ export default function PlayerOverlay({
   const scrubRef = useRef(currentTime);
   const autoHideTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
+  // ─── Quality presets (with dynamic "Max" from media bitrate) ──
+  // TODO: extract this logic out to common util
+  const qualityPresets = useMemo(() => {
+    const mediaBitrate = item?.MediaSources?.[0]?.Bitrate;
+    if (mediaBitrate && mediaBitrate > 0) {
+      const label =
+        mediaBitrate >= 1_000_000
+          ? `Max - ${(mediaBitrate / 1_000_000).toFixed(1)} Mbps`
+          : `Max - ${Math.round(mediaBitrate / 1_000)} Kbps`;
+      return [{ label, maxBitrate: mediaBitrate }, ...QUALITY_PRESETS];
+    }
+    return QUALITY_PRESETS;
+  }, [item]);
+
   // ─── Audio streams ───────────────────────────────────────
   const audioStreams = useMemo(() => {
     if (!item?.MediaSources?.[0]?.MediaStreams) return [];
@@ -100,7 +114,7 @@ export default function PlayerOverlay({
     if (saved) {
       hasInitialized.current = true;
       if (saved.qualityPreset) {
-        const match = QUALITY_PRESETS.find(
+        const match = qualityPresets.find(
           (p) => p.label === saved.qualityPreset,
         );
         if (match) setSelectedQuality(match);
@@ -117,7 +131,7 @@ export default function PlayerOverlay({
     } else if (audioStreams.length > 0) {
       setSelectedAudioIndex(audioStreams[0].Index);
     }
-  }, [audioStreams, getMediaSettings]);
+  }, [audioStreams, qualityPresets, getMediaSettings]);
 
   // ─── Poll player state ──────────────────────────────────
   useEffect(() => {
@@ -382,7 +396,7 @@ export default function PlayerOverlay({
         >
           <View style={styles.pickerContainer}>
             <Text style={styles.pickerTitle}>Stream Quality</Text>
-            {QUALITY_PRESETS?.map((preset) => {
+            {qualityPresets.map((preset) => {
               const isActive = preset.label === selectedQuality.label;
               return (
                 <TouchableOpacity

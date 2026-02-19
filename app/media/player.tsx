@@ -94,9 +94,23 @@ export default function PlayerScreen() {
     let newAudioIndex: number | undefined;
 
     if (saved.qualityPreset) {
-      const match = QUALITY_PRESETS.find(
-        (p) => p.label === saved.qualityPreset,
-      );
+      // TODO: extract this logic out to common util
+      // Build the same dynamic "Max" preset the overlay uses
+      const mediaBitrate = item.MediaSources?.[0]?.Bitrate;
+      const allPresets =
+        mediaBitrate && mediaBitrate > 0
+          ? [
+              {
+                label:
+                  mediaBitrate >= 1_000_000
+                    ? `Max - ${(mediaBitrate / 1_000_000).toFixed(1)} Mbps`
+                    : `Max - ${Math.round(mediaBitrate / 1_000)} Kbps`,
+                maxBitrate: mediaBitrate,
+              },
+              ...QUALITY_PRESETS,
+            ]
+          : QUALITY_PRESETS;
+      const match = allPresets.find((p) => p.label === saved.qualityPreset);
       if (match) {
         setSelectedQuality(match);
         newBitrate = match.maxBitrate;
