@@ -23,7 +23,11 @@ import Animated, { FadeIn, FadeOut } from "react-native-reanimated";
 import { Spacing } from "../../constants/Spacing";
 import { useMediaSettings } from "../../services/hooks/useMediaSettings";
 import { JellyfinItem } from "../../types/jellyfin";
-import { QUALITY_PRESETS, QualityPreset } from "../../types/player";
+import {
+  DEFAULT_QUALITY_PRESET,
+  QUALITY_PRESETS,
+  QualityPreset,
+} from "../../types/player";
 
 // ─── Time formatting ────────────────────────────────────────
 function formatTime(seconds: number): string {
@@ -77,7 +81,7 @@ export default function PlayerOverlay({
   const [showQualityPicker, setShowQualityPicker] = useState(false);
   const [showLanguagePicker, setShowLanguagePicker] = useState(false);
   const [selectedQuality, setSelectedQuality] = useState<QualityPreset>(
-    QUALITY_PRESETS[0],
+    DEFAULT_QUALITY_PRESET,
   );
   const [selectedAudioIndex, setSelectedAudioIndex] = useState<number>(0);
   const [isScrubbing, setIsScrubbing] = useState(false);

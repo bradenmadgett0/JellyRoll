@@ -8,14 +8,17 @@ import {
     useQuery,
     useQueryClient,
 } from "@tanstack/react-query";
-import { useCallback } from "react";
+import { useCallback, useMemo } from "react";
 import { ServerConfig } from "../../types/server";
 import { JellyfinClient } from "../api/jellyfin";
 import { useServerStore } from "../stores/serverStore";
 
 /** Create a JellyfinClient instance from a server config */
-function createClient(server: ServerConfig): JellyfinClient {
-  return new JellyfinClient(server);
+function createClient(
+  server: ServerConfig,
+  playSessionId?: string,
+): JellyfinClient {
+  return new JellyfinClient(server, playSessionId);
 }
 
 /** Get first connected Jellyfin server */
@@ -166,7 +169,7 @@ export function useJellyfinImageUrl() {
 
 // ─── Stream URL Helper ──────────────────────────────
 
-export function useJellyfinStreamUrl() {
+export function useJellyfinStreamUrl(playSessionId: string) {
   const server = useJellyfinServer();
 
   return (
@@ -175,10 +178,15 @@ export function useJellyfinStreamUrl() {
     audioStreamIndex?: number,
   ): { streamUrl: string; hlsUrl: string } | null => {
     if (!server) return null;
-    const client = createClient(server);
+    const client = createClient(server, playSessionId);
     return {
       streamUrl: client.getStreamUrl(itemId),
-      hlsUrl: client.getHlsStreamUrl(itemId, maxBitrate, audioStreamIndex),
+      hlsUrl: client.getHlsStreamUrl(
+        itemId,
+        playSessionId,
+        maxBitrate,
+        audioStreamIndex,
+      ),
     };
   };
 }
@@ -233,17 +241,25 @@ export function usePlaybackReporter() {
   const server = useJellyfinServer();
   const queryClient = useQueryClient();
 
+  // Stable session ID for the lifetime of this hook instance.
+  // All playback reports and the stream URL must share this value
+  // so Jellyfin can correlate them to a single transcode session.
+  const playSessionId = useMemo(
+    () => "jellyroll_" + Math.random().toString(36).substring(2, 15),
+    [],
+  );
+
   const reportStart = useCallback(
     async (itemId: string, positionTicks: number = 0) => {
       if (!server) return;
       try {
-        const client = createClient(server);
-        await client.reportPlaybackStart(itemId, positionTicks);
+        const client = createClient(server, playSessionId);
+        await client.reportPlaybackStart(itemId, positionTicks, playSessionId);
       } catch (e) {
         console.warn("[Playback] Failed to report start", e);
       }
     },
-    [server],
+    [server, playSessionId],
   );
 
   const reportProgress = useCallback(
@@ -254,21 +270,43 @@ export function usePlaybackReporter() {
     ) => {
       if (!server) return;
       try {
-        const client = createClient(server);
-        await client.reportPlaybackProgress(itemId, positionTicks, isPaused);
+        const client = createClient(server, playSessionId);
+        await client.reportPlaybackProgress(
+          itemId,
+          positionTicks,
+          isPaused,
+          playSessionId,
+        );
       } catch (e) {
         console.warn("[Playback] Failed to report progress", e);
       }
     },
-    [server],
+    [server, playSessionId],
   );
+
+  const killTranscode = useCallback(async () => {
+    if (!server) return;
+    try {
+      console.log("Killing transcode", playSessionId);
+      const client = createClient(server, playSessionId);
+      await client.deleteActiveEncoding(playSessionId);
+    } catch (e) {
+      console.warn("[Playback] Failed to kill transcode", e);
+    }
+  }, [server, playSessionId]);
 
   const reportStop = useCallback(
     async (itemId: string, positionTicks: number) => {
       if (!server) return;
       try {
-        const client = createClient(server);
-        await client.reportPlaybackStopped(itemId, positionTicks);
+        const client = createClient(server, playSessionId);
+        await client.reportPlaybackStopped(
+          itemId,
+          positionTicks,
+          playSessionId,
+        );
+        // Kill the server-side transcode session
+        await client.deleteActiveEncoding(playSessionId);
         // Invalidate resume cache so Continue Watching refreshes
         queryClient.invalidateQueries({ queryKey: ["jellyfin", "resume"] });
         // Also invalidate the detail cache for this item
@@ -279,8 +317,14 @@ export function usePlaybackReporter() {
         console.warn("[Playback] Failed to report stop", e);
       }
     },
-    [server, queryClient],
+    [server, playSessionId, queryClient],
   );
 
-  return { reportStart, reportProgress, reportStop };
+  return {
+    reportStart,
+    reportProgress,
+    reportStop,
+    killTranscode,
+    playSessionId,
+  };
 }

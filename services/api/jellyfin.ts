@@ -26,6 +26,10 @@ export class JellyfinClient {
   private server: ServerConfig;
   private deviceId: string;
 
+  getDeviceId(): string {
+    return this.deviceId;
+  }
+
   constructor(server: ServerConfig, deviceId?: string) {
     this.server = server;
     this.deviceId = deviceId ?? generateDeviceId();
@@ -223,15 +227,16 @@ export class JellyfinClient {
 
   getHlsStreamUrl(
     itemId: string,
+    playSessionId: string,
     maxBitrate?: number | null,
     audioStreamIndex?: number,
   ): string {
     const token = this.server.accessToken ?? "";
-    let url = `${this.server.url}/Videos/${itemId}/master.m3u8?api_key=${token}&DeviceId=${this.deviceId}&MediaSourceId=${itemId}&VideoCodec=h264&AudioCodec=aac&MaxAudioChannels=6&TranscodingMaxAudioChannels=6&SegmentContainer=ts`;
+    let url = `${this.server.url}/Videos/${itemId}/master.m3u8?api_key=${token}&DeviceId=${this.deviceId}&playSessionId=${playSessionId}&MediaSourceId=${itemId}&VideoCodec=h264&AudioCodec=aac&MaxAudioChannels=6&TranscodingMaxAudioChannels=6&SegmentContainer=ts`;
     if (maxBitrate && maxBitrate > 0) {
       url += `&videoBitRate=${maxBitrate}`;
     }
-    if (audioStreamIndex) {
+    if (audioStreamIndex !== undefined && audioStreamIndex !== null) {
       url += `&audioStreamIndex=${audioStreamIndex}`;
     }
     return url;
@@ -259,12 +264,13 @@ export class JellyfinClient {
   async reportPlaybackStart(
     itemId: string,
     positionTicks: number = 0,
+    playSessionId: string,
   ): Promise<void> {
     await this.client.post("/Sessions/Playing", {
       ItemId: itemId,
       PositionTicks: positionTicks,
       PlayMethod: "Transcode",
-      PlaySessionId: this.deviceId,
+      PlaySessionId: playSessionId,
     });
   }
 
@@ -272,24 +278,32 @@ export class JellyfinClient {
     itemId: string,
     positionTicks: number,
     isPaused: boolean = false,
+    playSessionId: string,
   ): Promise<void> {
     await this.client.post("/Sessions/Playing/Progress", {
       ItemId: itemId,
       PositionTicks: positionTicks,
       IsPaused: isPaused,
       PlayMethod: "Transcode",
-      PlaySessionId: this.deviceId,
+      PlaySessionId: playSessionId,
     });
   }
 
   async reportPlaybackStopped(
     itemId: string,
     positionTicks: number,
+    playSessionId: string,
   ): Promise<void> {
     await this.client.post("/Sessions/Playing/Stopped", {
       ItemId: itemId,
       PositionTicks: positionTicks,
-      PlaySessionId: this.deviceId,
+      PlaySessionId: playSessionId,
+    });
+  }
+
+  async deleteActiveEncoding(playSessionId: string): Promise<void> {
+    await this.client.delete("/Videos/ActiveEncodings", {
+      params: { playSessionId: playSessionId, DeviceId: this.deviceId },
     });
   }
 

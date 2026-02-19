@@ -14,3 +14,6 @@ export const QUALITY_PRESETS: QualityPreset[] = [
   { label: "360p - 800 Kbps", maxBitrate: 800_000 },
   { label: "Auto (Max)", maxBitrate: null },
 ];
+
+export const DEFAULT_QUALITY_PRESET: QualityPreset =
+  QUALITY_PRESETS[QUALITY_PRESETS.length - 1];

@@ -3,7 +3,11 @@
  * and playback reporting. Renders VideoPlayer + PlayerOverlay as children.
  */
 
-import { QUALITY_PRESETS, QualityPreset } from "@/types/player";
+import {
+  DEFAULT_QUALITY_PRESET,
+  QUALITY_PRESETS,
+  QualityPreset,
+} from "@/types/player";
 import { Ionicons } from "@expo/vector-icons";
 import { Stack, useLocalSearchParams, useRouter } from "expo-router";
 import { useVideoPlayer } from "expo-video";
@@ -38,14 +42,20 @@ export default function PlayerScreen() {
   }>();
   const router = useRouter();
   const styles = useThemedStyles(createStyles);
-  const getStreamUrl = useJellyfinStreamUrl();
   const { data: item } = useJellyfinDetail(itemId);
-  const { reportStart, reportProgress, reportStop } = usePlaybackReporter();
+  const {
+    reportStart,
+    reportProgress,
+    reportStop,
+    killTranscode,
+    playSessionId,
+  } = usePlaybackReporter();
+  const getStreamUrl = useJellyfinStreamUrl(playSessionId);
   const { get: getMediaSettings, serverId } = useMediaSettings(itemId);
 
   const [showOverlay, setShowOverlay] = useState(true);
   const [selectedQuality, setSelectedQuality] = useState<QualityPreset>(
-    QUALITY_PRESETS[0],
+    DEFAULT_QUALITY_PRESET,
   );
   const [selectedAudioStreamIndex, setSelectedAudioStreamIndex] =
     useState<number>();
@@ -60,9 +70,8 @@ export default function PlayerScreen() {
   const progressReporter = useRef<ReturnType<typeof setInterval> | null>(null);
 
   // IMPORTANT: getStreamUrl is intentionally excluded from deps.
-  // Each call creates a new JellyfinClient with a fresh random deviceId,
-  // producing a different URL string. If included, every re-render would
-  // change hlsUrl → useVideoPlayer would release the old player and create
+  // The function reference changes every render, so including it would
+  // recompute hlsUrl → useVideoPlayer releases the old player and creates
   // a new one → playback resets to 0.
   // eslint-disable-next-line react-hooks/exhaustive-deps
   const hlsUrl = useMemo(() => {
@@ -90,7 +99,7 @@ export default function PlayerScreen() {
     const saved = getMediaSettings();
     if (!saved) return;
 
-    let newBitrate: number | null = QUALITY_PRESETS[0].maxBitrate;
+    let newBitrate: number | null = DEFAULT_QUALITY_PRESET.maxBitrate;
     let newAudioIndex: number | undefined;
 
     if (saved.qualityPreset) {
@@ -123,13 +132,14 @@ export default function PlayerScreen() {
 
     // Only replace if saved settings differ from defaults
     if (
-      newBitrate !== QUALITY_PRESETS[0].maxBitrate ||
+      newBitrate !== DEFAULT_QUALITY_PRESET.maxBitrate ||
       newAudioIndex !== undefined
     ) {
       const urls = getStreamUrl(itemId, newBitrate, newAudioIndex);
       if (urls?.hlsUrl) {
         // eslint-disable-next-line @typescript-eslint/no-floating-promises
         (async () => {
+          await killTranscode();
           await player.replaceAsync(urls.hlsUrl);
           if (startSeconds > 0) player.currentTime = startSeconds;
           player.play();
@@ -182,6 +192,9 @@ export default function PlayerScreen() {
     };
   }, [itemId, player, reportProgress]);
 
+  // TODO: Consider pausing the player explicitly before unmount to prevent
+  // brief background streaming while useVideoPlayer tears down the native instance.
+
   // ─── Report stop on unmount (uses cached ticks, never 0) ────
   useEffect(() => {
     return () => {
@@ -211,13 +224,15 @@ export default function PlayerScreen() {
         selectedAudioStreamIndex,
       );
       if (!urls?.hlsUrl) return;
+      // Kill old transcode before starting a new one
+      await killTranscode();
       // Replace the source and seek back
       await player.replaceAsync(urls.hlsUrl);
       player.currentTime = resumeTime;
       player.play();
       // eslint-disable-next-line react-hooks/exhaustive-deps
     },
-    [itemId, player, getStreamUrl, selectedAudioStreamIndex],
+    [itemId, player, getStreamUrl, killTranscode, selectedAudioStreamIndex],
   );
 
   // ─── Audio stream change handler ────────────────────────────
@@ -234,13 +249,15 @@ export default function PlayerScreen() {
         audioStreamIndex,
       );
       if (!urls?.hlsUrl) return;
+      // Kill old transcode before starting a new one
+      await killTranscode();
       // Replace the source and seek back
       await player.replaceAsync(urls.hlsUrl);
       player.currentTime = resumeTime;
       player.play();
       // eslint-disable-next-line react-hooks/exhaustive-deps
     },
-    [itemId, player, getStreamUrl, selectedQuality],
+    [itemId, player, getStreamUrl, killTranscode, selectedQuality],
   );
 
   // Memoize VideoPlayer to prevent re-renders from overlay toggle
