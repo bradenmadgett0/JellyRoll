@@ -10,7 +10,14 @@ import AudioStreamSelector from "@/components/media/AudioStreamSelector";
 import { Ionicons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
 import { VideoAirPlayButton, VideoPlayer } from "expo-video";
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import React, {
+  JSX,
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
 import {
   GestureResponderEvent,
   LayoutChangeEvent,
@@ -20,6 +27,7 @@ import {
   TouchableOpacity,
   View,
 } from "react-native";
+import { Gesture, GestureDetector } from "react-native-gesture-handler";
 import Animated, { FadeIn, FadeOut } from "react-native-reanimated";
 import { Spacing } from "../../constants/Spacing";
 import { useMediaSettings } from "../../services/hooks/useMediaSettings";
@@ -66,9 +74,9 @@ export default function PlayerOverlay({
   player,
   item,
   itemId,
-  showOverlay,
   toggleOverlay,
   onQualityChange,
+  showOverlay,
   onAudioStreamChange,
 }: PlayerOverlayProps) {
   const router = useRouter();
@@ -84,9 +92,10 @@ export default function PlayerOverlay({
   const [selectedQuality, setSelectedQuality] = useState<QualityPreset>(
     DEFAULT_QUALITY_PRESET,
   );
-  const [selectedAudioIndex, setSelectedAudioIndex] = useState<number>(0);
+
   const [isScrubbing, setIsScrubbing] = useState(false);
   const [scrubberWidth, setScrubberWidth] = useState(0);
+  const [overlayModalContent, setOverlayModalContent] = useState<JSX.Element>();
 
   const scrubRef = useRef(currentTime);
   const autoHideTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -148,6 +157,14 @@ export default function PlayerOverlay({
     return () => clearInterval(interval);
   }, [player, isScrubbing]);
 
+  const setAutoHideTimer = useCallback(() => {
+    if (autoHideTimer.current) clearTimeout(autoHideTimer.current);
+    autoHideTimer.current = setTimeout(() => {
+      setOverlayModalContent(undefined);
+      toggleOverlay();
+    }, AUTO_HIDE_MS);
+  }, []);
+
   // ─── Auto-hide overlay ──────────────────────────────────
   useEffect(() => {
     if (
@@ -156,7 +173,7 @@ export default function PlayerOverlay({
       !showQualityPicker &&
       !showLanguagePicker
     ) {
-      autoHideTimer.current = setTimeout(() => toggleOverlay(), AUTO_HIDE_MS);
+      setAutoHideTimer();
       return () => {
         if (autoHideTimer.current) clearTimeout(autoHideTimer.current);
       };
@@ -241,173 +258,197 @@ export default function PlayerOverlay({
   const progress = duration > 0 ? currentTime / duration : 0;
   const remaining = duration - currentTime;
 
+  const parentGesture = useMemo(
+    () =>
+      Gesture.Tap()
+        .onStart(() => {
+          setAutoHideTimer();
+        })
+        .runOnJS(true),
+    [setAutoHideTimer],
+  );
+
   if (!showOverlay) return null;
 
   return (
-    <Animated.View
-      entering={FadeIn.duration(200)}
-      exiting={FadeOut.duration(200)}
-      style={styles.overlay}
-      pointerEvents="box-none"
-    >
-      {/* Gradient scrim */}
-      <View style={styles.scrimTop} />
-      <View style={styles.scrimBottom} />
-
-      {/* ─── Top Bar ─────────────────────────────────── */}
-      <View style={styles.topBar}>
-        <TouchableOpacity
-          onPress={handleBack}
-          style={styles.controlBtn}
-          hitSlop={12}
-        >
-          <Ionicons name="arrow-back" size={24} color="#fff" />
-        </TouchableOpacity>
-        <View style={styles.titleContainer}>
-          <Text style={styles.title} numberOfLines={1}>
-            {item?.Name ?? "Playing..."}
-          </Text>
-          {item?.Type === "Episode" && item.SeriesName && (
-            <Text style={styles.subtitle}>
-              {item.SeriesName} · S{item.ParentIndexNumber}E{item.IndexNumber}
-            </Text>
-          )}
-        </View>
-
-        {Platform.OS === "ios" && <VideoAirPlayButton />}
-      </View>
-
-      {/* ─── Center Controls ─────────────────────────── */}
-      <View style={styles.centerControls}>
-        <TouchableOpacity
-          onPress={handleSkipBack}
-          style={styles.skipBtn}
-          hitSlop={16}
-        >
-          <Ionicons name="play-back" size={28} color="#fff" />
-          <Text style={styles.skipLabel}>10</Text>
-        </TouchableOpacity>
-
-        <TouchableOpacity
-          onPress={handlePlayPause}
-          style={styles.playPauseBtn}
-          hitSlop={16}
-        >
-          <Ionicons
-            name={isPlaying ? "pause" : "play"}
-            size={38}
-            color="#fff"
-          />
-        </TouchableOpacity>
-
-        <TouchableOpacity
-          onPress={handleSkipForward}
-          style={styles.skipBtn}
-          hitSlop={16}
-        >
-          <Ionicons name="play-forward" size={28} color="#fff" />
-          <Text style={styles.skipLabel}>10</Text>
-        </TouchableOpacity>
-      </View>
-
-      {/* ─── Bottom Bar ──────────────────────────────── */}
-      <View style={styles.bottomBar}>
-        {/* Time labels + scrubber */}
-        <View style={styles.scrubberRow}>
-          <Text style={styles.timeLabel}>{formatTime(currentTime)}</Text>
-
-          <View
-            ref={scrubberTrackRef}
-            style={styles.scrubberTrack}
-            onLayout={handleScrubberLayout}
-            onStartShouldSetResponder={() => true}
-            onMoveShouldSetResponder={() => true}
-            onResponderGrant={handleScrubStart}
-            onResponderMove={handleScrubMove}
-            onResponderRelease={handleScrubEnd}
-            onResponderTerminate={handleScrubEnd}
-          >
-            {/* Progress fill */}
-            <View
-              style={[styles.scrubberFill, { width: `${progress * 100}%` }]}
-            />
-            {/* Thumb */}
-            <View
-              style={[styles.scrubberThumb, { left: `${progress * 100}%` }]}
-            />
+    <GestureDetector gesture={parentGesture}>
+      <Animated.View
+        entering={FadeIn.duration(200)}
+        exiting={FadeOut.duration(200)}
+        style={styles.overlay}
+        pointerEvents="box-none"
+      >
+        {overlayModalContent && (
+          <View style={styles.modalOverlayContainer}>
+            {overlayModalContent}
           </View>
+        )}
+        {/* Gradient scrim */}
+        <View style={styles.scrimTop} />
+        <View style={styles.scrimBottom} />
 
-          <Text style={styles.timeLabel}>-{formatTime(remaining)}</Text>
-        </View>
-
-        {/* Bitrate indicator + quality gear */}
-        <View style={styles.bottomMeta}>
-          {formatBitrate(bitrate) && (
-            <Text style={styles.bitrateLabel}>{formatBitrate(bitrate)}</Text>
-          )}
+        {/* ─── Top Bar ─────────────────────────────────── */}
+        <View style={styles.topBar}>
           <TouchableOpacity
-            onPress={() => setShowQualityPicker(true)}
-            style={styles.qualityBtn}
+            onPress={handleBack}
+            style={styles.controlBtn}
             hitSlop={12}
           >
-            <Ionicons
-              name="settings-sharp"
-              size={18}
-              color="rgba(255,255,255,0.8)"
-            />
-            <Text style={styles.qualityBtnLabel}>{selectedQuality.label}</Text>
+            <Ionicons name="arrow-back" size={24} color="#fff" />
+          </TouchableOpacity>
+          <View style={styles.titleContainer}>
+            <Text style={styles.title} numberOfLines={1}>
+              {item?.Name ?? "Playing..."}
+            </Text>
+            {item?.Type === "Episode" && item.SeriesName && (
+              <Text style={styles.subtitle}>
+                {item.SeriesName} · S{item.ParentIndexNumber}E{item.IndexNumber}
+              </Text>
+            )}
+          </View>
+
+          {Platform.OS === "ios" && <VideoAirPlayButton />}
+        </View>
+
+        {/* ─── Center Controls ─────────────────────────── */}
+        <View style={styles.centerControls}>
+          <TouchableOpacity
+            onPress={handleSkipBack}
+            style={styles.skipBtn}
+            hitSlop={16}
+          >
+            <Ionicons name="play-back" size={28} color="#fff" />
+            <Text style={styles.skipLabel}>10</Text>
           </TouchableOpacity>
 
-          <AudioStreamSelector
-            item={item}
-            onAudioStreamChange={onAudioStreamChange}
-          />
-        </View>
-      </View>
+          <TouchableOpacity
+            onPress={handlePlayPause}
+            style={styles.playPauseBtn}
+            hitSlop={16}
+          >
+            <Ionicons
+              name={isPlaying ? "pause" : "play"}
+              size={38}
+              color="#fff"
+            />
+          </TouchableOpacity>
 
-      {/* ─── Quality Picker Modal ────────────────────── */}
-      {showQualityPicker && (
-        <TouchableOpacity
-          style={styles.pickerBackdrop}
-          activeOpacity={1}
-          onPress={() => setShowQualityPicker(false)}
-        >
-          <View style={styles.pickerContainer}>
-            <Text style={styles.pickerTitle}>Stream Quality</Text>
-            {qualityPresets.map((preset) => {
-              const isActive = preset.label === selectedQuality.label;
-              return (
-                <TouchableOpacity
-                  key={preset.label}
-                  style={[
-                    styles.pickerOption,
-                    isActive && styles.pickerOptionActive,
-                  ]}
-                  onPress={() => {
-                    setSelectedQuality(preset);
-                    setMediaSettings({ qualityPreset: preset.label });
-                    onQualityChange(preset);
-                    setShowQualityPicker(false);
-                  }}
-                >
-                  <Text
-                    style={[
-                      styles.pickerOptionText,
-                      isActive && styles.pickerOptionTextActive,
-                    ]}
-                  >
-                    {preset.label}
-                  </Text>
-                  {isActive && (
-                    <Ionicons name="checkmark" size={18} color="#fff" />
-                  )}
-                </TouchableOpacity>
-              );
-            })}
+          <TouchableOpacity
+            onPress={handleSkipForward}
+            style={styles.skipBtn}
+            hitSlop={16}
+          >
+            <Ionicons name="play-forward" size={28} color="#fff" />
+            <Text style={styles.skipLabel}>10</Text>
+          </TouchableOpacity>
+        </View>
+
+        {/* ─── Bottom Bar ──────────────────────────────── */}
+        <View style={styles.bottomBar}>
+          {/* Time labels + scrubber */}
+          <View style={styles.scrubberRow}>
+            <Text style={styles.timeLabel}>{formatTime(currentTime)}</Text>
+
+            <View
+              ref={scrubberTrackRef}
+              style={styles.scrubberTrack}
+              onLayout={handleScrubberLayout}
+              onStartShouldSetResponder={() => true}
+              onMoveShouldSetResponder={() => true}
+              onResponderGrant={handleScrubStart}
+              onResponderMove={handleScrubMove}
+              onResponderRelease={handleScrubEnd}
+              onResponderTerminate={handleScrubEnd}
+            >
+              {/* Progress fill */}
+              <View
+                style={[styles.scrubberFill, { width: `${progress * 100}%` }]}
+              />
+              {/* Thumb */}
+              <View
+                style={[styles.scrubberThumb, { left: `${progress * 100}%` }]}
+              />
+            </View>
+
+            <Text style={styles.timeLabel}>-{formatTime(remaining)}</Text>
           </View>
-        </TouchableOpacity>
-      )}
-    </Animated.View>
+
+          {/* Bitrate indicator + quality gear */}
+          <View style={styles.bottomMeta}>
+            {formatBitrate(bitrate) && (
+              <Text style={styles.bitrateLabel}>{formatBitrate(bitrate)}</Text>
+            )}
+            <TouchableOpacity
+              onPress={() => setShowQualityPicker(true)}
+              style={styles.qualityBtn}
+              hitSlop={12}
+            >
+              <Ionicons
+                name="settings-sharp"
+                size={18}
+                color="rgba(255,255,255,0.8)"
+              />
+              <Text style={styles.qualityBtnLabel}>
+                {selectedQuality.label}
+              </Text>
+            </TouchableOpacity>
+
+            <AudioStreamSelector
+              item={item}
+              onAudioStreamChange={onAudioStreamChange}
+              onModalToggle={(modal) =>
+                overlayModalContent
+                  ? setOverlayModalContent(undefined)
+                  : setOverlayModalContent(modal)
+              }
+            />
+          </View>
+        </View>
+
+        {/* ─── Quality Picker Modal ────────────────────── */}
+        {showQualityPicker && (
+          <TouchableOpacity
+            style={styles.pickerBackdrop}
+            activeOpacity={1}
+            onPress={() => setShowQualityPicker(false)}
+          >
+            <View style={styles.pickerContainer}>
+              <Text style={styles.pickerTitle}>Stream Quality</Text>
+              {qualityPresets.map((preset) => {
+                const isActive = preset.label === selectedQuality.label;
+                return (
+                  <TouchableOpacity
+                    key={preset.label}
+                    style={[
+                      styles.pickerOption,
+                      isActive && styles.pickerOptionActive,
+                    ]}
+                    onPress={() => {
+                      setSelectedQuality(preset);
+                      setMediaSettings({ qualityPreset: preset.label });
+                      onQualityChange(preset);
+                      setShowQualityPicker(false);
+                    }}
+                  >
+                    <Text
+                      style={[
+                        styles.pickerOptionText,
+                        isActive && styles.pickerOptionTextActive,
+                      ]}
+                    >
+                      {preset.label}
+                    </Text>
+                    {isActive && (
+                      <Ionicons name="checkmark" size={18} color="#fff" />
+                    )}
+                  </TouchableOpacity>
+                );
+              })}
+            </View>
+          </TouchableOpacity>
+        )}
+      </Animated.View>
+    </GestureDetector>
   );
 }
 
@@ -571,6 +612,15 @@ const styles = StyleSheet.create({
     fontFamily: "Inter_500Medium",
     fontSize: 11,
     color: "rgba(255,255,255,0.85)",
+  },
+
+  modalOverlayContainer: {
+    width: "100%",
+    height: "100%",
+    justifyContent: "center",
+    alignItems: "center",
+    zIndex: 20,
+    position: "absolute",
   },
 
   // Quality picker modal

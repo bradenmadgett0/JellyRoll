@@ -19,6 +19,7 @@ import { StatusBar } from "expo-status-bar";
 import { useEffect } from "react";
 import "react-native-reanimated";
 
+import { GestureHandlerRootView } from "react-native-gesture-handler";
 import { Themes } from "../constants/Colors";
 import { useEffectiveScheme } from "../hooks/useEffectiveScheme";
 import { useMediaSettingsStore } from "../services/stores/mediaSettingsStore";
@@ -99,94 +100,96 @@ export default function RootLayout() {
   return (
     <QueryClientProvider client={queryClient}>
       <ThemeProvider value={navTheme}>
-        <Stack
-          screenOptions={{
-            headerTitleStyle: { fontFamily: "Inter_600SemiBold" },
-          }}
-        >
-          <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
-          <Stack.Screen
-            name="search"
-            options={{
-              headerShown: false,
-              animation: "fade",
+        <GestureHandlerRootView>
+          <Stack
+            screenOptions={{
+              headerTitleStyle: { fontFamily: "Inter_600SemiBold" },
             }}
-          />
-          <Stack.Screen
-            name="server/add"
-            options={{
-              presentation: "modal",
-              title: "Add Server",
-              headerShown: true,
-            }}
-          />
-          <Stack.Screen
-            name="server/[id]"
-            options={{
-              presentation: "modal",
-              title: "Server Details",
-              headerShown: true,
-            }}
-          />
-          <Stack.Screen
-            name="media/[id]"
-            options={{
-              title: "",
-              headerShown: false,
-            }}
-          />
-          <Stack.Screen
-            name="media/player"
-            options={{
-              headerShown: false,
-              presentation: "fullScreenModal",
-              animation: "fade",
-            }}
-          />
-          <Stack.Screen
-            name="sonarr/index"
-            options={{
-              title: "Sonarr",
-              headerShown: true,
-            }}
-          />
-          <Stack.Screen
-            name="sonarr/[id]"
-            options={{
-              title: "Series",
-              headerShown: true,
-            }}
-          />
-          <Stack.Screen
-            name="radarr/index"
-            options={{
-              title: "Radarr",
-              headerShown: true,
-            }}
-          />
-          <Stack.Screen
-            name="radarr/[id]"
-            options={{
-              title: "Movie",
-              headerShown: true,
-            }}
-          />
-          <Stack.Screen
-            name="lidarr/index"
-            options={{
-              title: "Lidarr",
-              headerShown: true,
-            }}
-          />
-          <Stack.Screen
-            name="lidarr/[id]"
-            options={{
-              title: "Artist",
-              headerShown: true,
-            }}
-          />
-        </Stack>
-        <StatusBar style={scheme === "dark" ? "light" : "dark"} />
+          >
+            <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
+            <Stack.Screen
+              name="search"
+              options={{
+                headerShown: false,
+                animation: "fade",
+              }}
+            />
+            <Stack.Screen
+              name="server/add"
+              options={{
+                presentation: "modal",
+                title: "Add Server",
+                headerShown: true,
+              }}
+            />
+            <Stack.Screen
+              name="server/[id]"
+              options={{
+                presentation: "modal",
+                title: "Server Details",
+                headerShown: true,
+              }}
+            />
+            <Stack.Screen
+              name="media/[id]"
+              options={{
+                title: "",
+                headerShown: false,
+              }}
+            />
+            <Stack.Screen
+              name="media/player"
+              options={{
+                headerShown: false,
+                presentation: "fullScreenModal",
+                animation: "fade",
+              }}
+            />
+            <Stack.Screen
+              name="sonarr/index"
+              options={{
+                title: "Sonarr",
+                headerShown: true,
+              }}
+            />
+            <Stack.Screen
+              name="sonarr/[id]"
+              options={{
+                title: "Series",
+                headerShown: true,
+              }}
+            />
+            <Stack.Screen
+              name="radarr/index"
+              options={{
+                title: "Radarr",
+                headerShown: true,
+              }}
+            />
+            <Stack.Screen
+              name="radarr/[id]"
+              options={{
+                title: "Movie",
+                headerShown: true,
+              }}
+            />
+            <Stack.Screen
+              name="lidarr/index"
+              options={{
+                title: "Lidarr",
+                headerShown: true,
+              }}
+            />
+            <Stack.Screen
+              name="lidarr/[id]"
+              options={{
+                title: "Artist",
+                headerShown: true,
+              }}
+            />
+          </Stack>
+          <StatusBar style={scheme === "dark" ? "light" : "dark"} />
+        </GestureHandlerRootView>
       </ThemeProvider>
     </QueryClientProvider>
   );

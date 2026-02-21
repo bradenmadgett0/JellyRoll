@@ -2,7 +2,13 @@ import { AppColors } from "@/hooks/useColors";
 import { useThemedStyles } from "@/hooks/useThemedStyles";
 import { Ionicons } from "@expo/vector-icons";
 import { useState } from "react";
-import { StyleSheet, Text, TouchableOpacity, View } from "react-native";
+import {
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  TouchableWithoutFeedback,
+  View,
+} from "react-native";
 
 interface MediaObjectListModalProps<T extends object> {
   onModalToggle: () => void;
@@ -23,37 +29,41 @@ const MediaObjectListModal = <T extends object>({
   const [selectedIndex, setSelectedIndex] = useState(initialSelectedIndex);
 
   return (
-    <TouchableOpacity
-      style={themedStyles.pickerBackdrop}
-      onPress={onModalToggle}
-    >
-      <View style={themedStyles.pickerContainer}>
-        <Text style={themedStyles.pickerTitle}>{title}</Text>
-        {options?.map((option, index) => {
-          const isActive = index === selectedIndex;
-          return (
-            <TouchableOpacity
-              key={`${title}-${index}`}
-              style={[
-                themedStyles.pickerOption,
-                isActive && themedStyles.pickerOptionActive,
-              ]}
-              onPress={() => onOptionSelect(option)}
-            >
-              <Text
+    <TouchableWithoutFeedback onPress={onModalToggle}>
+      <View style={themedStyles.pickerBackdrop}>
+        <View style={themedStyles.pickerContainer}>
+          <Text style={themedStyles.pickerTitle}>{title}</Text>
+          {options?.map((option, index) => {
+            const isActive = index === selectedIndex;
+            return (
+              <TouchableOpacity
+                key={`${title}-${index}`}
                 style={[
-                  themedStyles.pickerOptionText,
-                  isActive && themedStyles.pickerOptionTextActive,
+                  themedStyles.pickerOption,
+                  isActive && themedStyles.pickerOptionActive,
                 ]}
+                onPress={() => {
+                  setSelectedIndex(index);
+                  onOptionSelect(option);
+                }}
               >
-                {option.label}
-              </Text>
-              {isActive && <Ionicons name="checkmark" size={18} color="#fff" />}
-            </TouchableOpacity>
-          );
-        })}
+                <Text
+                  style={[
+                    themedStyles.pickerOptionText,
+                    isActive && themedStyles.pickerOptionTextActive,
+                  ]}
+                >
+                  {option.label}
+                </Text>
+                {isActive && (
+                  <Ionicons name="checkmark" size={18} color="#fff" />
+                )}
+              </TouchableOpacity>
+            );
+          })}
+        </View>
       </View>
-    </TouchableOpacity>
+    </TouchableWithoutFeedback>
   );
 };
 

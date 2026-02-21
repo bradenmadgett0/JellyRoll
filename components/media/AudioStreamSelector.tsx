@@ -1,14 +1,8 @@
 import { AppColors } from "@/hooks/useColors";
 import { useMediaSettings } from "@/services/hooks/useMediaSettings";
 import { Ionicons } from "@expo/vector-icons";
-import { useEffect, useMemo, useRef, useState } from "react";
-import {
-    Dimensions,
-    StyleSheet,
-    Text,
-    TouchableOpacity,
-    View,
-} from "react-native";
+import { JSX, useEffect, useMemo, useRef, useState } from "react";
+import { StyleSheet, Text, TouchableOpacity, View } from "react-native";
 import { useThemedStyles } from "../../hooks/useThemedStyles";
 import { JellyfinItem } from "../../types/jellyfin";
 import MediaObjectListModal from "../ui/MediaObjectListModal";
@@ -16,20 +10,18 @@ import MediaObjectListModal from "../ui/MediaObjectListModal";
 interface AudioStreamSelectorProps {
   item: JellyfinItem | null | undefined;
   onAudioStreamChange?: (index: number) => void;
+  onModalToggle: (modal?: JSX.Element) => void;
 }
 
 const AudioStreamSelector = ({
   item,
   onAudioStreamChange,
+  onModalToggle,
 }: AudioStreamSelectorProps) => {
   if (!item) {
     return null;
   }
 
-  const deviceWidth = Dimensions.get("window").width;
-  const deviceHeight = Dimensions.get("window").height;
-
-  const [showLanguagePicker, setShowLanguagePicker] = useState(false);
   const themedStyles = useThemedStyles(styles);
   const [selectedAudioIndex, setSelectedAudioIndex] = useState(0);
   const { get: getMediaSettings, set: setMediaSettings } = useMediaSettings(
@@ -61,75 +53,33 @@ const AudioStreamSelector = ({
     }
   }, [audioStreams, getMediaSettings]);
 
+  const audioLanguageModal = useMemo(
+    () => (
+      <MediaObjectListModal
+        onModalToggle={() => onModalToggle(undefined)}
+        title="Audio Language"
+        options={audioStreams.map((s) => ({
+          ...s,
+          label: s.DisplayTitle || "",
+        }))}
+        onOptionSelect={(option) => {
+          setSelectedAudioIndex(option.Index);
+          setMediaSettings({ audioStreamIndex: option.Index });
+          onAudioStreamChange?.(option.Index);
+          onModalToggle(undefined);
+        }}
+        initialSelectedIndex={audioStreams?.findIndex(
+          (s) => s.Index === selectedAudioIndex,
+        )}
+      />
+    ),
+    [audioStreams, selectedAudioIndex, onAudioStreamChange],
+  );
+
   return (
     <View>
-      {showLanguagePicker && (
-        // <TouchableOpacity
-        //   style={[
-        //     themedStyles.pickerBackdrop,
-        //     {
-        //       width: deviceWidth,
-        //       height: deviceHeight,
-        //       top: -(deviceHeight - 100),
-        //       left: -(deviceWidth - 120),
-        //     },
-        //   ]}
-        //   onPress={() => setShowLanguagePicker(false)}
-        // >
-        //   <View style={themedStyles.pickerContainer}>
-        //     <Text style={themedStyles.pickerTitle}>Audio Language</Text>
-        //     {audioStreams?.map((lang) => {
-        //       const isActive = lang.Index === selectedAudioIndex;
-        //       return (
-        //         <TouchableOpacity
-        //           key={`${lang.Index}-${lang.Language}`}
-        //           style={[
-        //             themedStyles.pickerOption,
-        //             isActive && themedStyles.pickerOptionActive,
-        //           ]}
-        //           onPress={() => {
-        //             setSelectedAudioIndex(lang.Index);
-        //             setMediaSettings({ audioStreamIndex: lang.Index });
-        //             onAudioStreamChange?.(lang.Index);
-        //             setShowLanguagePicker(false);
-        //           }}
-        //         >
-        //           <Text
-        //             style={[
-        //               themedStyles.pickerOptionText,
-        //               isActive && themedStyles.pickerOptionTextActive,
-        //             ]}
-        //           >
-        //             {lang.DisplayTitle}
-        //           </Text>
-        //           {isActive && (
-        //             <Ionicons name="checkmark" size={18} color="#fff" />
-        //           )}
-        //         </TouchableOpacity>
-        //       );
-        //     })}
-        //   </View>
-        // </TouchableOpacity>
-        <MediaObjectListModal
-          onModalToggle={() => setShowLanguagePicker(false)}
-          title="Audio Language"
-          options={audioStreams.map((s) => ({
-            ...s,
-            label: s.DisplayTitle || "",
-          }))}
-          onOptionSelect={(option) => {
-            setSelectedAudioIndex(option.Index);
-            setMediaSettings({ audioStreamIndex: option.Index });
-            onAudioStreamChange?.(option.Index);
-            setShowLanguagePicker(false);
-          }}
-          initialSelectedIndex={audioStreams?.findIndex(
-            (s) => s.Index === selectedAudioIndex,
-          )}
-        />
-      )}
       <TouchableOpacity
-        onPress={() => setShowLanguagePicker(true)}
+        onPress={() => onModalToggle?.(audioLanguageModal)}
         style={themedStyles.qualityBtn}
         hitSlop={12}
       >
