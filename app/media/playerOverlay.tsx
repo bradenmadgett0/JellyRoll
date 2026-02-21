@@ -6,6 +6,7 @@
  * Bottom:    Elapsed  ·  Scrubber  ·  Remaining  ·  Fullscreen
  */
 
+import AudioStreamSelector from "@/components/media/AudioStreamSelector";
 import { Ionicons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
 import { VideoAirPlayButton, VideoPlayer } from "expo-video";
@@ -104,12 +105,6 @@ export default function PlayerOverlay({
     return QUALITY_PRESETS;
   }, [item]);
 
-  // ─── Audio streams ───────────────────────────────────────
-  const audioStreams = useMemo(() => {
-    if (!item?.MediaSources?.[0]?.MediaStreams) return [];
-    return item.MediaSources[0].MediaStreams.filter((s) => s.Type === "Audio");
-  }, [item]);
-
   // ─── Initialize from saved settings ──────────────────────
   const hasInitialized = useRef(false);
   useEffect(() => {
@@ -123,19 +118,8 @@ export default function PlayerOverlay({
         );
         if (match) setSelectedQuality(match);
       }
-      if (saved.audioStreamIndex !== undefined) {
-        setSelectedAudioIndex(saved.audioStreamIndex);
-        return;
-      }
     }
-    // Fall back to default audio stream if no saved setting
-    const defaultStream = audioStreams.find((s) => s.IsDefault);
-    if (defaultStream) {
-      setSelectedAudioIndex(defaultStream.Index);
-    } else if (audioStreams.length > 0) {
-      setSelectedAudioIndex(audioStreams[0].Index);
-    }
-  }, [audioStreams, qualityPresets, getMediaSettings]);
+  }, [qualityPresets, getMediaSettings]);
 
   // ─── Poll player state ──────────────────────────────────
   useEffect(() => {
@@ -374,20 +358,10 @@ export default function PlayerOverlay({
             <Text style={styles.qualityBtnLabel}>{selectedQuality.label}</Text>
           </TouchableOpacity>
 
-          <TouchableOpacity
-            onPress={() => setShowLanguagePicker(true)}
-            style={styles.qualityBtn}
-            hitSlop={12}
-          >
-            <Ionicons
-              name="language-outline"
-              size={18}
-              color="rgba(255,255,255,0.8)"
-            />
-            <Text style={styles.qualityBtnLabel}>
-              {audioStreams?.[selectedAudioIndex - 1 || 0]?.Language}
-            </Text>
-          </TouchableOpacity>
+          <AudioStreamSelector
+            item={item}
+            onAudioStreamChange={onAudioStreamChange}
+          />
         </View>
       </View>
 
@@ -423,49 +397,6 @@ export default function PlayerOverlay({
                     ]}
                   >
                     {preset.label}
-                  </Text>
-                  {isActive && (
-                    <Ionicons name="checkmark" size={18} color="#fff" />
-                  )}
-                </TouchableOpacity>
-              );
-            })}
-          </View>
-        </TouchableOpacity>
-      )}
-
-      {/* ─── Audio Language Picker Modal ────────────────────── */}
-      {showLanguagePicker && (
-        <TouchableOpacity
-          style={styles.pickerBackdrop}
-          activeOpacity={1}
-          onPress={() => setShowLanguagePicker(false)}
-        >
-          <View style={styles.pickerContainer}>
-            <Text style={styles.pickerTitle}>Audio Language</Text>
-            {audioStreams?.map((lang) => {
-              const isActive = lang.Index === selectedAudioIndex;
-              return (
-                <TouchableOpacity
-                  key={`${lang.Index}-${lang.Language}`}
-                  style={[
-                    styles.pickerOption,
-                    isActive && styles.pickerOptionActive,
-                  ]}
-                  onPress={() => {
-                    setSelectedAudioIndex(lang.Index);
-                    setMediaSettings({ audioStreamIndex: lang.Index });
-                    onAudioStreamChange(lang.Index);
-                    setShowLanguagePicker(false);
-                  }}
-                >
-                  <Text
-                    style={[
-                      styles.pickerOptionText,
-                      isActive && styles.pickerOptionTextActive,
-                    ]}
-                  >
-                    {lang.DisplayTitle}
                   </Text>
                   {isActive && (
                     <Ionicons name="checkmark" size={18} color="#fff" />
