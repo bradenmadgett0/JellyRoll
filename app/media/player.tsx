@@ -238,6 +238,7 @@ export default function PlayerScreen() {
   // ─── Audio stream change handler ────────────────────────────
   const handleAudioStreamChange = useCallback(
     async (audioStreamIndex: number) => {
+      if (audioStreamIndex === selectedAudioStreamIndex) return;
       setSelectedAudioStreamIndex(audioStreamIndex);
       if (!itemId || !player) return;
       // Remember current position
