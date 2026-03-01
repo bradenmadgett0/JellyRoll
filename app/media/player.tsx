@@ -238,6 +238,7 @@ export default function PlayerScreen() {
   // ─── Audio stream change handler ────────────────────────────
   const handleAudioStreamChange = useCallback(
     async (audioStreamIndex: number) => {
+      console.log("handleAudioStreamChange", audioStreamIndex, selectedAudioStreamIndex);
       if (audioStreamIndex === selectedAudioStreamIndex) return;
       setSelectedAudioStreamIndex(audioStreamIndex);
       if (!itemId || !player) return;
@@ -258,7 +259,7 @@ export default function PlayerScreen() {
       player.play();
       // eslint-disable-next-line react-hooks/exhaustive-deps
     },
-    [itemId, player, getStreamUrl, killTranscode, selectedQuality],
+    [itemId, player, getStreamUrl, killTranscode, selectedQuality, selectedAudioStreamIndex],
   );
 
   // Memoize VideoPlayer to prevent re-renders from overlay toggle
