@@ -65,7 +65,7 @@ function MediaCardBase({
   const cardW = isBackdrop
     ? BACKDROP_W
     : isGrid
-      ? (SCREEN_WIDTH - Spacing.screenPadding * 2 - Spacing.md) / 2
+      ? (SCREEN_WIDTH - Spacing.screenPadding * 2 - Spacing.md) / 3
       : POSTER_W;
   const cardH = isBackdrop ? BACKDROP_H : isGrid ? cardW * 1.5 : POSTER_H;
 
