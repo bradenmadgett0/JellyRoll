@@ -203,7 +203,7 @@ export function useJellyfinSeasons(seriesId: string | undefined) {
       const client = createClient(server);
       const response = await client.getItems({
         parentId: seriesId,
-        includeItemTypes: "Season",
+        includeItemTypes: "Season,Episode",
         sortBy: "SortName",
         sortOrder: "Ascending",
       });

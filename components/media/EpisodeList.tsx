@@ -105,7 +105,7 @@ function SeasonSection({
                       episode.hasFile && { color: accentColor },
                     ]}
                   >
-                    {episode.episodeNumber}
+                    {episode.Name}
                   </Text>
                 </View>
                 <View style={styles.episodeInfo}>

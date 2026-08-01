@@ -21,7 +21,7 @@ import Animated, {
   FadeInDown,
   FadeInUp,
 } from "react-native-reanimated";
-import { EpisodeList, SeasonGroup } from "../../components/media/EpisodeList";
+import { EpisodeList, SeasonGroup, EpisodeItem } from "../../components/media/EpisodeList";
 import { Spacing } from "../../constants/Spacing";
 import { AppColors } from "../../hooks/useColors";
 import { useThemedStyles } from "../../hooks/useThemedStyles";
@@ -30,6 +30,7 @@ import {
   useJellyfinImageUrl,
   useJellyfinSeasons,
 } from "../../services/hooks/useJellyfin";
+import { JellyfinItem } from "@/types/jellyfin";
 
 const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get("window");
 const BACKDROP_HEIGHT = SCREEN_HEIGHT * 0.45;
@@ -67,10 +68,13 @@ export default function MediaDetailScreen() {
 
   // Build season/episode list for series
   const seasonGroups: SeasonGroup[] = useMemo(() => {
+    console.log(seasons);
     if (!seasons) return [];
-    return seasons.map((s) => ({
+    const parsedSeasons = seasons.filter((s) => s.Type === "Season");
+    const parsedEpisodes: EpisodeItem[] = seasons.filter((s) => s.Type === "Episode");
+    return parsedSeasons.map((s) => ({
       seasonNumber: s.IndexNumber ?? 0,
-      episodes: [],
+      episodes: parsedEpisodes.filter((e) => e.SeasonName === s.Name) || [],
       totalEpisodes: s.ChildCount,
     }));
   }, [seasons]);
