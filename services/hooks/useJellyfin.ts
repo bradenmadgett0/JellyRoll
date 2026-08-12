@@ -207,6 +207,7 @@ export function useJellyfinSeasons(seriesId: string | undefined) {
         sortBy: "SortName",
         sortOrder: "Ascending",
       });
+      console.log(response.Items);
       return response.Items;
     },
     enabled: !!server && !!seriesId,

@@ -5,11 +5,12 @@
 
 import { Ionicons } from "@expo/vector-icons";
 import { memo, useState } from "react";
-import { StyleSheet, Text, TouchableOpacity, View } from "react-native";
+import { StyleSheet, Text, TouchableOpacity, View, Image } from "react-native";
 import Animated, { FadeInDown } from "react-native-reanimated";
 import { Spacing } from "../../constants/Spacing";
 import { AppColors } from "../../hooks/useColors";
 import { useThemedStyles } from "../../hooks/useThemedStyles";
+import { useJellyfinImageUrl } from "@/services/hooks/useJellyfin";
 
 export interface EpisodeItem {
   id: string | number;
@@ -46,11 +47,18 @@ function SeasonSection({
   styles: ReturnType<typeof createStyles>;
 }) {
   const [expanded, setExpanded] = useState(season.seasonNumber === 1);
+  const getImageUrl = useJellyfinImageUrl();
 
   const fileCount =
     season.episodeFileCount ?? season.episodes.filter((e) => e.hasFile).length;
   const totalCount = season.totalEpisodes ?? season.episodes.length;
   const progressPercent = totalCount > 0 ? (fileCount / totalCount) * 100 : 0;
+
+  const getEpisodeImage = (episode) => {
+    const imageUrl = getImageUrl(episode.Id, "Primary");
+    console.log(imageUrl);
+    return imageUrl;
+  }
 
   return (
     <View style={styles.seasonContainer}>
@@ -98,6 +106,7 @@ function SeasonSection({
                 onPress={episode.onPress}
                 activeOpacity={0.7}
               >
+                <Image style={{ width: 50, height: 50 }} source={{ uri: getEpisodeImage(episode) || '' }} />
                 <View style={styles.episodeNumber}>
                   <Text
                     style={[
@@ -228,16 +237,17 @@ const createStyles = (colors: AppColors) =>
       paddingLeft: Spacing.md,
     },
     episodeRow: {
-      flexDirection: "row",
-      alignItems: "center",
+      flexDirection: "column",
       paddingVertical: Spacing.md,
       paddingHorizontal: Spacing.sm,
       borderBottomWidth: 0.5,
       borderBottomColor: colors.surfaceBorder,
+      width: '100%',
     },
     episodeNumber: {
-      width: 32,
+      width: '100%',
       alignItems: "center",
+      flexWrap: 'wrap'
     },
     episodeNumberText: {
       fontFamily: "Inter_600SemiBold",
