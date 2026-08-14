@@ -15,6 +15,8 @@ export interface ServerConfig {
     accessToken?: string;
     /** Jellyfin user ID */
     userId?: string;
+    /** Stable per-server device ID sent as DeviceId in the Jellyfin auth header. Generated once at add-time; must not change, or Jellyfin registers a new session/device per value. */
+    deviceId?: string;
     /** Whether this server connection works over HTTPS */
     isHttps: boolean;
     /** User explicitly accepted HTTP connection (local network) */

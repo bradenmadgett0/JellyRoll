@@ -14,11 +14,8 @@ import { JellyfinClient } from "../api/jellyfin";
 import { useServerStore } from "../stores/serverStore";
 
 /** Create a JellyfinClient instance from a server config */
-function createClient(
-  server: ServerConfig,
-  playSessionId?: string,
-): JellyfinClient {
-  return new JellyfinClient(server, playSessionId);
+function createClient(server: ServerConfig): JellyfinClient {
+  return new JellyfinClient(server);
 }
 
 /** Get first connected Jellyfin server */
@@ -178,7 +175,7 @@ export function useJellyfinStreamUrl(playSessionId: string) {
     audioStreamIndex?: number,
   ): { streamUrl: string; hlsUrl: string } | null => {
     if (!server) return null;
-    const client = createClient(server, playSessionId);
+    const client = createClient(server);
     return {
       streamUrl: client.getStreamUrl(itemId),
       hlsUrl: client.getHlsStreamUrl(
@@ -254,7 +251,7 @@ export function usePlaybackReporter() {
     async (itemId: string, positionTicks: number = 0) => {
       if (!server) return;
       try {
-        const client = createClient(server, playSessionId);
+        const client = createClient(server);
         await client.reportPlaybackStart(itemId, positionTicks, playSessionId);
       } catch (e) {
         console.warn("[Playback] Failed to report start", e);
@@ -271,7 +268,7 @@ export function usePlaybackReporter() {
     ) => {
       if (!server) return;
       try {
-        const client = createClient(server, playSessionId);
+        const client = createClient(server);
         await client.reportPlaybackProgress(
           itemId,
           positionTicks,
@@ -289,7 +286,7 @@ export function usePlaybackReporter() {
     if (!server) return;
     try {
       console.log("Killing transcode", playSessionId);
-      const client = createClient(server, playSessionId);
+      const client = createClient(server);
       await client.deleteActiveEncoding(playSessionId);
     } catch (e) {
       console.warn("[Playback] Failed to kill transcode", e);
@@ -300,7 +297,7 @@ export function usePlaybackReporter() {
     async (itemId: string, positionTicks: number) => {
       if (!server) return;
       try {
-        const client = createClient(server, playSessionId);
+        const client = createClient(server);
         await client.reportPlaybackStopped(
           itemId,
           positionTicks,

@@ -12,13 +12,29 @@ import {
     JellyfinSystemInfo,
 } from "../../types/jellyfin";
 import { ConnectionTestResult, ServerConfig } from "../../types/server";
+import { useServerStore } from "../stores/serverStore";
 
 const CLIENT_NAME = "JellyRoll";
 const CLIENT_VERSION = "1.0.0";
 const DEVICE_NAME = "JellyRoll Mobile";
 
-function generateDeviceId(): string {
+export function generateDeviceId(): string {
   return "jellyroll_" + Math.random().toString(36).substring(2, 15);
+}
+
+/**
+ * Resolve the stable device ID for a server, backfilling and persisting one
+ * for installs that predate the deviceId field. Without a stable ID, Jellyfin
+ * registers a new session/device per request.
+ */
+function resolveDeviceId(server: ServerConfig): string {
+  if (server.deviceId) return server.deviceId;
+  const deviceId = generateDeviceId();
+  useServerStore
+    .getState()
+    .updateServer(server.id, { deviceId })
+    .catch((e) => console.warn("[Jellyfin] Failed to persist device ID", e));
+  return deviceId;
 }
 
 export class JellyfinClient {
@@ -30,9 +46,9 @@ export class JellyfinClient {
     return this.deviceId;
   }
 
-  constructor(server: ServerConfig, deviceId?: string) {
+  constructor(server: ServerConfig) {
     this.server = server;
-    this.deviceId = deviceId ?? generateDeviceId();
+    this.deviceId = resolveDeviceId(server);
 
     this.client = axios.create({
       baseURL: server.url,

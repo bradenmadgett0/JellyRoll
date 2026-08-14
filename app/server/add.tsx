@@ -21,7 +21,7 @@ import { SOURCE_COLORS } from "../../constants/Sources";
 import { Spacing } from "../../constants/Spacing";
 import { AppColors } from "../../hooks/useColors";
 import { useThemedStyles } from "../../hooks/useThemedStyles";
-import { JellyfinClient } from "../../services/api/jellyfin";
+import { generateDeviceId, JellyfinClient } from "../../services/api/jellyfin";
 import { LidarrClient } from "../../services/api/lidarr";
 import { RadarrClient } from "../../services/api/radarr";
 import { SonarrClient } from "../../services/api/sonarr";
@@ -115,6 +115,7 @@ export default function AddServerScreen() {
 
     try {
       if (isJellyfin) {
+        const deviceId = generateDeviceId();
         const client = new JellyfinClient({
           id: "temp",
           name: "",
@@ -123,6 +124,7 @@ export default function AddServerScreen() {
           isHttps: normalizedUrl.startsWith("https"),
           httpAllowed: useHttp,
           sortOrder: 0,
+          deviceId,
         });
 
         const connResult = await client.testConnection();
@@ -145,6 +147,7 @@ export default function AddServerScreen() {
           httpAllowed: useHttp,
           lastConnected: new Date().toISOString(),
           serverVersion: connResult.serverVersion,
+          deviceId,
         });
 
         setStep("success");
