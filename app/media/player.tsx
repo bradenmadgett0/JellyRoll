@@ -200,7 +200,6 @@ export default function PlayerScreen() {
     ) {
       const urls = getStreamUrl(itemId, newBitrate, newAudioIndex);
       if (urls?.hlsUrl) {
-        // eslint-disable-next-line @typescript-eslint/no-floating-promises
         (async () => {
           await killTranscode();
           await player.replaceAsync(urls.hlsUrl);
@@ -263,27 +262,37 @@ export default function PlayerScreen() {
   // TODO: Consider pausing the player explicitly before unmount to prevent
   // brief background streaming while useVideoPlayer tears down the native instance.
 
-  // ─── Report stop on unmount (uses cached ticks, never 0) ────
-  // reportStop's identity changes once the PlaybackInfo handshake resolves
-  // (it closes over the negotiated session), so we track it in a ref rather
-  // than the effect's deps — otherwise the unmount cleanup would fire a real
-  // stop report the moment the session becomes available, not on unmount.
+  // ─── Report stop on unmount (uses cached ticks; 0 is a real position) ──
+  // reportStop's and killTranscode's identities change once the PlaybackInfo
+  // handshake resolves (they close over the negotiated session), so we track
+  // them in refs rather than the effect's deps — otherwise the unmount
+  // cleanup would fire a real stop report the moment the session becomes
+  // available, not on unmount.
   const reportStopRef = useRef(reportStop);
+  const killTranscodeRef = useRef(killTranscode);
   useEffect(() => {
     reportStopRef.current = reportStop;
-  }, [reportStop]);
+    killTranscodeRef.current = killTranscode;
+  }, [reportStop, killTranscode]);
 
   useEffect(() => {
     return () => {
-      if (itemId && lastKnownTicks.current > 0) {
-        reportStopRef.current(itemId, lastKnownTicks.current);
-      }
+      if (!itemId) return;
+      // Independent calls, not chained: reportStop failing must not stop the
+      // transcode from being killed. usePlaybackReporter already no-ops
+      // cleanly when no session was ever negotiated.
+      reportStopRef.current(itemId, lastKnownTicks.current);
+      killTranscodeRef.current();
     };
   }, [itemId]);
 
   // ─── Overlay toggle ─────────────────────────────────────────
   const toggleOverlay = useCallback(() => {
     setShowOverlay((prev) => !prev);
+  }, []);
+
+  const hideOverlay = useCallback(() => {
+    setShowOverlay(false);
   }, []);
 
   // ─── Quality change handler ──────────────────────────────────
@@ -306,7 +315,6 @@ export default function PlayerScreen() {
       await player.replaceAsync(urls.hlsUrl);
       player.currentTime = resumeTime;
       player.play();
-      // eslint-disable-next-line react-hooks/exhaustive-deps
     },
     [itemId, player, getStreamUrl, killTranscode, selectedAudioStreamIndex],
   );
@@ -332,7 +340,6 @@ export default function PlayerScreen() {
       await player.replaceAsync(urls.hlsUrl);
       player.currentTime = resumeTime;
       player.play();
-      // eslint-disable-next-line react-hooks/exhaustive-deps
     },
     [itemId, player, getStreamUrl, killTranscode, selectedQuality, selectedAudioStreamIndex],
   );
@@ -383,7 +390,7 @@ export default function PlayerScreen() {
         item={item}
         itemId={itemId}
         showOverlay={showOverlay}
-        toggleOverlay={toggleOverlay}
+        hideOverlay={hideOverlay}
         onQualityChange={handleQualityChange}
         onAudioStreamChange={handleAudioStreamChange}
       />

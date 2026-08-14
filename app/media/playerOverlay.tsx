@@ -62,7 +62,7 @@ interface PlayerOverlayProps {
   item?: JellyfinItem | null;
   itemId: string;
   showOverlay: boolean;
-  toggleOverlay: () => void;
+  hideOverlay: () => void;
   onQualityChange: (preset: QualityPreset) => void;
   onAudioStreamChange: (streamIndex: number) => void;
 }
@@ -74,7 +74,7 @@ export default function PlayerOverlay({
   player,
   item,
   itemId,
-  toggleOverlay,
+  hideOverlay,
   onQualityChange,
   showOverlay,
   onAudioStreamChange,
@@ -88,7 +88,6 @@ export default function PlayerOverlay({
   const [duration, setDuration] = useState(player.duration);
   const [bitrate, setBitrate] = useState<number | null>(null);
   const [showQualityPicker, setShowQualityPicker] = useState(false);
-  const [showLanguagePicker, setShowLanguagePicker] = useState(false);
   const [selectedQuality, setSelectedQuality] = useState<QualityPreset>(
     DEFAULT_QUALITY_PRESET,
   );
@@ -160,10 +159,9 @@ export default function PlayerOverlay({
   const setAutoHideTimer = useCallback(() => {
     if (autoHideTimer.current) clearTimeout(autoHideTimer.current);
     autoHideTimer.current = setTimeout(() => {
-      setOverlayModalContent(undefined);
-      toggleOverlay();
+      hideOverlay();
     }, AUTO_HIDE_MS);
-  }, []);
+  }, [hideOverlay]);
 
   // ─── Auto-hide overlay ──────────────────────────────────
   useEffect(() => {
@@ -171,7 +169,7 @@ export default function PlayerOverlay({
       showOverlay &&
       !isScrubbing &&
       !showQualityPicker &&
-      !showLanguagePicker
+      !overlayModalContent
     ) {
       setAutoHideTimer();
       return () => {
@@ -182,8 +180,8 @@ export default function PlayerOverlay({
     showOverlay,
     isScrubbing,
     showQualityPicker,
-    showLanguagePicker,
-    toggleOverlay,
+    overlayModalContent,
+    setAutoHideTimer,
   ]);
 
   // ─── Controls ───────────────────────────────────────────

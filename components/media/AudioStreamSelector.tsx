@@ -18,14 +18,10 @@ const AudioStreamSelector = ({
   onAudioStreamChange,
   onModalToggle,
 }: AudioStreamSelectorProps) => {
-  if (!item) {
-    return null;
-  }
-
   const themedStyles = useThemedStyles(styles);
   const [selectedAudioIndex, setSelectedAudioIndex] = useState(0);
   const { get: getMediaSettings, set: setMediaSettings } = useMediaSettings(
-    item.Id,
+    item?.Id ?? "",
   );
   const hasInitialized = useRef(false);
 
@@ -76,6 +72,16 @@ const AudioStreamSelector = ({
     [audioStreams, selectedAudioIndex, onAudioStreamChange],
   );
 
+  if (!item) {
+    return null;
+  }
+
+  const selectedStream = audioStreams.find(
+    (s) => s.Index === selectedAudioIndex,
+  );
+  const label =
+    selectedStream?.DisplayTitle || selectedStream?.Language || "Audio";
+
   return (
     <View>
       <TouchableOpacity
@@ -88,9 +94,7 @@ const AudioStreamSelector = ({
           size={18}
           color="rgba(255,255,255,0.8)"
         />
-        <Text style={themedStyles.qualityBtnLabel}>
-          {audioStreams?.[selectedAudioIndex - 1 || 0]?.Language}
-        </Text>
+        <Text style={themedStyles.qualityBtnLabel}>{label}</Text>
       </TouchableOpacity>
     </View>
   );
