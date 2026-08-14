@@ -3,7 +3,7 @@
  * exposes the resulting session (PlaySessionId, MediaSourceId, PlayMethod).
  */
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { JellyfinPlaybackErrorCode } from "../../types/jellyfin";
 import { JellyfinPlaybackSession, useJellyfinPlaybackInfo } from "./useJellyfin";
 
@@ -38,6 +38,18 @@ export function usePlaybackSession(
   // when itemId/options haven't changed.
   const [nonce, setNonce] = useState(0);
 
+  // Options are negotiated once per (itemId, nonce) cycle, not reactively on
+  // every options change — a quality/audio switch updates these before the
+  // next render, and switches are handled by replaceAsync (see player.tsx's
+  // switchStream), not by re-negotiating here. If this effect depended on
+  // them directly, every switch would fire a second, racing negotiation
+  // alongside the manual replace. The ref always holds the latest values so
+  // an explicit renegotiate() (P11) still negotiates with current settings.
+  const optionsRef = useRef({ startTicks, maxStreamingBitrate, audioStreamIndex });
+  useEffect(() => {
+    optionsRef.current = { startTicks, maxStreamingBitrate, audioStreamIndex };
+  });
+
   useEffect(() => {
     if (!itemId) return;
     let cancelled = false;
@@ -45,9 +57,9 @@ export function usePlaybackSession(
     setError(null);
 
     getPlaybackInfo(itemId, {
-      startTimeTicks: startTicks,
-      maxStreamingBitrate,
-      audioStreamIndex,
+      startTimeTicks: optionsRef.current.startTicks,
+      maxStreamingBitrate: optionsRef.current.maxStreamingBitrate,
+      audioStreamIndex: optionsRef.current.audioStreamIndex,
     })
       .then((info) => {
         if (cancelled) return;
@@ -83,7 +95,9 @@ export function usePlaybackSession(
     return () => {
       cancelled = true;
     };
-  }, [itemId, startTicks, maxStreamingBitrate, audioStreamIndex, getPlaybackInfo, nonce]);
+    // startTicks/maxStreamingBitrate/audioStreamIndex intentionally excluded
+    // — see optionsRef comment above.
+  }, [itemId, getPlaybackInfo, nonce]);
 
   const renegotiate = useCallback(() => setNonce((n) => n + 1), []);
 

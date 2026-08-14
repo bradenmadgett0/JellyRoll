@@ -9,9 +9,13 @@ import {
   QualityPreset,
   ticksToSeconds,
 } from "@/types/player";
+import { useEventListener } from "expo";
 import { Ionicons } from "@expo/vector-icons";
 import { Stack, useLocalSearchParams, useRouter } from "expo-router";
-import { useVideoPlayer } from "expo-video";
+import {
+  useVideoPlayer,
+  VideoPlayer as VideoPlayerInstance,
+} from "expo-video";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   ActivityIndicator,
@@ -34,6 +38,27 @@ import { usePlaybackSession } from "../../services/hooks/usePlaybackSession";
 import PlayerOverlay from "./playerOverlay";
 import VideoPlayer from "./videoPlayer";
 
+/**
+ * Resolves once the player has loaded enough of its current source to accept
+ * a seek — setting `currentTime` before this (e.g. synchronously in
+ * useVideoPlayer's setup callback, or immediately after replaceAsync) is
+ * silently dropped, since the player has nothing loaded yet to seek within.
+ * Also resolves on 'error' so a failed load can't hang the caller forever.
+ */
+function waitForReady(player: VideoPlayerInstance): Promise<void> {
+  if (player.status === "readyToPlay" || player.status === "error") {
+    return Promise.resolve();
+  }
+  return new Promise((resolve) => {
+    const subscription = player.addListener("statusChange", ({ status }) => {
+      if (status === "readyToPlay" || status === "error") {
+        subscription.remove();
+        resolve();
+      }
+    });
+  });
+}
+
 export default function PlayerScreen() {
   const { itemId, startTicks: startTicksParam } = useLocalSearchParams<{
     itemId: string;
@@ -42,54 +67,123 @@ export default function PlayerScreen() {
   const router = useRouter();
   const styles = useThemedStyles(createStyles);
   const { data: item } = useJellyfinDetail(itemId);
+  const { get: getMediaSettings, set: setMediaSettings } =
+    useMediaSettings(itemId);
 
   const startTicks = startTicksParam ? parseInt(startTicksParam, 10) : 0;
   const startSeconds = startTicks > 0 ? ticksToSeconds(startTicks) : 0;
+  // Guards the one-time resume-position seek once the player is ready (below).
+  const hasSeeked = useRef(false);
+
+  const [showOverlay, setShowOverlay] = useState(true);
+
+  // ─── Resolve saved settings synchronously, before negotiating ───────────
+  // Read once at mount (not gated on the item detail query, so a slow/failed
+  // detail fetch can never block playback from starting) so the very FIRST
+  // PlaybackInfo handshake already carries the right bitrate/audio track.
+  // The old approach applied saved settings in an effect that ran after the
+  // handshake and after playback had already begun at defaults — every
+  // launch with a non-default saved quality did negotiate → play → kill →
+  // negotiate again → replace: two transcode starts for one launch. Only
+  // the dynamic "Max - <source bitrate>" preset can't be matched yet here
+  // (its label depends on the item detail query, which may not have
+  // resolved); that one narrow case falls back to the default and
+  // self-corrects the next time it's saved.
+  const [initialSettings] = useState(() => getMediaSettings());
+  const [selectedQuality, setSelectedQuality] = useState<QualityPreset>(() => {
+    if (initialSettings?.qualityPreset) {
+      const match = buildQualityPresets().find(
+        (p) => p.label === initialSettings.qualityPreset,
+      );
+      if (match) return match;
+    }
+    return DEFAULT_QUALITY_PRESET;
+  });
+  const [selectedAudioStreamIndex, setSelectedAudioStreamIndex] = useState<
+    number | undefined
+  >(initialSettings?.audioStreamIndex);
 
   const {
     session: playbackSession,
     error: playbackError,
-  } = usePlaybackSession(itemId, { startTicks });
+  } = usePlaybackSession(itemId, {
+    startTicks,
+    maxStreamingBitrate: selectedQuality.maxBitrate ?? undefined,
+    audioStreamIndex: selectedAudioStreamIndex,
+  });
   const getStreamUrl = useJellyfinStreamUrl(
     playbackSession?.playSessionId,
     playbackSession?.mediaSourceId,
   );
-  const { get: getMediaSettings, set: setMediaSettings, serverId } =
-    useMediaSettings(itemId);
-
-  const [showOverlay, setShowOverlay] = useState(true);
-  const [selectedQuality, setSelectedQuality] = useState<QualityPreset>(
-    DEFAULT_QUALITY_PRESET,
-  );
-  const [selectedAudioStreamIndex, setSelectedAudioStreamIndex] =
-    useState<number>();
 
   // Single source of truth for the preset list — both the parent (URL
-  // building) and the overlay (picker UI) read from this.
+  // building) and the overlay (picker UI) read from this. Reactive, unlike
+  // the one-time resolution above, so it picks up the dynamic "Max" entry
+  // once the item detail loads.
   const qualityPresets = useMemo(
     () => buildQualityPresets(item?.MediaSources?.[0]?.Bitrate),
     [item],
   );
 
-  const hasSeeked = useRef(false);
+  // Once the session negotiates, reflect the server's chosen default audio
+  // track in state (for the picker label) if there was no saved override —
+  // the initial URL already got this track since we didn't constrain
+  // audioStreamIndex, so no stream replace is needed here, just display.
+  useEffect(() => {
+    if (!playbackSession || selectedAudioStreamIndex !== undefined) return;
+    if (playbackSession.defaultAudioStreamIndex !== undefined) {
+      setSelectedAudioStreamIndex(playbackSession.defaultAudioStreamIndex);
+      return;
+    }
+    const audioStreams =
+      item?.MediaSources?.[0]?.MediaStreams?.filter(
+        (s) => s.Type === "Audio",
+      ) ?? [];
+    const fallback =
+      audioStreams.find((s) => s.IsDefault)?.Index ?? audioStreams[0]?.Index;
+    if (fallback !== undefined) setSelectedAudioStreamIndex(fallback);
+  }, [playbackSession, selectedAudioStreamIndex, item]);
 
-  // getStreamUrl is now a stable useCallback (see useJellyfinStreamUrl) that
-  // only changes identity when the client or the negotiated session does —
-  // not on unrelated re-renders — so it's safe to depend on honestly here.
+  // NOTE: this previously also baked `startTicks` into the URL so the
+  // server would start the transcode already at the resume point, avoiding
+  // a client-side seek into un-transcoded content. That broke playback
+  // outright against the live server (see the NOTE on getHlsStreamUrl), so
+  // it's reverted to the local-seek approach below pending a known-correct
+  // way to request a server-side start offset.
+  //
+  // selectedQuality/selectedAudioStreamIndex are intentionally excluded from
+  // deps: they're read once here, at the moment the session first becomes
+  // available (already resolved from saved settings before that, per above)
+  // to build the initial URL. Later quality/audio switches go through
+  // switchStream's replaceAsync path, not through rebuilding this memo, so
+  // hlsUrl intentionally goes stale after a switch — P11 unifies URL state
+  // with the session.
   const hlsUrl = useMemo(() => {
     if (!itemId || !playbackSession) return null;
-    const urls = getStreamUrl(itemId);
+    const urls = getStreamUrl(
+      itemId,
+      selectedQuality.maxBitrate,
+      selectedAudioStreamIndex,
+    );
     return urls?.hlsUrl ?? null;
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [itemId, playbackSession, getStreamUrl]);
 
   const player = useVideoPlayer(hlsUrl ?? "", (p) => {
     p.loop = false;
     p.allowsExternalPlayback = true;
-    if (startSeconds > 0 && !hasSeeked.current) {
-      p.currentTime = startSeconds;
-      hasSeeked.current = true;
-    }
     p.play();
+  });
+
+  // Seek to the resume position once the player has actually loaded the
+  // source. Setting currentTime synchronously in useVideoPlayer's setup
+  // callback above (the previous approach) fires before the player has
+  // anything loaded and is silently dropped — resume always started from 0.
+  useEventListener(player, "statusChange", ({ status }) => {
+    if (status === "readyToPlay" && startSeconds > 0 && !hasSeeked.current) {
+      hasSeeked.current = true;
+      player.currentTime = startSeconds;
+    }
   });
 
   const { killTranscode } = usePlaybackReporting({
@@ -99,79 +193,6 @@ export default function PlayerScreen() {
     startTicks,
     audioStreamIndex: selectedAudioStreamIndex,
   });
-
-  // ─── Resolve initial quality + audio selection (once, after player is ready) ──
-  // Establishes what's actually playing so the overlay's labels never
-  // disagree with the stream: audio defaults to the negotiated source's
-  // DefaultAudioStreamIndex (what the server itself would pick), falling
-  // back to scanning for IsDefault, only overridden by a saved preference.
-  // The stream is only replaced when a saved setting requires it — the
-  // resolved *default* is what the initial URL already got without us
-  // asking, so just reflecting it in state doesn't need a restart.
-  const hasAppliedSaved = useRef(false);
-  useEffect(() => {
-    if (
-      !player ||
-      !item ||
-      !serverId ||
-      !playbackSession ||
-      hasAppliedSaved.current
-    )
-      return;
-    hasAppliedSaved.current = true;
-
-    const saved = getMediaSettings();
-
-    const audioStreams =
-      item.MediaSources?.[0]?.MediaStreams?.filter(
-        (s) => s.Type === "Audio",
-      ) ?? [];
-    const defaultAudioIndex =
-      playbackSession.defaultAudioStreamIndex ??
-      audioStreams.find((s) => s.IsDefault)?.Index ??
-      audioStreams[0]?.Index;
-
-    let newBitrate: number | null = DEFAULT_QUALITY_PRESET.maxBitrate;
-    let newAudioIndex: number | undefined = defaultAudioIndex;
-    let needsReplace = false;
-
-    if (saved?.qualityPreset) {
-      const match = qualityPresets.find((p) => p.label === saved.qualityPreset);
-      if (match) {
-        setSelectedQuality(match);
-        newBitrate = match.maxBitrate;
-        needsReplace = true;
-      }
-    }
-    if (saved?.audioStreamIndex !== undefined) {
-      newAudioIndex = saved.audioStreamIndex;
-      needsReplace = true;
-    }
-    setSelectedAudioStreamIndex(newAudioIndex);
-
-    if (needsReplace) {
-      const urls = getStreamUrl(itemId, newBitrate, newAudioIndex);
-      if (urls?.hlsUrl) {
-        (async () => {
-          await killTranscode();
-          await player.replaceAsync(urls.hlsUrl);
-          if (startSeconds > 0) player.currentTime = startSeconds;
-          player.play();
-        })();
-      }
-    }
-  }, [
-    player,
-    item,
-    serverId,
-    playbackSession,
-    itemId,
-    startSeconds,
-    qualityPresets,
-    getMediaSettings,
-    getStreamUrl,
-    killTranscode,
-  ]);
 
   // ─── Overlay toggle ─────────────────────────────────────────
   const toggleOverlay = useCallback(() => {
@@ -204,8 +225,12 @@ export default function PlayerScreen() {
       if (!urls?.hlsUrl) return;
       // Kill old transcode before starting a new one
       await killTranscode();
-      // Replace the source and seek back
+      // Replace the source and seek back — wait for the new source to
+      // actually be loaded first; setting currentTime immediately after
+      // replaceAsync resolves is not guaranteed to take effect (see
+      // waitForReady).
       await player.replaceAsync(urls.hlsUrl);
+      await waitForReady(player);
       player.currentTime = resumeTime;
       player.play();
     },

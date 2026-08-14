@@ -338,6 +338,14 @@ export class JellyfinClient {
   // is undocumented (the spec only lists the Authorization header), but the
   // server still honours it, and expo-video can't attach headers to the HLS
   // segment requests it makes internally — so the query param stays.
+  // NOTE: a `startTimeTicks` param was tried here (server-side resume offset
+  // baked into the URL, avoiding a client-side seek into un-transcoded
+  // content) but broke playback entirely against the live server — the
+  // request came back as something the player couldn't load at all, on both
+  // an initial resume and a mid-playback replaceAsync. Reverted pending a
+  // known-correct contract (P14's TranscodingUrl-from-PlaybackInfo work is
+  // the better path here — inspect a real response rather than guessing at
+  // hand-built query params).
   getHlsStreamUrl(
     itemId: string,
     playSessionId: string,
