@@ -7,7 +7,6 @@ import {
   buildQualityPresets,
   DEFAULT_QUALITY_PRESET,
   QualityPreset,
-  secondsToTicks,
   ticksToSeconds,
 } from "@/types/player";
 import { Ionicons } from "@expo/vector-icons";
@@ -26,25 +25,14 @@ import { Spacing } from "../../constants/Spacing";
 import { AppColors } from "../../hooks/useColors";
 import { useThemedStyles } from "../../hooks/useThemedStyles";
 import {
-  JellyfinPlaybackSession,
   useJellyfinDetail,
-  useJellyfinPlaybackInfo,
   useJellyfinStreamUrl,
-  usePlaybackReporter,
 } from "../../services/hooks/useJellyfin";
 import { useMediaSettings } from "../../services/hooks/useMediaSettings";
-import { JellyfinPlaybackErrorCode } from "../../types/jellyfin";
+import { usePlaybackReporting } from "../../services/hooks/usePlaybackReporting";
+import { usePlaybackSession } from "../../services/hooks/usePlaybackSession";
 import PlayerOverlay from "./playerOverlay";
 import VideoPlayer from "./videoPlayer";
-
-const POSITION_TRACK_MS = 1_000; // cache position every 1s
-const PROGRESS_REPORT_MS = 10_000; // report to Jellyfin every 10s
-
-const PLAYBACK_ERROR_MESSAGES: Record<JellyfinPlaybackErrorCode, string> = {
-  NotAllowed: "You don't have permission to play this item.",
-  NoCompatibleStream: "No compatible stream could be found for this item.",
-  RateLimitExceeded: "Too many active streams. Try again in a moment.",
-};
 
 export default function PlayerScreen() {
   const { itemId, startTicks: startTicksParam } = useLocalSearchParams<{
@@ -54,12 +42,14 @@ export default function PlayerScreen() {
   const router = useRouter();
   const styles = useThemedStyles(createStyles);
   const { data: item } = useJellyfinDetail(itemId);
-  const getPlaybackInfo = useJellyfinPlaybackInfo();
-  const [playbackSession, setPlaybackSession] =
-    useState<JellyfinPlaybackSession | null>(null);
-  const [playbackError, setPlaybackError] = useState<string | null>(null);
-  const { reportStart, reportProgress, reportStop, killTranscode } =
-    usePlaybackReporter(playbackSession ?? undefined);
+
+  const startTicks = startTicksParam ? parseInt(startTicksParam, 10) : 0;
+  const startSeconds = startTicks > 0 ? ticksToSeconds(startTicks) : 0;
+
+  const {
+    session: playbackSession,
+    error: playbackError,
+  } = usePlaybackSession(itemId, { startTicks });
   const getStreamUrl = useJellyfinStreamUrl(
     playbackSession?.playSessionId,
     playbackSession?.mediaSourceId,
@@ -81,58 +71,7 @@ export default function PlayerScreen() {
     [item],
   );
 
-  const startTicks = startTicksParam ? parseInt(startTicksParam, 10) : 0;
-  const startSeconds = startTicks > 0 ? ticksToSeconds(startTicks) : 0;
-
-  // Initialize with startTicks so we never fall back to 0
-  const lastKnownTicks = useRef(startTicks);
   const hasSeeked = useRef(false);
-  const positionTracker = useRef<ReturnType<typeof setInterval> | null>(null);
-  const progressReporter = useRef<ReturnType<typeof setInterval> | null>(null);
-
-  // ─── Negotiate the playback session (PlaybackInfo handshake) ──
-  // Runs once per itemId: mints the real PlaySessionId and selects the
-  // MediaSource to play, both required before a stream URL can be built.
-  useEffect(() => {
-    if (!itemId) return;
-    let cancelled = false;
-    setPlaybackSession(null);
-    setPlaybackError(null);
-
-    getPlaybackInfo(itemId, { startTimeTicks: startTicks })
-      .then((info) => {
-        if (cancelled) return;
-        if (info.ErrorCode) {
-          setPlaybackError(
-            PLAYBACK_ERROR_MESSAGES[info.ErrorCode] ??
-              "This item can't be played right now.",
-          );
-          return;
-        }
-        const source = info.MediaSources?.[0];
-        if (!source) {
-          setPlaybackError("No compatible media source was found.");
-          return;
-        }
-        setPlaybackSession({
-          playSessionId: info.PlaySessionId,
-          mediaSourceId: source.Id,
-          // We only ever request /master.m3u8 (HLS), never the raw /stream
-          // endpoint, so true DirectPlay never happens through this path.
-          playMethod: source.SupportsDirectStream
-            ? "DirectStream"
-            : "Transcode",
-          defaultAudioStreamIndex: source.DefaultAudioStreamIndex,
-        });
-      })
-      .catch(() => {
-        if (!cancelled) setPlaybackError("Unable to start playback.");
-      });
-
-    return () => {
-      cancelled = true;
-    };
-  }, [itemId, startTicks, getPlaybackInfo]);
 
   // getStreamUrl is now a stable useCallback (see useJellyfinStreamUrl) that
   // only changes identity when the client or the negotiated session does —
@@ -151,6 +90,14 @@ export default function PlayerScreen() {
       hasSeeked.current = true;
     }
     p.play();
+  });
+
+  const { killTranscode } = usePlaybackReporting({
+    player,
+    itemId,
+    session: playbackSession,
+    startTicks,
+    audioStreamIndex: selectedAudioStreamIndex,
   });
 
   // ─── Resolve initial quality + audio selection (once, after player is ready) ──
@@ -226,81 +173,6 @@ export default function PlayerScreen() {
     killTranscode,
   ]);
 
-  // ─── Position tracker (1s) — caches currentTime locally ─────
-  useEffect(() => {
-    if (!player) return;
-
-    positionTracker.current = setInterval(() => {
-      try {
-        const ticks = secondsToTicks(player.currentTime);
-        if (ticks > 0) lastKnownTicks.current = ticks;
-      } catch {
-        // player may have been released
-      }
-    }, POSITION_TRACK_MS);
-
-    return () => {
-      if (positionTracker.current) {
-        clearInterval(positionTracker.current);
-        positionTracker.current = null;
-      }
-    };
-  }, [player]);
-
-  // ─── Report playback start ──────────────────────────────────
-  useEffect(() => {
-    if (!itemId || !hlsUrl) return;
-    reportStart(itemId, startTicks);
-  }, [itemId, hlsUrl, startTicks, reportStart]);
-
-  // ─── Report progress to Jellyfin (10s) ──────────────────────
-  useEffect(() => {
-    if (!itemId || !player) return;
-
-    progressReporter.current = setInterval(() => {
-      reportProgress(
-        itemId,
-        lastKnownTicks.current,
-        !player.playing,
-        selectedAudioStreamIndex,
-      );
-    }, PROGRESS_REPORT_MS);
-
-    return () => {
-      if (progressReporter.current) {
-        clearInterval(progressReporter.current);
-        progressReporter.current = null;
-      }
-    };
-  }, [itemId, player, reportProgress, selectedAudioStreamIndex]);
-
-  // TODO: Consider pausing the player explicitly before unmount to prevent
-  // brief background streaming while useVideoPlayer tears down the native instance.
-
-  // ─── Report stop on unmount (uses cached ticks; 0 is a real position) ──
-  // reportStop's and killTranscode's identities change once the PlaybackInfo
-  // handshake resolves (they close over the negotiated session), so we track
-  // them in refs rather than the effect's deps — otherwise the unmount
-  // cleanup would fire a real stop report the moment the session becomes
-  // available, not on unmount.
-  const reportStopRef = useRef(reportStop);
-  const killTranscodeRef = useRef(killTranscode);
-  useEffect(() => {
-    reportStopRef.current = reportStop;
-    killTranscodeRef.current = killTranscode;
-  }, [reportStop, killTranscode]);
-
-  useEffect(() => {
-    return () => {
-      if (!itemId) return;
-      // Independent calls, not chained: reportStop failing must not stop the
-      // transcode from being killed. usePlaybackReporter already no-ops
-      // cleanly when no session was ever negotiated.
-      reportStopRef.current(itemId, lastKnownTicks.current);
-      killTranscodeRef.current();
-    };
-  }, [itemId]);
-
   // ─── Overlay toggle ─────────────────────────────────────────
   const toggleOverlay = useCallback(() => {
     setShowOverlay((prev) => !prev);
@@ -310,20 +182,25 @@ export default function PlayerScreen() {
     setShowOverlay(false);
   }, []);
 
-  // ─── Quality change handler ──────────────────────────────────
-  const handleQualityChange = useCallback(
-    async (preset: QualityPreset) => {
-      setSelectedQuality(preset);
-      setMediaSettings({ qualityPreset: preset.label });
+  // ─── Stream switch (quality or audio track) ─────────────────
+  // Both kinds of switch are the same six steps — remember position, build
+  // URL, kill transcode, replaceAsync, seek back, play — differing only in
+  // which URL param changes. Callers always pass both values explicitly
+  // (rather than "omit to keep current") since `bitrate: null` is itself a
+  // meaningful value (uncapped) and must not collapse into a default.
+  const switchStream = useCallback(
+    async ({
+      bitrate,
+      audioStreamIndex,
+    }: {
+      bitrate: number | null;
+      audioStreamIndex: number | undefined;
+    }) => {
       if (!itemId || !player) return;
       // Remember current position
       const resumeTime = player.currentTime;
-      // Build new URL with selected bitrate
-      const urls = getStreamUrl(
-        itemId,
-        preset.maxBitrate,
-        selectedAudioStreamIndex,
-      );
+      // Build new URL with the selected bitrate/audio track
+      const urls = getStreamUrl(itemId, bitrate, audioStreamIndex);
       if (!urls?.hlsUrl) return;
       // Kill old transcode before starting a new one
       await killTranscode();
@@ -332,48 +209,31 @@ export default function PlayerScreen() {
       player.currentTime = resumeTime;
       player.play();
     },
-    [
-      itemId,
-      player,
-      getStreamUrl,
-      killTranscode,
-      setMediaSettings,
-      selectedAudioStreamIndex,
-    ],
+    [itemId, player, getStreamUrl, killTranscode],
+  );
+
+  // ─── Quality change handler ──────────────────────────────────
+  const handleQualityChange = useCallback(
+    (preset: QualityPreset) => {
+      setSelectedQuality(preset);
+      setMediaSettings({ qualityPreset: preset.label });
+      switchStream({
+        bitrate: preset.maxBitrate,
+        audioStreamIndex: selectedAudioStreamIndex,
+      });
+    },
+    [setMediaSettings, switchStream, selectedAudioStreamIndex],
   );
 
   // ─── Audio stream change handler ────────────────────────────
   const handleAudioStreamChange = useCallback(
-    async (audioStreamIndex: number) => {
+    (audioStreamIndex: number) => {
       if (audioStreamIndex === selectedAudioStreamIndex) return;
       setSelectedAudioStreamIndex(audioStreamIndex);
       setMediaSettings({ audioStreamIndex });
-      if (!itemId || !player) return;
-      // Remember current position
-      const resumeTime = player.currentTime;
-      // Build new URL with selected bitrate
-      const urls = getStreamUrl(
-        itemId,
-        selectedQuality.maxBitrate,
-        audioStreamIndex,
-      );
-      if (!urls?.hlsUrl) return;
-      // Kill old transcode before starting a new one
-      await killTranscode();
-      // Replace the source and seek back
-      await player.replaceAsync(urls.hlsUrl);
-      player.currentTime = resumeTime;
-      player.play();
+      switchStream({ bitrate: selectedQuality.maxBitrate, audioStreamIndex });
     },
-    [
-      itemId,
-      player,
-      getStreamUrl,
-      killTranscode,
-      setMediaSettings,
-      selectedQuality,
-      selectedAudioStreamIndex,
-    ],
+    [selectedAudioStreamIndex, selectedQuality, setMediaSettings, switchStream],
   );
 
   // Memoize VideoPlayer to prevent re-renders from overlay toggle
