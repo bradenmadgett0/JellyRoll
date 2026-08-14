@@ -89,7 +89,12 @@ export default function LibraryScreen() {
 
   const renderItem = useCallback(
     ({ item, index }: { item: JellyfinItem; index: number }) => {
-      const imageUrl = getImageUrl(item.Id, "Primary", 200);
+      const imageUrl = getImageUrl(
+        item.Id,
+        "Primary",
+        200,
+        item.ImageTags?.Primary,
+      );
       return (
         <Animated.View
           entering={FadeIn.duration(300).delay(Math.min(index * 30, 300))}

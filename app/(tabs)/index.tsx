@@ -109,7 +109,7 @@ export default function HomeScreen() {
     return latestItems.slice(0, 12).map((item) => ({
       id: item.Id,
       title: item.Name,
-      imageUrl: getImageUrl(item.Id, "Primary", 200),
+      imageUrl: getImageUrl(item.Id, "Primary", 200, item.ImageTags?.Primary),
       badge:
         item.Type === "Movie"
           ? "Movie"

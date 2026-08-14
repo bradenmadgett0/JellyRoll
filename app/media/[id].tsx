@@ -84,7 +84,9 @@ export default function MediaDetailScreen() {
             airDate: e.PremiereDate,
             overview: e.Overview,
             hasFile: true,
-            imageUrl: getImageUrl(e.Id, "Primary", 200) ?? undefined,
+            imageUrl:
+              getImageUrl(e.Id, "Primary", 200, e.ImageTags?.Primary) ??
+              undefined,
             onPress: () => router.push(`/media/${e.Id}` as any),
           }),
         ),
@@ -96,10 +98,14 @@ export default function MediaDetailScreen() {
         item.ParentBackdropItemId ?? item.Id,
         "Backdrop",
         SCREEN_WIDTH * 2,
+        // Only this item's own tag — a parent's backdrop tag isn't in this response.
+        item.ParentBackdropItemId ? undefined : item.BackdropImageTags?.[0],
       )
     : null;
 
-  const posterUrl = item ? getImageUrl(item.Id, "Primary", 300) : null;
+  const posterUrl = item
+    ? getImageUrl(item.Id, "Primary", 300, item.ImageTags?.Primary)
+    : null;
 
   if (isLoading) {
     return (
@@ -301,7 +307,12 @@ export default function MediaDetailScreen() {
                   .slice(0, 15)
                   .map((person) => {
                     const personImage = person.PrimaryImageTag
-                      ? getImageUrl(person.Id, "Primary", 100)
+                      ? getImageUrl(
+                          person.Id,
+                          "Primary",
+                          100,
+                          person.PrimaryImageTag,
+                        )
                       : null;
                     return (
                       <View

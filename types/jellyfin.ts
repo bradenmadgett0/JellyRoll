@@ -30,6 +30,11 @@ export interface JellyfinLibraryResponse {
     TotalRecordCount: number;
 }
 
+// The spec marks essentially every BaseItemDto property — including Id, Name,
+// ServerId, and Type below — as nullable. In practice every item this app
+// fetches has them populated, and the UI accesses them directly (no `?.`
+// guards) throughout, so they're kept required here rather than cascading
+// optional-chaining into every consumer. Revisit if a real null is ever seen.
 export interface JellyfinItem {
     Id: string;
     Name: string;
@@ -46,8 +51,8 @@ export interface JellyfinItem {
     EndDate?: string;
     Status?: string;
     Genres?: string[];
-    Studios?: Array<{ Name: string; Id: string }>;
-    People?: Array<{ Name: string; Id: string; Role?: string; Type: string; PrimaryImageTag?: string }>;
+    Studios?: { Name: string; Id: string }[];
+    People?: { Name: string; Id: string; Role?: string; Type: string; PrimaryImageTag?: string }[];
     ImageTags?: Record<string, string>;
     BackdropImageTags?: string[];
     ParentId?: string;
@@ -69,6 +74,10 @@ export interface JellyfinItem {
     RecursiveItemCount?: number;
 }
 
+// Subset of the spec's BaseItemKind enum this app currently branches on,
+// plus other values confirmed to come back from real libraries. Widened with
+// `string & {}` (not a plain `string`) so unlisted BaseItemKind values still
+// type-check instead of erroring, while known members keep autocomplete.
 export type JellyfinItemType =
     | 'Movie'
     | 'Series'
@@ -79,7 +88,22 @@ export type JellyfinItemType =
     | 'Audio'
     | 'BoxSet'
     | 'Folder'
-    | 'CollectionFolder';
+    | 'CollectionFolder'
+    | 'Playlist'
+    | 'Video'
+    | 'Trailer'
+    | 'MusicVideo'
+    | 'Person'
+    | 'Genre'
+    | 'Recording'
+    | 'PhotoAlbum'
+    | 'Photo'
+    | 'Book'
+    | 'AudioBook'
+    | 'LiveTvChannel'
+    | 'TvChannel'
+    | 'Program'
+    | (string & {});
 
 export interface JellyfinUserData {
     PlaybackPositionTicks: number;
@@ -102,11 +126,14 @@ export interface JellyfinMediaSource {
     SupportsDirectStream: boolean;
     SupportsDirectPlay: boolean;
     TranscodingUrl?: string;
-    DirectStreamUrl?: string;
+    TranscodingSubProtocol?: string;
+    Protocol?: string;
+    DefaultAudioStreamIndex?: number;
+    DefaultSubtitleStreamIndex?: number;
 }
 
 export interface JellyfinMediaStream {
-    Type: 'Video' | 'Audio' | 'Subtitle';
+    Type: 'Audio' | 'Video' | 'Subtitle' | 'EmbeddedImage' | 'Data' | 'Lyric';
     Codec: string;
     Language?: string;
     Title?: string;
@@ -140,10 +167,18 @@ export interface JellyfinPlaybackInfoResponse {
     ErrorCode?: JellyfinPlaybackErrorCode;
 }
 
+/**
+ * Response of GET /System/Info/Public — the spec's PublicSystemInfo schema.
+ * `HasUpdateAvailable` lives only on the authenticated /System/Info response
+ * and was never actually returned here; removed.
+ */
 export interface JellyfinSystemInfo {
     ServerName: string;
     Version: string;
     Id: string;
+    /** @deprecated marked deprecated in the 10.11 spec, but still present on the response */
     OperatingSystem: string;
-    HasUpdateAvailable: boolean;
+    LocalAddress?: string;
+    ProductName?: string;
+    StartupWizardCompleted?: boolean;
 }

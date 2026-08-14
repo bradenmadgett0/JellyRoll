@@ -63,7 +63,13 @@ export function useGlobalSearch(query: string) {
                 source: 'jellyfin' as const,
                 sourceId: item.Id,
                 type: item.Type,
-                imageUrl: client.getImageUrl(item.Id, 'Primary', 100),
+                imageUrl: client.getImageUrl(
+                    item.Id,
+                    'Primary',
+                    100,
+                    undefined,
+                    item.ImageTags?.Primary,
+                ),
             }));
         },
         enabled: enabled && !!jellyfinServer,

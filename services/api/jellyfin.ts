@@ -327,11 +327,17 @@ export class JellyfinClient {
 
   // ─── Streaming URLs ─────────────────────────────────
 
+  // No `api_key` here: per the spec, GET /Videos/{itemId}/stream requires no
+  // authentication at all, so putting the access token in the URL is a no-op
+  // that just leaks it into logs, caches, and any proxy in between.
   getStreamUrl(itemId: string): string {
-    const token = this.server.accessToken ?? "";
-    return `${this.server.url}/Videos/${itemId}/stream?static=true&api_key=${token}`;
+    return `${this.server.url}/Videos/${itemId}/stream?static=true`;
   }
 
+  // Unlike getStreamUrl above, /master.m3u8 DOES require auth. `api_key` here
+  // is undocumented (the spec only lists the Authorization header), but the
+  // server still honours it, and expo-video can't attach headers to the HLS
+  // segment requests it makes internally — so the query param stays.
   getHlsStreamUrl(
     itemId: string,
     playSessionId: string,
@@ -352,16 +358,19 @@ export class JellyfinClient {
 
   // ─── Image URLs ─────────────────────────────────────
 
+  /** Pass the item's `ImageTags[imageType]` as `tag` so client/CDN caches invalidate when artwork changes. */
   getImageUrl(
     itemId: string,
     imageType: "Primary" | "Backdrop" | "Thumb" | "Banner" | "Logo" = "Primary",
     maxWidth?: number,
     maxHeight?: number,
+    tag?: string,
   ): string {
     let url = `${this.server.url}/Items/${itemId}/Images/${imageType}`;
     const params: string[] = [];
     if (maxWidth) params.push(`maxWidth=${maxWidth}`);
     if (maxHeight) params.push(`maxHeight=${maxHeight}`);
+    if (tag) params.push(`tag=${tag}`);
     params.push("quality=90");
     if (params.length) url += `?${params.join("&")}`;
     return url;

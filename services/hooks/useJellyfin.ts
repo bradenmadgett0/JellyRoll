@@ -165,10 +165,11 @@ export function useJellyfinImageUrl() {
     itemId: string,
     imageType: "Primary" | "Backdrop" | "Thumb" = "Primary",
     maxWidth?: number,
+    tag?: string,
   ): string | null => {
     if (!server) return null;
     const client = createClient(server);
-    return client.getImageUrl(itemId, imageType, maxWidth);
+    return client.getImageUrl(itemId, imageType, maxWidth, undefined, tag);
   };
 }
 
