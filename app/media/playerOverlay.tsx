@@ -30,11 +30,9 @@ import {
 import { Gesture, GestureDetector } from "react-native-gesture-handler";
 import Animated, { FadeIn, FadeOut } from "react-native-reanimated";
 import { Spacing } from "../../constants/Spacing";
-import { useMediaSettings } from "../../services/hooks/useMediaSettings";
 import { JellyfinItem } from "../../types/jellyfin";
 import {
-  DEFAULT_QUALITY_PRESET,
-  QUALITY_PRESETS,
+  formatBitrate,
   QualityPreset,
 } from "../../types/player";
 
@@ -49,13 +47,6 @@ function formatTime(seconds: number): string {
   return `${m}:${String(s).padStart(2, "0")}`;
 }
 
-function formatBitrate(bps: number | null): string | null {
-  if (!bps || bps <= 0) return null;
-  if (bps >= 1_000_000) return `${(bps / 1_000_000).toFixed(1)} Mbps`;
-  if (bps >= 1_000) return `${Math.round(bps / 1_000)} Kbps`;
-  return `${bps} bps`;
-}
-
 // ─── Props ──────────────────────────────────────────────────
 interface PlayerOverlayProps {
   player: VideoPlayer;
@@ -63,7 +54,10 @@ interface PlayerOverlayProps {
   itemId: string;
   showOverlay: boolean;
   hideOverlay: () => void;
+  qualityPresets: QualityPreset[];
+  selectedQuality: QualityPreset;
   onQualityChange: (preset: QualityPreset) => void;
+  selectedAudioStreamIndex: number | undefined;
   onAudioStreamChange: (streamIndex: number) => void;
 }
 
@@ -75,22 +69,20 @@ export default function PlayerOverlay({
   item,
   itemId,
   hideOverlay,
+  qualityPresets,
+  selectedQuality,
   onQualityChange,
   showOverlay,
+  selectedAudioStreamIndex,
   onAudioStreamChange,
 }: PlayerOverlayProps) {
   const router = useRouter();
-  const { get: getMediaSettings, set: setMediaSettings } =
-    useMediaSettings(itemId);
 
   const [isPlaying, setIsPlaying] = useState(player.playing);
   const [currentTime, setCurrentTime] = useState(player.currentTime);
   const [duration, setDuration] = useState(player.duration);
   const [bitrate, setBitrate] = useState<number | null>(null);
   const [showQualityPicker, setShowQualityPicker] = useState(false);
-  const [selectedQuality, setSelectedQuality] = useState<QualityPreset>(
-    DEFAULT_QUALITY_PRESET,
-  );
 
   const [isScrubbing, setIsScrubbing] = useState(false);
   const [scrubberWidth, setScrubberWidth] = useState(0);
@@ -98,36 +90,6 @@ export default function PlayerOverlay({
 
   const scrubRef = useRef(currentTime);
   const autoHideTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
-
-  // ─── Quality presets (with dynamic "Max" from media bitrate) ──
-  // TODO: extract this logic out to common util
-  const qualityPresets = useMemo(() => {
-    const mediaBitrate = item?.MediaSources?.[0]?.Bitrate;
-    if (mediaBitrate && mediaBitrate > 0) {
-      const label =
-        mediaBitrate >= 1_000_000
-          ? `Max - ${(mediaBitrate / 1_000_000).toFixed(1)} Mbps`
-          : `Max - ${Math.round(mediaBitrate / 1_000)} Kbps`;
-      return [{ label, maxBitrate: mediaBitrate }, ...QUALITY_PRESETS];
-    }
-    return QUALITY_PRESETS;
-  }, [item]);
-
-  // ─── Initialize from saved settings ──────────────────────
-  const hasInitialized = useRef(false);
-  useEffect(() => {
-    if (hasInitialized.current) return;
-    const saved = getMediaSettings();
-    if (saved) {
-      hasInitialized.current = true;
-      if (saved.qualityPreset) {
-        const match = qualityPresets.find(
-          (p) => p.label === saved.qualityPreset,
-        );
-        if (match) setSelectedQuality(match);
-      }
-    }
-  }, [qualityPresets, getMediaSettings]);
 
   // ─── Poll player state ──────────────────────────────────
   useEffect(() => {
@@ -393,6 +355,7 @@ export default function PlayerOverlay({
 
             <AudioStreamSelector
               item={item}
+              selectedAudioIndex={selectedAudioStreamIndex}
               onAudioStreamChange={onAudioStreamChange}
               onModalToggle={(modal) =>
                 overlayModalContent
@@ -422,8 +385,6 @@ export default function PlayerOverlay({
                       isActive && styles.pickerOptionActive,
                     ]}
                     onPress={() => {
-                      setSelectedQuality(preset);
-                      setMediaSettings({ qualityPreset: preset.label });
                       onQualityChange(preset);
                       setShowQualityPicker(false);
                     }}

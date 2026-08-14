@@ -1,7 +1,6 @@
 import { AppColors } from "@/hooks/useColors";
-import { useMediaSettings } from "@/services/hooks/useMediaSettings";
 import { Ionicons } from "@expo/vector-icons";
-import { JSX, useEffect, useMemo, useRef, useState } from "react";
+import { JSX, useMemo } from "react";
 import { StyleSheet, Text, TouchableOpacity, View } from "react-native";
 import { useThemedStyles } from "../../hooks/useThemedStyles";
 import { JellyfinItem } from "../../types/jellyfin";
@@ -9,45 +8,23 @@ import MediaObjectListModal from "../ui/MediaObjectListModal";
 
 interface AudioStreamSelectorProps {
   item: JellyfinItem | null | undefined;
+  selectedAudioIndex: number | undefined;
   onAudioStreamChange?: (index: number) => void;
   onModalToggle: (modal?: JSX.Element) => void;
 }
 
 const AudioStreamSelector = ({
   item,
+  selectedAudioIndex,
   onAudioStreamChange,
   onModalToggle,
 }: AudioStreamSelectorProps) => {
   const themedStyles = useThemedStyles(styles);
-  const [selectedAudioIndex, setSelectedAudioIndex] = useState(0);
-  const { get: getMediaSettings, set: setMediaSettings } = useMediaSettings(
-    item?.Id ?? "",
-  );
-  const hasInitialized = useRef(false);
 
   const audioStreams = useMemo(() => {
     if (!item?.MediaSources?.[0]?.MediaStreams) return [];
     return item.MediaSources[0].MediaStreams.filter((s) => s.Type === "Audio");
   }, [item]);
-
-  useEffect(() => {
-    if (hasInitialized.current) return;
-    const saved = getMediaSettings();
-    if (saved) {
-      hasInitialized.current = true;
-      if (saved.audioStreamIndex !== undefined) {
-        setSelectedAudioIndex(saved.audioStreamIndex);
-        return;
-      }
-    }
-    // Fall back to default audio stream if no saved setting
-    const defaultStream = audioStreams.find((s) => s.IsDefault);
-    if (defaultStream) {
-      setSelectedAudioIndex(defaultStream.Index);
-    } else if (audioStreams.length > 0) {
-      setSelectedAudioIndex(audioStreams[0].Index);
-    }
-  }, [audioStreams, getMediaSettings]);
 
   const audioLanguageModal = useMemo(
     () => (
@@ -59,8 +36,6 @@ const AudioStreamSelector = ({
           label: s.DisplayTitle || "",
         }))}
         onOptionSelect={(option) => {
-          setSelectedAudioIndex(option.Index);
-          setMediaSettings({ audioStreamIndex: option.Index });
           onAudioStreamChange?.(option.Index);
           onModalToggle(undefined);
         }}
@@ -69,7 +44,7 @@ const AudioStreamSelector = ({
         )}
       />
     ),
-    [audioStreams, selectedAudioIndex, onAudioStreamChange],
+    [audioStreams, selectedAudioIndex, onAudioStreamChange, onModalToggle],
   );
 
   if (!item) {

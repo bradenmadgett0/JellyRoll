@@ -4,9 +4,11 @@
  */
 
 import {
+  buildQualityPresets,
   DEFAULT_QUALITY_PRESET,
-  QUALITY_PRESETS,
   QualityPreset,
+  secondsToTicks,
+  ticksToSeconds,
 } from "@/types/player";
 import { Ionicons } from "@expo/vector-icons";
 import { Stack, useLocalSearchParams, useRouter } from "expo-router";
@@ -35,7 +37,6 @@ import { JellyfinPlaybackErrorCode } from "../../types/jellyfin";
 import PlayerOverlay from "./playerOverlay";
 import VideoPlayer from "./videoPlayer";
 
-const TICKS_PER_SECOND = 10_000_000;
 const POSITION_TRACK_MS = 1_000; // cache position every 1s
 const PROGRESS_REPORT_MS = 10_000; // report to Jellyfin every 10s
 
@@ -63,7 +64,8 @@ export default function PlayerScreen() {
     playbackSession?.playSessionId,
     playbackSession?.mediaSourceId,
   );
-  const { get: getMediaSettings, serverId } = useMediaSettings(itemId);
+  const { get: getMediaSettings, set: setMediaSettings, serverId } =
+    useMediaSettings(itemId);
 
   const [showOverlay, setShowOverlay] = useState(true);
   const [selectedQuality, setSelectedQuality] = useState<QualityPreset>(
@@ -72,8 +74,15 @@ export default function PlayerScreen() {
   const [selectedAudioStreamIndex, setSelectedAudioStreamIndex] =
     useState<number>();
 
+  // Single source of truth for the preset list — both the parent (URL
+  // building) and the overlay (picker UI) read from this.
+  const qualityPresets = useMemo(
+    () => buildQualityPresets(item?.MediaSources?.[0]?.Bitrate),
+    [item],
+  );
+
   const startTicks = startTicksParam ? parseInt(startTicksParam, 10) : 0;
-  const startSeconds = startTicks > 0 ? startTicks / TICKS_PER_SECOND : 0;
+  const startSeconds = startTicks > 0 ? ticksToSeconds(startTicks) : 0;
 
   // Initialize with startTicks so we never fall back to 0
   const lastKnownTicks = useRef(startTicks);
@@ -113,6 +122,7 @@ export default function PlayerScreen() {
           playMethod: source.SupportsDirectStream
             ? "DirectStream"
             : "Transcode",
+          defaultAudioStreamIndex: source.DefaultAudioStreamIndex,
         });
       })
       .catch(() => {
@@ -122,19 +132,16 @@ export default function PlayerScreen() {
     return () => {
       cancelled = true;
     };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [itemId]);
+  }, [itemId, startTicks, getPlaybackInfo]);
 
-  // IMPORTANT: getStreamUrl is intentionally excluded from deps.
-  // The function reference changes every render, so including it would
-  // recompute hlsUrl → useVideoPlayer releases the old player and creates
-  // a new one → playback resets to 0.
+  // getStreamUrl is now a stable useCallback (see useJellyfinStreamUrl) that
+  // only changes identity when the client or the negotiated session does —
+  // not on unrelated re-renders — so it's safe to depend on honestly here.
   const hlsUrl = useMemo(() => {
     if (!itemId || !playbackSession) return null;
     const urls = getStreamUrl(itemId);
     return urls?.hlsUrl ?? null;
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [itemId, playbackSession]);
+  }, [itemId, playbackSession, getStreamUrl]);
 
   const player = useVideoPlayer(hlsUrl ?? "", (p) => {
     p.loop = false;
@@ -146,7 +153,14 @@ export default function PlayerScreen() {
     p.play();
   });
 
-  // ─── Load saved media settings (once, after player is ready) ──
+  // ─── Resolve initial quality + audio selection (once, after player is ready) ──
+  // Establishes what's actually playing so the overlay's labels never
+  // disagree with the stream: audio defaults to the negotiated source's
+  // DefaultAudioStreamIndex (what the server itself would pick), falling
+  // back to scanning for IsDefault, only overridden by a saved preference.
+  // The stream is only replaced when a saved setting requires it — the
+  // resolved *default* is what the initial URL already got without us
+  // asking, so just reflecting it in state doesn't need a restart.
   const hasAppliedSaved = useRef(false);
   useEffect(() => {
     if (
@@ -160,44 +174,35 @@ export default function PlayerScreen() {
     hasAppliedSaved.current = true;
 
     const saved = getMediaSettings();
-    if (!saved) return;
+
+    const audioStreams =
+      item.MediaSources?.[0]?.MediaStreams?.filter(
+        (s) => s.Type === "Audio",
+      ) ?? [];
+    const defaultAudioIndex =
+      playbackSession.defaultAudioStreamIndex ??
+      audioStreams.find((s) => s.IsDefault)?.Index ??
+      audioStreams[0]?.Index;
 
     let newBitrate: number | null = DEFAULT_QUALITY_PRESET.maxBitrate;
-    let newAudioIndex: number | undefined;
+    let newAudioIndex: number | undefined = defaultAudioIndex;
+    let needsReplace = false;
 
-    if (saved.qualityPreset) {
-      // TODO: extract this logic out to common util
-      // Build the same dynamic "Max" preset the overlay uses
-      const mediaBitrate = item.MediaSources?.[0]?.Bitrate;
-      const allPresets =
-        mediaBitrate && mediaBitrate > 0
-          ? [
-              {
-                label:
-                  mediaBitrate >= 1_000_000
-                    ? `Max - ${(mediaBitrate / 1_000_000).toFixed(1)} Mbps`
-                    : `Max - ${Math.round(mediaBitrate / 1_000)} Kbps`,
-                maxBitrate: mediaBitrate,
-              },
-              ...QUALITY_PRESETS,
-            ]
-          : QUALITY_PRESETS;
-      const match = allPresets.find((p) => p.label === saved.qualityPreset);
+    if (saved?.qualityPreset) {
+      const match = qualityPresets.find((p) => p.label === saved.qualityPreset);
       if (match) {
         setSelectedQuality(match);
         newBitrate = match.maxBitrate;
+        needsReplace = true;
       }
     }
-    if (saved.audioStreamIndex !== undefined) {
-      setSelectedAudioStreamIndex(saved.audioStreamIndex);
+    if (saved?.audioStreamIndex !== undefined) {
       newAudioIndex = saved.audioStreamIndex;
+      needsReplace = true;
     }
+    setSelectedAudioStreamIndex(newAudioIndex);
 
-    // Only replace if saved settings differ from defaults
-    if (
-      newBitrate !== DEFAULT_QUALITY_PRESET.maxBitrate ||
-      newAudioIndex !== undefined
-    ) {
+    if (needsReplace) {
       const urls = getStreamUrl(itemId, newBitrate, newAudioIndex);
       if (urls?.hlsUrl) {
         (async () => {
@@ -208,8 +213,18 @@ export default function PlayerScreen() {
         })();
       }
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [player, item, serverId, playbackSession]);
+  }, [
+    player,
+    item,
+    serverId,
+    playbackSession,
+    itemId,
+    startSeconds,
+    qualityPresets,
+    getMediaSettings,
+    getStreamUrl,
+    killTranscode,
+  ]);
 
   // ─── Position tracker (1s) — caches currentTime locally ─────
   useEffect(() => {
@@ -217,7 +232,7 @@ export default function PlayerScreen() {
 
     positionTracker.current = setInterval(() => {
       try {
-        const ticks = Math.round(player.currentTime * TICKS_PER_SECOND);
+        const ticks = secondsToTicks(player.currentTime);
         if (ticks > 0) lastKnownTicks.current = ticks;
       } catch {
         // player may have been released
@@ -299,6 +314,7 @@ export default function PlayerScreen() {
   const handleQualityChange = useCallback(
     async (preset: QualityPreset) => {
       setSelectedQuality(preset);
+      setMediaSettings({ qualityPreset: preset.label });
       if (!itemId || !player) return;
       // Remember current position
       const resumeTime = player.currentTime;
@@ -316,7 +332,14 @@ export default function PlayerScreen() {
       player.currentTime = resumeTime;
       player.play();
     },
-    [itemId, player, getStreamUrl, killTranscode, selectedAudioStreamIndex],
+    [
+      itemId,
+      player,
+      getStreamUrl,
+      killTranscode,
+      setMediaSettings,
+      selectedAudioStreamIndex,
+    ],
   );
 
   // ─── Audio stream change handler ────────────────────────────
@@ -324,6 +347,7 @@ export default function PlayerScreen() {
     async (audioStreamIndex: number) => {
       if (audioStreamIndex === selectedAudioStreamIndex) return;
       setSelectedAudioStreamIndex(audioStreamIndex);
+      setMediaSettings({ audioStreamIndex });
       if (!itemId || !player) return;
       // Remember current position
       const resumeTime = player.currentTime;
@@ -341,7 +365,15 @@ export default function PlayerScreen() {
       player.currentTime = resumeTime;
       player.play();
     },
-    [itemId, player, getStreamUrl, killTranscode, selectedQuality, selectedAudioStreamIndex],
+    [
+      itemId,
+      player,
+      getStreamUrl,
+      killTranscode,
+      setMediaSettings,
+      selectedQuality,
+      selectedAudioStreamIndex,
+    ],
   );
 
   // Memoize VideoPlayer to prevent re-renders from overlay toggle
@@ -391,7 +423,10 @@ export default function PlayerScreen() {
         itemId={itemId}
         showOverlay={showOverlay}
         hideOverlay={hideOverlay}
+        qualityPresets={qualityPresets}
+        selectedQuality={selectedQuality}
         onQualityChange={handleQualityChange}
+        selectedAudioStreamIndex={selectedAudioStreamIndex}
         onAudioStreamChange={handleAudioStreamChange}
       />
     </View>
