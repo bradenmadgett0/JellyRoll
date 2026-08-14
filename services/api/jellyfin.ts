@@ -9,6 +9,8 @@ import {
     JellyfinItem,
     JellyfinItemsResponse,
     JellyfinLibraryResponse,
+    JellyfinPlaybackInfoResponse,
+    JellyfinPlayMethod,
     JellyfinSystemInfo,
 } from "../../types/jellyfin";
 import { ConnectionTestResult, ServerConfig } from "../../types/server";
@@ -286,6 +288,43 @@ export class JellyfinClient {
     return data;
   }
 
+  // ─── Playback Handshake ──────────────────────────────
+
+  /**
+   * Negotiates a playback session with the server. Returns the MediaSource(s)
+   * actually available to play and the server-issued PlaySessionId — both
+   * required before building a stream URL. `MediaSourceId` on a stream URL
+   * only coincidentally equals `itemId` for single-version items, and a
+   * client-invented PlaySessionId won't correlate with what the server
+   * tracks for stop/kill-transcode.
+   */
+  async getPlaybackInfo(
+    itemId: string,
+    opts: {
+      maxStreamingBitrate?: number;
+      startTimeTicks?: number;
+      audioStreamIndex?: number;
+      subtitleStreamIndex?: number;
+      mediaSourceId?: string;
+    } = {},
+  ): Promise<JellyfinPlaybackInfoResponse> {
+    const userId = this.server.userId;
+    if (!userId) throw new Error("Not authenticated. User ID is missing.");
+
+    const { data } = await this.client.post(`/Items/${itemId}/PlaybackInfo`, {
+      UserId: userId,
+      MaxStreamingBitrate: opts.maxStreamingBitrate,
+      StartTimeTicks: opts.startTimeTicks,
+      AudioStreamIndex: opts.audioStreamIndex,
+      SubtitleStreamIndex: opts.subtitleStreamIndex,
+      MediaSourceId: opts.mediaSourceId,
+      EnableTranscoding: true,
+      AllowVideoStreamCopy: true,
+      AllowAudioStreamCopy: true,
+    });
+    return data;
+  }
+
   // ─── Streaming URLs ─────────────────────────────────
 
   getStreamUrl(itemId: string): string {
@@ -296,11 +335,12 @@ export class JellyfinClient {
   getHlsStreamUrl(
     itemId: string,
     playSessionId: string,
+    mediaSourceId: string,
     maxBitrate?: number | null,
     audioStreamIndex?: number,
   ): string {
     const token = this.server.accessToken ?? "";
-    let url = `${this.server.url}/Videos/${itemId}/master.m3u8?api_key=${token}&DeviceId=${this.deviceId}&playSessionId=${playSessionId}&MediaSourceId=${itemId}&VideoCodec=h264&AudioCodec=aac&MaxAudioChannels=6&TranscodingMaxAudioChannels=6&SegmentContainer=ts`;
+    let url = `${this.server.url}/Videos/${itemId}/master.m3u8?api_key=${token}&DeviceId=${this.deviceId}&playSessionId=${playSessionId}&MediaSourceId=${mediaSourceId}&VideoCodec=h264&AudioCodec=aac&MaxAudioChannels=6&TranscodingMaxAudioChannels=6&SegmentContainer=ts`;
     if (maxBitrate && maxBitrate > 0) {
       url += `&videoBitRate=${maxBitrate}`;
     }
@@ -333,12 +373,23 @@ export class JellyfinClient {
     itemId: string,
     positionTicks: number = 0,
     playSessionId: string,
+    opts: {
+      playMethod: JellyfinPlayMethod;
+      mediaSourceId?: string;
+      audioStreamIndex?: number;
+      subtitleStreamIndex?: number;
+      canSeek?: boolean;
+    },
   ): Promise<void> {
     await this.client.post("/Sessions/Playing", {
       ItemId: itemId,
       PositionTicks: positionTicks,
-      PlayMethod: "Transcode",
+      PlayMethod: opts.playMethod,
       PlaySessionId: playSessionId,
+      MediaSourceId: opts.mediaSourceId,
+      AudioStreamIndex: opts.audioStreamIndex,
+      SubtitleStreamIndex: opts.subtitleStreamIndex,
+      CanSeek: opts.canSeek ?? true,
     });
   }
 
@@ -347,13 +398,24 @@ export class JellyfinClient {
     positionTicks: number,
     isPaused: boolean = false,
     playSessionId: string,
+    opts: {
+      playMethod: JellyfinPlayMethod;
+      mediaSourceId?: string;
+      audioStreamIndex?: number;
+      subtitleStreamIndex?: number;
+      canSeek?: boolean;
+    },
   ): Promise<void> {
     await this.client.post("/Sessions/Playing/Progress", {
       ItemId: itemId,
       PositionTicks: positionTicks,
       IsPaused: isPaused,
-      PlayMethod: "Transcode",
+      PlayMethod: opts.playMethod,
       PlaySessionId: playSessionId,
+      MediaSourceId: opts.mediaSourceId,
+      AudioStreamIndex: opts.audioStreamIndex,
+      SubtitleStreamIndex: opts.subtitleStreamIndex,
+      CanSeek: opts.canSeek ?? true,
     });
   }
 

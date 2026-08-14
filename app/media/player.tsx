@@ -13,6 +13,7 @@ import { Stack, useLocalSearchParams, useRouter } from "expo-router";
 import { useVideoPlayer } from "expo-video";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
+  ActivityIndicator,
   StatusBar,
   StyleSheet,
   Text,
@@ -23,17 +24,26 @@ import { Spacing } from "../../constants/Spacing";
 import { AppColors } from "../../hooks/useColors";
 import { useThemedStyles } from "../../hooks/useThemedStyles";
 import {
+  JellyfinPlaybackSession,
   useJellyfinDetail,
+  useJellyfinPlaybackInfo,
   useJellyfinStreamUrl,
   usePlaybackReporter,
 } from "../../services/hooks/useJellyfin";
 import { useMediaSettings } from "../../services/hooks/useMediaSettings";
+import { JellyfinPlaybackErrorCode } from "../../types/jellyfin";
 import PlayerOverlay from "./playerOverlay";
 import VideoPlayer from "./videoPlayer";
 
 const TICKS_PER_SECOND = 10_000_000;
 const POSITION_TRACK_MS = 1_000; // cache position every 1s
 const PROGRESS_REPORT_MS = 10_000; // report to Jellyfin every 10s
+
+const PLAYBACK_ERROR_MESSAGES: Record<JellyfinPlaybackErrorCode, string> = {
+  NotAllowed: "You don't have permission to play this item.",
+  NoCompatibleStream: "No compatible stream could be found for this item.",
+  RateLimitExceeded: "Too many active streams. Try again in a moment.",
+};
 
 export default function PlayerScreen() {
   const { itemId, startTicks: startTicksParam } = useLocalSearchParams<{
@@ -43,14 +53,16 @@ export default function PlayerScreen() {
   const router = useRouter();
   const styles = useThemedStyles(createStyles);
   const { data: item } = useJellyfinDetail(itemId);
-  const {
-    reportStart,
-    reportProgress,
-    reportStop,
-    killTranscode,
-    playSessionId,
-  } = usePlaybackReporter();
-  const getStreamUrl = useJellyfinStreamUrl(playSessionId);
+  const getPlaybackInfo = useJellyfinPlaybackInfo();
+  const [playbackSession, setPlaybackSession] =
+    useState<JellyfinPlaybackSession | null>(null);
+  const [playbackError, setPlaybackError] = useState<string | null>(null);
+  const { reportStart, reportProgress, reportStop, killTranscode } =
+    usePlaybackReporter(playbackSession ?? undefined);
+  const getStreamUrl = useJellyfinStreamUrl(
+    playbackSession?.playSessionId,
+    playbackSession?.mediaSourceId,
+  );
   const { get: getMediaSettings, serverId } = useMediaSettings(itemId);
 
   const [showOverlay, setShowOverlay] = useState(true);
@@ -69,16 +81,60 @@ export default function PlayerScreen() {
   const positionTracker = useRef<ReturnType<typeof setInterval> | null>(null);
   const progressReporter = useRef<ReturnType<typeof setInterval> | null>(null);
 
+  // ─── Negotiate the playback session (PlaybackInfo handshake) ──
+  // Runs once per itemId: mints the real PlaySessionId and selects the
+  // MediaSource to play, both required before a stream URL can be built.
+  useEffect(() => {
+    if (!itemId) return;
+    let cancelled = false;
+    setPlaybackSession(null);
+    setPlaybackError(null);
+
+    getPlaybackInfo(itemId, { startTimeTicks: startTicks })
+      .then((info) => {
+        if (cancelled) return;
+        if (info.ErrorCode) {
+          setPlaybackError(
+            PLAYBACK_ERROR_MESSAGES[info.ErrorCode] ??
+              "This item can't be played right now.",
+          );
+          return;
+        }
+        const source = info.MediaSources?.[0];
+        if (!source) {
+          setPlaybackError("No compatible media source was found.");
+          return;
+        }
+        setPlaybackSession({
+          playSessionId: info.PlaySessionId,
+          mediaSourceId: source.Id,
+          // We only ever request /master.m3u8 (HLS), never the raw /stream
+          // endpoint, so true DirectPlay never happens through this path.
+          playMethod: source.SupportsDirectStream
+            ? "DirectStream"
+            : "Transcode",
+        });
+      })
+      .catch(() => {
+        if (!cancelled) setPlaybackError("Unable to start playback.");
+      });
+
+    return () => {
+      cancelled = true;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [itemId]);
+
   // IMPORTANT: getStreamUrl is intentionally excluded from deps.
   // The function reference changes every render, so including it would
   // recompute hlsUrl → useVideoPlayer releases the old player and creates
   // a new one → playback resets to 0.
-  // eslint-disable-next-line react-hooks/exhaustive-deps
   const hlsUrl = useMemo(() => {
-    if (!itemId) return null;
+    if (!itemId || !playbackSession) return null;
     const urls = getStreamUrl(itemId);
     return urls?.hlsUrl ?? null;
-  }, [itemId]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [itemId, playbackSession]);
 
   const player = useVideoPlayer(hlsUrl ?? "", (p) => {
     p.loop = false;
@@ -93,7 +149,14 @@ export default function PlayerScreen() {
   // ─── Load saved media settings (once, after player is ready) ──
   const hasAppliedSaved = useRef(false);
   useEffect(() => {
-    if (!player || !item || !serverId || hasAppliedSaved.current) return;
+    if (
+      !player ||
+      !item ||
+      !serverId ||
+      !playbackSession ||
+      hasAppliedSaved.current
+    )
+      return;
     hasAppliedSaved.current = true;
 
     const saved = getMediaSettings();
@@ -147,7 +210,7 @@ export default function PlayerScreen() {
       }
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [player, item, serverId]);
+  }, [player, item, serverId, playbackSession]);
 
   // ─── Position tracker (1s) — caches currentTime locally ─────
   useEffect(() => {
@@ -181,7 +244,12 @@ export default function PlayerScreen() {
     if (!itemId || !player) return;
 
     progressReporter.current = setInterval(() => {
-      reportProgress(itemId, lastKnownTicks.current, !player.playing);
+      reportProgress(
+        itemId,
+        lastKnownTicks.current,
+        !player.playing,
+        selectedAudioStreamIndex,
+      );
     }, PROGRESS_REPORT_MS);
 
     return () => {
@@ -190,19 +258,27 @@ export default function PlayerScreen() {
         progressReporter.current = null;
       }
     };
-  }, [itemId, player, reportProgress]);
+  }, [itemId, player, reportProgress, selectedAudioStreamIndex]);
 
   // TODO: Consider pausing the player explicitly before unmount to prevent
   // brief background streaming while useVideoPlayer tears down the native instance.
 
   // ─── Report stop on unmount (uses cached ticks, never 0) ────
+  // reportStop's identity changes once the PlaybackInfo handshake resolves
+  // (it closes over the negotiated session), so we track it in a ref rather
+  // than the effect's deps — otherwise the unmount cleanup would fire a real
+  // stop report the moment the session becomes available, not on unmount.
+  const reportStopRef = useRef(reportStop);
+  useEffect(() => {
+    reportStopRef.current = reportStop;
+  }, [reportStop]);
+
   useEffect(() => {
     return () => {
       if (itemId && lastKnownTicks.current > 0) {
-        reportStop(itemId, lastKnownTicks.current);
+        reportStopRef.current(itemId, lastKnownTicks.current);
       }
     };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [itemId]);
 
   // ─── Overlay toggle ─────────────────────────────────────────
@@ -238,7 +314,6 @@ export default function PlayerScreen() {
   // ─── Audio stream change handler ────────────────────────────
   const handleAudioStreamChange = useCallback(
     async (audioStreamIndex: number) => {
-      console.log("handleAudioStreamChange", audioStreamIndex, selectedAudioStreamIndex);
       if (audioStreamIndex === selectedAudioStreamIndex) return;
       setSelectedAudioStreamIndex(audioStreamIndex);
       if (!itemId || !player) return;
@@ -269,7 +344,7 @@ export default function PlayerScreen() {
   );
 
   // ─── Error state ────────────────────────────────────────────
-  if (!itemId || !hlsUrl) {
+  if (!itemId || playbackError) {
     return (
       <View style={styles.errorContainer}>
         <Stack.Screen options={{ headerShown: false }} />
@@ -278,10 +353,22 @@ export default function PlayerScreen() {
           size={48}
           color={styles.iconError.color}
         />
-        <Text style={styles.errorText}>Unable to load video stream</Text>
+        <Text style={styles.errorText}>
+          {playbackError ?? "Unable to load video stream"}
+        </Text>
         <TouchableOpacity style={styles.backBtn} onPress={() => router.back()}>
           <Text style={styles.backBtnText}>Go Back</Text>
         </TouchableOpacity>
+      </View>
+    );
+  }
+
+  // ─── Loading state (awaiting the PlaybackInfo handshake) ────
+  if (!hlsUrl) {
+    return (
+      <View style={styles.errorContainer}>
+        <Stack.Screen options={{ headerShown: false }} />
+        <ActivityIndicator size="large" color={styles.iconPrimary.color} />
       </View>
     );
   }
@@ -335,4 +422,5 @@ const createStyles = (colors: AppColors) =>
       fontSize: 15,
     },
     iconError: { color: colors.error },
+    iconPrimary: { color: colors.primary },
   });

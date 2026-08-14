@@ -127,6 +127,19 @@ export interface JellyfinItemsResponse {
     StartIndex: number;
 }
 
+export type JellyfinPlayMethod = 'Transcode' | 'DirectStream' | 'DirectPlay';
+
+export type JellyfinPlaybackErrorCode =
+    | 'NotAllowed'
+    | 'NoCompatibleStream'
+    | 'RateLimitExceeded';
+
+export interface JellyfinPlaybackInfoResponse {
+    MediaSources: JellyfinMediaSource[];
+    PlaySessionId: string;
+    ErrorCode?: JellyfinPlaybackErrorCode;
+}
+
 export interface JellyfinSystemInfo {
     ServerName: string;
     Version: string;
