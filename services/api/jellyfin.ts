@@ -139,7 +139,9 @@ export class JellyfinClient {
   async getLibraries(): Promise<JellyfinLibraryResponse> {
     const userId = this.server.userId;
     if (!userId) throw new Error("Not authenticated. User ID is missing.");
-    const { data } = await this.client.get(`/Users/${userId}/Views`);
+    const { data } = await this.client.get("/UserViews", {
+      params: { userId },
+    });
     return data;
   }
 
@@ -161,8 +163,9 @@ export class JellyfinClient {
     const userId = this.server.userId;
     if (!userId) throw new Error("Not authenticated. User ID is missing.");
 
-    const { data } = await this.client.get(`/Users/${userId}/Items`, {
+    const { data } = await this.client.get("/Items", {
       params: {
+        userId,
         ParentId: params.parentId,
         IncludeItemTypes: params.includeItemTypes,
         SortBy: params.sortBy ?? "SortName",
@@ -188,13 +191,21 @@ export class JellyfinClient {
     const userId = this.server.userId;
     if (!userId) throw new Error("Not authenticated. User ID is missing.");
 
-    const { data } = await this.client.get(`/Users/${userId}/Items/${itemId}`, {
+    // GET /Items/{itemId} only accepts itemId + userId — no `fields` param — so
+    // it can't guarantee Overview/People/Studios/MediaSources/ExternalUrls the
+    // detail screen needs. Use the list endpoint instead, which does support
+    // `fields`, filtered to a single item.
+    // TODO: possibly revisit + maybe swap to single endpoint with no fields param
+    const { data } = await this.client.get<JellyfinItemsResponse>("/Items", {
       params: {
-        Fields:
+        ids: itemId,
+        userId,
+        fields:
           "Overview,PrimaryImageAspectRatio,MediaSources,Genres,Studios,People,ExternalUrls",
+        limit: 1,
       },
     });
-    return data;
+    return data.Items[0];
   }
 
   // ─── Resume / Latest ────────────────────────────────
@@ -203,8 +214,9 @@ export class JellyfinClient {
     const userId = this.server.userId;
     if (!userId) throw new Error("Not authenticated. User ID is missing.");
 
-    const { data } = await this.client.get(`/Users/${userId}/Items/Resume`, {
+    const { data } = await this.client.get("/UserItems/Resume", {
       params: {
+        userId,
         Limit: limit,
         Fields: "Overview,PrimaryImageAspectRatio",
         ImageTypeLimit: 1,
@@ -222,8 +234,9 @@ export class JellyfinClient {
     const userId = this.server.userId;
     if (!userId) throw new Error("Not authenticated. User ID is missing.");
 
-    const { data } = await this.client.get(`/Users/${userId}/Items/Latest`, {
+    const { data } = await this.client.get("/Items/Latest", {
       params: {
+        userId,
         ParentId: parentId,
         Limit: limit,
         Fields: "Overview,PrimaryImageAspectRatio",
