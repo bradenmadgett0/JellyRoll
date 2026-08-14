@@ -338,6 +338,12 @@ export class JellyfinClient {
 
   // ─── Search ──────────────────────────────────────────
 
+  // TODO: `SearchScore` isn't a real `ItemSortBy` member in 10.11 — swapped for
+  // `SortName` below. The purpose-built `GET /Search/Hints` endpoint returns
+  // relevance-ranked results instead, but its response is `SearchHintResult`
+  // (`{ SearchHints, TotalRecordCount }`), a different shape from
+  // `BaseItemDtoQueryResult` — switching would ripple into how callers of
+  // `search()` map results (see services/hooks/useSearch.ts:53-70). Follow up for potential swap
   async search(
     searchTerm: string,
     limit: number = 20,
@@ -346,8 +352,8 @@ export class JellyfinClient {
       searchTerm,
       limit,
       includeItemTypes: "Movie,Series,Episode,MusicAlbum,MusicArtist,Audio",
-      sortBy: "SearchScore,SortName",
-      sortOrder: "Descending",
+      sortBy: "SortName",
+      sortOrder: "Ascending",
     });
   }
 }
