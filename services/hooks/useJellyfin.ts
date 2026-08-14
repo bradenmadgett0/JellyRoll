@@ -198,13 +198,7 @@ export function useJellyfinSeasons(seriesId: string | undefined) {
     queryFn: async () => {
       if (!server || !seriesId) throw new Error("Missing params");
       const client = createClient(server);
-      const response = await client.getItems({
-        parentId: seriesId,
-        includeItemTypes: "Season,Episode",
-        sortBy: "SortName",
-        sortOrder: "Ascending",
-      });
-      console.log(response.Items);
+      const response = await client.getSeasons(seriesId);
       return response.Items;
     },
     enabled: !!server && !!seriesId,
@@ -212,23 +206,22 @@ export function useJellyfinSeasons(seriesId: string | undefined) {
   });
 }
 
-export function useJellyfinEpisodes(seasonId: string | undefined) {
+/** All episodes for a series, or just those in one season if `seasonId` is given. */
+export function useJellyfinEpisodes(
+  seriesId: string | undefined,
+  seasonId?: string,
+) {
   const server = useJellyfinServer();
 
   return useQuery({
-    queryKey: ["jellyfin", "episodes", server?.id, seasonId],
+    queryKey: ["jellyfin", "episodes", server?.id, seriesId, seasonId],
     queryFn: async () => {
-      if (!server || !seasonId) throw new Error("Missing params");
+      if (!server || !seriesId) throw new Error("Missing params");
       const client = createClient(server);
-      const response = await client.getItems({
-        parentId: seasonId,
-        includeItemTypes: "Episode",
-        sortBy: "SortName",
-        sortOrder: "Ascending",
-      });
+      const response = await client.getEpisodes(seriesId, seasonId);
       return response.Items;
     },
-    enabled: !!server && !!seasonId,
+    enabled: !!server && !!seriesId,
     staleTime: 2 * 60 * 1000,
   });
 }

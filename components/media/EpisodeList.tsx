@@ -10,7 +10,6 @@ import Animated, { FadeInDown } from "react-native-reanimated";
 import { Spacing } from "../../constants/Spacing";
 import { AppColors } from "../../hooks/useColors";
 import { useThemedStyles } from "../../hooks/useThemedStyles";
-import { useJellyfinImageUrl } from "@/services/hooks/useJellyfin";
 
 export interface EpisodeItem {
   id: string | number;
@@ -21,6 +20,7 @@ export interface EpisodeItem {
   hasFile: boolean;
   monitored?: boolean;
   progress?: number;
+  imageUrl?: string;
   onPress?: () => void;
   onSearch?: () => void;
 }
@@ -47,18 +47,11 @@ function SeasonSection({
   styles: ReturnType<typeof createStyles>;
 }) {
   const [expanded, setExpanded] = useState(season.seasonNumber === 1);
-  const getImageUrl = useJellyfinImageUrl();
 
   const fileCount =
     season.episodeFileCount ?? season.episodes.filter((e) => e.hasFile).length;
   const totalCount = season.totalEpisodes ?? season.episodes.length;
   const progressPercent = totalCount > 0 ? (fileCount / totalCount) * 100 : 0;
-
-  const getEpisodeImage = (episode) => {
-    const imageUrl = getImageUrl(episode.Id, "Primary");
-    console.log(imageUrl);
-    return imageUrl;
-  }
 
   return (
     <View style={styles.seasonContainer}>
@@ -106,17 +99,23 @@ function SeasonSection({
                 onPress={episode.onPress}
                 activeOpacity={0.7}
               >
-                <Image style={{ width: 50, height: 50 }} source={{ uri: getEpisodeImage(episode) || '' }} />
-                <View style={styles.episodeNumber}>
-                  <Text
-                    style={[
-                      styles.episodeNumberText,
-                      episode.hasFile && { color: accentColor },
-                    ]}
-                  >
-                    {episode.Name}
-                  </Text>
-                </View>
+                {episode.imageUrl ? (
+                  <Image
+                    style={styles.episodeImage}
+                    source={{ uri: episode.imageUrl }}
+                  />
+                ) : (
+                  <View style={styles.episodeNumber}>
+                    <Text
+                      style={[
+                        styles.episodeNumberText,
+                        episode.hasFile && { color: accentColor },
+                      ]}
+                    >
+                      {episode.episodeNumber}
+                    </Text>
+                  </View>
+                )}
                 <View style={styles.episodeInfo}>
                   <Text style={styles.episodeTitle} numberOfLines={1}>
                     {episode.title}
@@ -237,17 +236,22 @@ const createStyles = (colors: AppColors) =>
       paddingLeft: Spacing.md,
     },
     episodeRow: {
-      flexDirection: "column",
+      flexDirection: "row",
+      alignItems: "center",
       paddingVertical: Spacing.md,
       paddingHorizontal: Spacing.sm,
       borderBottomWidth: 0.5,
       borderBottomColor: colors.surfaceBorder,
-      width: '100%',
+    },
+    episodeImage: {
+      width: 50,
+      height: 50,
+      borderRadius: Spacing.radiusSm,
+      backgroundColor: colors.backgroundTertiary,
     },
     episodeNumber: {
-      width: '100%',
+      width: 32,
       alignItems: "center",
-      flexWrap: 'wrap'
     },
     episodeNumberText: {
       fontFamily: "Inter_600SemiBold",

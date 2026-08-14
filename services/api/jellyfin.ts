@@ -247,6 +247,45 @@ export class JellyfinClient {
     return data;
   }
 
+  // ─── Shows (Seasons & Episodes) ─────────────────────
+
+  async getSeasons(seriesId: string): Promise<JellyfinItemsResponse> {
+    const userId = this.server.userId;
+    if (!userId) throw new Error("Not authenticated. User ID is missing.");
+
+    const { data } = await this.client.get(`/Shows/${seriesId}/Seasons`, {
+      params: {
+        userId,
+        fields: "Overview,PrimaryImageAspectRatio",
+        enableImages: true,
+        imageTypeLimit: 1,
+        enableImageTypes: "Primary,Backdrop,Thumb",
+      },
+    });
+    return data;
+  }
+
+  async getEpisodes(
+    seriesId: string,
+    seasonId?: string,
+  ): Promise<JellyfinItemsResponse> {
+    const userId = this.server.userId;
+    if (!userId) throw new Error("Not authenticated. User ID is missing.");
+
+    const { data } = await this.client.get(`/Shows/${seriesId}/Episodes`, {
+      params: {
+        userId,
+        seasonId,
+        fields: "Overview,PrimaryImageAspectRatio,MediaSources",
+        sortBy: "AiredEpisodeOrder",
+        enableImages: true,
+        imageTypeLimit: 1,
+        enableImageTypes: "Primary,Backdrop,Thumb",
+      },
+    });
+    return data;
+  }
+
   // ─── Streaming URLs ─────────────────────────────────
 
   getStreamUrl(itemId: string): string {

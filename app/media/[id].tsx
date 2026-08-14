@@ -27,6 +27,7 @@ import { AppColors } from "../../hooks/useColors";
 import { useThemedStyles } from "../../hooks/useThemedStyles";
 import {
   useJellyfinDetail,
+  useJellyfinEpisodes,
   useJellyfinImageUrl,
   useJellyfinSeasons,
 } from "../../services/hooks/useJellyfin";
@@ -63,21 +64,32 @@ export default function MediaDetailScreen() {
   const { data: item, isLoading, error } = useJellyfinDetail(id);
   const isSeries = item?.Type === "Series";
   const { data: seasons } = useJellyfinSeasons(isSeries ? id : undefined);
+  const { data: episodes } = useJellyfinEpisodes(isSeries ? id : undefined);
 
   const [expandedSeason, setExpandedSeason] = useState<string | undefined>();
 
   // Build season/episode list for series
   const seasonGroups: SeasonGroup[] = useMemo(() => {
-    console.log(seasons);
     if (!seasons) return [];
-    const parsedSeasons = seasons.filter((s) => s.Type === "Season");
-    const parsedEpisodes: EpisodeItem[] = seasons.filter((s) => s.Type === "Episode");
-    return parsedSeasons.map((s) => ({
-      seasonNumber: s.IndexNumber ?? 0,
-      episodes: parsedEpisodes.filter((e) => e.SeasonName === s.Name) || [],
-      totalEpisodes: s.ChildCount,
+    return seasons.map((season) => ({
+      seasonNumber: season.IndexNumber ?? 0,
+      totalEpisodes: season.ChildCount,
+      episodes: (episodes ?? [])
+        .filter((e) => e.SeasonId === season.Id)
+        .map(
+          (e): EpisodeItem => ({
+            id: e.Id,
+            episodeNumber: e.IndexNumber ?? 0,
+            title: e.Name,
+            airDate: e.PremiereDate,
+            overview: e.Overview,
+            hasFile: true,
+            imageUrl: getImageUrl(e.Id, "Primary", 200) ?? undefined,
+            onPress: () => router.push(`/media/${e.Id}` as any),
+          }),
+        ),
     }));
-  }, [seasons]);
+  }, [seasons, episodes, getImageUrl, router]);
 
   const backdropUrl = item
     ? getImageUrl(
