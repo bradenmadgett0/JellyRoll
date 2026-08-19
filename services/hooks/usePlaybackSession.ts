@@ -4,8 +4,17 @@
  */
 
 import { useCallback, useEffect, useRef, useState } from "react";
+import { buildDeviceProfile } from "../api/deviceProfile";
 import { JellyfinPlaybackErrorCode } from "../../types/jellyfin";
-import { JellyfinPlaybackSession, useJellyfinPlaybackInfo } from "./useJellyfin";
+import {
+  JellyfinPlaybackSession,
+  useJellyfinPlaybackInfo,
+  useJellyfinResolveStreamUrl,
+} from "./useJellyfin";
+
+// Built once per module load, not per negotiation — it's static data, no
+// need to reconstruct it on every handshake.
+const DEVICE_PROFILE = buildDeviceProfile();
 
 const PLAYBACK_ERROR_MESSAGES: Record<JellyfinPlaybackErrorCode, string> = {
   NotAllowed: "You don't have permission to play this item.",
@@ -39,6 +48,7 @@ export function usePlaybackSession(
   { startTicks, maxStreamingBitrate, audioStreamIndex }: UsePlaybackSessionOptions = {},
 ): UsePlaybackSessionResult {
   const getPlaybackInfo = useJellyfinPlaybackInfo();
+  const resolveStreamUrl = useJellyfinResolveStreamUrl();
   const [session, setSession] = useState<JellyfinPlaybackSession | null>(null);
   const [error, setError] = useState<string | null>(null);
 
@@ -73,6 +83,7 @@ export function usePlaybackSession(
           startTimeTicks: opts.startTicks,
           maxStreamingBitrate: opts.maxStreamingBitrate,
           audioStreamIndex: opts.audioStreamIndex,
+          deviceProfile: DEVICE_PROFILE,
         });
         if (requestId !== requestIdRef.current) return null;
 
@@ -90,14 +101,27 @@ export function usePlaybackSession(
           setError("No compatible media source was found.");
           return null;
         }
+        // Resolves DirectPlay/DirectStream/Transcode from what the server
+        // actually negotiated (P14), rather than assuming every request goes
+        // through /master.m3u8 — now that a real DeviceProfile is sent, an
+        // already-compatible source direct-plays instead of forcing a
+        // transcode.
+        const resolved = resolveStreamUrl(
+          id,
+          source,
+          info.PlaySessionId,
+          opts.maxStreamingBitrate,
+          opts.audioStreamIndex,
+        );
+        if (!resolved) {
+          setError("Unable to build a playable stream URL.");
+          return null;
+        }
         const newSession: JellyfinPlaybackSession = {
           playSessionId: info.PlaySessionId,
           mediaSourceId: source.Id,
-          // We only ever request /master.m3u8 (HLS), never the raw /stream
-          // endpoint, so true DirectPlay never happens through this path.
-          playMethod: source.SupportsDirectStream
-            ? "DirectStream"
-            : "Transcode",
+          playMethod: resolved.playMethod,
+          streamUrl: resolved.url,
           defaultAudioStreamIndex: source.DefaultAudioStreamIndex,
         };
         setError(null);
@@ -109,7 +133,7 @@ export function usePlaybackSession(
         return null;
       }
     },
-    [getPlaybackInfo],
+    [getPlaybackInfo, resolveStreamUrl],
   );
 
   useEffect(() => {

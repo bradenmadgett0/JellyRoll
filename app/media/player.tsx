@@ -31,7 +31,7 @@ import { AppColors } from "../../hooks/useColors";
 import { useThemedStyles } from "../../hooks/useThemedStyles";
 import {
   useJellyfinDetail,
-  useJellyfinStreamUrl,
+  useJellyfinPrewarmStream,
 } from "../../services/hooks/useJellyfin";
 import { useMediaSettings } from "../../services/hooks/useMediaSettings";
 import { usePlaybackReporting } from "../../services/hooks/usePlaybackReporting";
@@ -113,10 +113,7 @@ export default function PlayerScreen() {
     maxStreamingBitrate: selectedQuality.maxBitrate ?? undefined,
     audioStreamIndex: selectedAudioStreamIndex,
   });
-  // Takes playSessionId/mediaSourceId per call (not bound here) — switchStream
-  // needs to build a URL from a session it just renegotiated, before that
-  // session has propagated back through a render as playbackSession.
-  const getStreamUrl = useJellyfinStreamUrl();
+  const prewarmStream = useJellyfinPrewarmStream();
 
   // Single source of truth for the preset list — both the parent (URL
   // building) and the overlay (picker UI) read from this. Reactive, unlike
@@ -159,23 +156,32 @@ export default function PlayerScreen() {
   // track playbackSession after the first time — (P11) every quality/audio
   // switch renegotiates a fresh session, which would otherwise tear down
   // and recreate the whole player on every switch instead of the intended
-  // in-place replaceAsync in switchStream.
+  // in-place replaceAsync in switchStream. playbackSession.streamUrl is
+  // already fully resolved (P14) — DirectPlay/DirectStream/Transcode, with
+  // bitrate and audio track baked in server-side — so no extra URL-building
+  // step is needed here.
+  // For a Transcode/DirectStream session, the URL's first segment can take
+  // many seconds to generate (ffmpeg spinning up, opening/probing the source
+  // file) — confirmed live: ~17s once, then ~0.02s on an identical repeat
+  // request, since Jellyfin serves the already-generated segment from its
+  // transcode cache. Pre-warming it here (while this screen's own loading
+  // spinner is still showing, since hlsUrl is still null) means the player
+  // hits that cached, already-fast second request instead of stalling
+  // visibly itself. DirectPlay has no transcode job, so it's skipped.
   const [hlsUrl, setHlsUrl] = useState<string | null>(null);
   useEffect(() => {
-    if (hlsUrl || !itemId || !playbackSession) return;
-    const urls = getStreamUrl(
-      itemId,
-      playbackSession.playSessionId,
-      playbackSession.mediaSourceId,
-      selectedQuality.maxBitrate,
-      selectedAudioStreamIndex,
-    );
-    if (urls?.hlsUrl) setHlsUrl(urls.hlsUrl);
-    // selectedQuality/selectedAudioStreamIndex intentionally excluded — read
-    // once here, at the moment the session first becomes available (already
-    // resolved from saved settings before that, per above).
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [itemId, playbackSession, hlsUrl, getStreamUrl]);
+    if (hlsUrl || !playbackSession) return;
+    let cancelled = false;
+    (async () => {
+      if (playbackSession.playMethod !== "DirectPlay") {
+        await prewarmStream(playbackSession.streamUrl);
+      }
+      if (!cancelled) setHlsUrl(playbackSession.streamUrl);
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [playbackSession, hlsUrl, prewarmStream]);
 
   const player = useVideoPlayer(hlsUrl ?? "", (p) => {
     p.loop = false;
@@ -267,29 +273,28 @@ export default function PlayerScreen() {
         audioStreamIndex,
       });
       if (!newSession) return;
-      // Build the new URL from the session we just negotiated, not from
-      // playbackSession — that state hasn't propagated back through a
-      // render yet at this point in the async flow.
-      const urls = getStreamUrl(
-        itemId,
-        newSession.playSessionId,
-        newSession.mediaSourceId,
-        bitrate,
-        audioStreamIndex,
-      );
-      if (!urls?.hlsUrl) return;
+      // newSession.streamUrl is already resolved (P14) — built from the
+      // session we just negotiated, not from playbackSession, which hasn't
+      // propagated back through a render yet at this point in the async flow.
+      // A switch renegotiates a fresh PlaySessionId, i.e. a fresh transcode
+      // job with the same slow-first-segment cost as initial load — pre-warm
+      // it for the same reason as the hlsUrl effect above, before the player
+      // itself waits on it via replaceAsync/waitForReady below.
+      if (newSession.playMethod !== "DirectPlay") {
+        await prewarmStream(newSession.streamUrl);
+      }
       // Kill the old transcode before starting the new one.
       await killTranscode();
       // Replace the source and seek back — wait for the new source to
       // actually be loaded first; setting currentTime immediately after
       // replaceAsync resolves is not guaranteed to take effect (see
       // waitForReady).
-      await player.replaceAsync(urls.hlsUrl);
+      await player.replaceAsync(newSession.streamUrl);
       await waitForReady(player);
       player.currentTime = resumeSeconds;
       player.play();
     },
-    [itemId, player, renegotiate, getStreamUrl, killTranscode],
+    [itemId, player, renegotiate, killTranscode, prewarmStream],
   );
 
   // ─── Quality change handler ──────────────────────────────────

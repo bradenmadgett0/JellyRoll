@@ -167,6 +167,36 @@ export interface JellyfinPlaybackInfoResponse {
     ErrorCode?: JellyfinPlaybackErrorCode;
 }
 
+// ─── Device Profile (P14) ────────────────────────────────
+// Sent in PlaybackInfoDto so the server negotiates DirectPlay/DirectStream/
+// Transcode itself instead of the client guessing. Only the fields this app
+// actually sets are typed here, not the full spec surface.
+
+export interface JellyfinDirectPlayProfile {
+    Type: 'Video' | 'Audio' | 'Photo';
+    Container: string;
+    VideoCodec?: string;
+    AudioCodec?: string;
+}
+
+export interface JellyfinTranscodingProfile {
+    Type: 'Video' | 'Audio' | 'Photo';
+    Container: string;
+    Protocol: 'hls' | 'http';
+    VideoCodec?: string;
+    AudioCodec?: string;
+    Context: 'Streaming' | 'Static';
+    MaxAudioChannels?: string;
+    MinSegments?: number;
+    BreakOnNonKeyFrames?: boolean;
+}
+
+export interface JellyfinDeviceProfile {
+    MaxStreamingBitrate?: number;
+    DirectPlayProfiles: JellyfinDirectPlayProfile[];
+    TranscodingProfiles: JellyfinTranscodingProfile[];
+}
+
 /**
  * Response of GET /System/Info/Public — the spec's PublicSystemInfo schema.
  * `HasUpdateAvailable` lives only on the authenticated /System/Info response

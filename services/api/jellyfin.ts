@@ -6,9 +6,11 @@
 import axios, { AxiosInstance } from "axios";
 import {
     JellyfinAuthResponse,
+    JellyfinDeviceProfile,
     JellyfinItem,
     JellyfinItemsResponse,
     JellyfinLibraryResponse,
+    JellyfinMediaSource,
     JellyfinPlaybackInfoResponse,
     JellyfinPlayMethod,
     JellyfinSystemInfo,
@@ -306,6 +308,7 @@ export class JellyfinClient {
       audioStreamIndex?: number;
       subtitleStreamIndex?: number;
       mediaSourceId?: string;
+      deviceProfile?: JellyfinDeviceProfile;
     } = {},
   ): Promise<JellyfinPlaybackInfoResponse> {
     const userId = this.server.userId;
@@ -318,6 +321,7 @@ export class JellyfinClient {
       AudioStreamIndex: opts.audioStreamIndex,
       SubtitleStreamIndex: opts.subtitleStreamIndex,
       MediaSourceId: opts.mediaSourceId,
+      DeviceProfile: opts.deviceProfile,
       EnableTranscoding: true,
       AllowVideoStreamCopy: true,
       AllowAudioStreamCopy: true,
@@ -334,18 +338,103 @@ export class JellyfinClient {
     return `${this.server.url}/Videos/${itemId}/stream?static=true`;
   }
 
+  /**
+   * Fetches (and discards) the first segment of a transcoding HLS stream so
+   * its slow part — ffmpeg spinning up and opening/probing the source file —
+   * already happened by the time the player asks for the same URL. Confirmed
+   * live: a heavy multi-track 4K remux took ~17s to produce its first
+   * segment once, then ~0.02s on an identical second request (Jellyfin
+   * serves the already-generated .ts file from its transcode cache). Only
+   * meaningful for a TranscodingUrl (Transcode/DirectStream) — DirectPlay's
+   * static /stream endpoint has no transcode job to warm up, and calling
+   * this on it would just be a wasted extra request.
+   *
+   * Self-authenticating URLs only (TranscodingUrl carries its own `ApiKey`
+   * query param — see resolveStreamUrl), so no auth header is needed here.
+   * Best-effort: any failure (network, malformed playlist) is swallowed —
+   * the player will make the same requests itself and surface a real error
+   * through its own status if something's actually wrong.
+   *
+   * TODO: double-check this actually helps on-device. Verified live from
+   * this sandbox against the server directly, but never through expo-video
+   * itself — confirm the perceived stall before playback starts is
+   * genuinely shorter with this in place, not just that the raw HTTP
+   * timing improves.
+   */
+  async prewarmHlsStream(masterUrl: string): Promise<void> {
+    try {
+      const masterText = await (await fetch(masterUrl)).text();
+      const mainLine = masterText
+        .split("\n")
+        .map((l) => l.trim())
+        .find((l) => l && !l.startsWith("#"));
+      if (!mainLine) return;
+      const mainUrl = new URL(mainLine, masterUrl).toString();
+
+      const mainText = await (await fetch(mainUrl)).text();
+      const segLine = mainText
+        .split("\n")
+        .map((l) => l.trim())
+        .find((l) => l && !l.startsWith("#"));
+      if (!segLine) return;
+      const segUrl = new URL(segLine, mainUrl).toString();
+
+      await fetch(segUrl);
+    } catch {
+      // Best-effort — see doc comment above.
+    }
+  }
+
+  /**
+   * Resolves the actual URL to hand to the player from a negotiated
+   * MediaSource, preferring the server's own TranscodingUrl over hand-built
+   * query params (P14). Verified live against a real server:
+   *  - TranscodingUrl comes back server-relative (needs server.url prefixed)
+   *    and already carries its own `ApiKey` query param — no extra auth
+   *    needed on top of it.
+   *  - On this server/version, SupportsDirectStream is never true unless
+   *    SupportsDirectPlay is also true (no distinct remux-only case was
+   *    observed even when forcing a container mismatch or a bitrate cap) —
+   *    but the flag is still checked in case another server version differs.
+   *  - A TranscodingUrl-less, non-direct-playable source (extraneous of
+   *    ErrorCode, which the caller already handles separately) shouldn't
+   *    happen, but falls back to the old hand-built HLS URL rather than
+   *    leaving playback with nothing to load.
+   */
+  resolveStreamUrl(
+    itemId: string,
+    source: JellyfinMediaSource,
+    playSessionId: string,
+    maxBitrate?: number | null,
+    audioStreamIndex?: number,
+  ): { url: string; playMethod: JellyfinPlayMethod } {
+    if (source.TranscodingUrl) {
+      return {
+        url: `${this.server.url}${source.TranscodingUrl}`,
+        playMethod: source.SupportsDirectStream ? "DirectStream" : "Transcode",
+      };
+    }
+    if (source.SupportsDirectPlay) {
+      return { url: this.getStreamUrl(itemId), playMethod: "DirectPlay" };
+    }
+    return {
+      url: this.getHlsStreamUrl(
+        itemId,
+        playSessionId,
+        source.Id,
+        maxBitrate,
+        audioStreamIndex,
+      ),
+      playMethod: "Transcode",
+    };
+  }
+
   // Unlike getStreamUrl above, /master.m3u8 DOES require auth. `api_key` here
   // is undocumented (the spec only lists the Authorization header), but the
   // server still honours it, and expo-video can't attach headers to the HLS
   // segment requests it makes internally — so the query param stays.
-  // NOTE: a `startTimeTicks` param was tried here (server-side resume offset
-  // baked into the URL, avoiding a client-side seek into un-transcoded
-  // content) but broke playback entirely against the live server — the
-  // request came back as something the player couldn't load at all, on both
-  // an initial resume and a mid-playback replaceAsync. Reverted pending a
-  // known-correct contract (P14's TranscodingUrl-from-PlaybackInfo work is
-  // the better path here — inspect a real response rather than guessing at
-  // hand-built query params).
+  // Only reached as resolveStreamUrl's last-resort fallback now (P14) — the
+  // primary path prefers the server's own TranscodingUrl.
   getHlsStreamUrl(
     itemId: string,
     playSessionId: string,

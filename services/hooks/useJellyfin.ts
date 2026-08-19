@@ -9,7 +9,12 @@ import {
     useQueryClient,
 } from "@tanstack/react-query";
 import { useCallback, useMemo } from "react";
-import { JellyfinPlaybackInfoResponse, JellyfinPlayMethod } from "../../types/jellyfin";
+import {
+    JellyfinDeviceProfile,
+    JellyfinMediaSource,
+    JellyfinPlaybackInfoResponse,
+    JellyfinPlayMethod,
+} from "../../types/jellyfin";
 import { ServerConfig } from "../../types/server";
 import { JellyfinClient } from "../api/jellyfin";
 import { useServerStore } from "../stores/serverStore";
@@ -19,6 +24,8 @@ export interface JellyfinPlaybackSession {
   playSessionId: string;
   mediaSourceId: string;
   playMethod: JellyfinPlayMethod;
+  /** Resolved via resolveStreamUrl (P14) — ready to hand straight to the player. */
+  streamUrl: string;
   /** The audio track the server itself would pick, from the negotiated MediaSource. */
   defaultAudioStreamIndex?: number;
 }
@@ -206,6 +213,7 @@ export function useJellyfinPlaybackInfo() {
         startTimeTicks?: number;
         audioStreamIndex?: number;
         subtitleStreamIndex?: number;
+        deviceProfile?: JellyfinDeviceProfile;
       },
     ): Promise<JellyfinPlaybackInfoResponse> => {
       if (!client)
@@ -219,35 +227,46 @@ export function useJellyfinPlaybackInfo() {
 // ─── Stream URL Helper ──────────────────────────────
 
 /**
- * Takes playSessionId/mediaSourceId per call rather than bound to the hook,
- * so callers can build a URL for a session they just negotiated (e.g. a
+ * Takes the negotiated MediaSource per call rather than bound to the hook,
+ * so callers can resolve a URL for a session they just negotiated (e.g. a
  * quality switch's fresh renegotiation) without waiting for that session to
  * propagate back through a render — a closure over the hook-bound values
  * would still reflect the *previous* session at the moment of the call.
  */
-export function useJellyfinStreamUrl() {
+export function useJellyfinResolveStreamUrl() {
   const server = useJellyfinServer();
   const client = useJellyfinClient(server);
 
   return useCallback(
     (
       itemId: string,
+      source: JellyfinMediaSource,
       playSessionId: string,
-      mediaSourceId: string,
       maxBitrate?: number | null,
       audioStreamIndex?: number,
-    ): { streamUrl: string; hlsUrl: string } | null => {
+    ): { url: string; playMethod: JellyfinPlayMethod } | null => {
       if (!client) return null;
-      return {
-        streamUrl: client.getStreamUrl(itemId),
-        hlsUrl: client.getHlsStreamUrl(
-          itemId,
-          playSessionId,
-          mediaSourceId,
-          maxBitrate,
-          audioStreamIndex,
-        ),
-      };
+      return client.resolveStreamUrl(
+        itemId,
+        source,
+        playSessionId,
+        maxBitrate,
+        audioStreamIndex,
+      );
+    },
+    [client],
+  );
+}
+
+/** See JellyfinClient.prewarmHlsStream — absorbs a transcode's slow first-segment startup before the player requests it. */
+export function useJellyfinPrewarmStream() {
+  const server = useJellyfinServer();
+  const client = useJellyfinClient(server);
+
+  return useCallback(
+    (masterUrl: string): Promise<void> => {
+      if (!client) return Promise.resolve();
+      return client.prewarmHlsStream(masterUrl);
     },
     [client],
   );
