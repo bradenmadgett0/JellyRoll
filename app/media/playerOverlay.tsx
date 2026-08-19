@@ -8,6 +8,7 @@
 
 import AudioStreamSelector from "@/components/media/AudioStreamSelector";
 import { Ionicons } from "@expo/vector-icons";
+import { useEventListener } from "expo";
 import { useRouter } from "expo-router";
 import { VideoAirPlayButton, VideoPlayer } from "expo-video";
 import React, {
@@ -61,7 +62,6 @@ interface PlayerOverlayProps {
   onAudioStreamChange: (streamIndex: number) => void;
 }
 
-const SCRUBBER_UPDATE_MS = 500;
 const AUTO_HIDE_MS = 4000;
 
 export default function PlayerOverlay({
@@ -81,7 +81,9 @@ export default function PlayerOverlay({
   const [isPlaying, setIsPlaying] = useState(player.playing);
   const [currentTime, setCurrentTime] = useState(player.currentTime);
   const [duration, setDuration] = useState(player.duration);
-  const [bitrate, setBitrate] = useState<number | null>(null);
+  const [bitrate, setBitrate] = useState<number | null>(
+    player.videoTrack?.bitrate ?? null,
+  );
   const [showQualityPicker, setShowQualityPicker] = useState(false);
 
   const [isScrubbing, setIsScrubbing] = useState(false);
@@ -91,32 +93,25 @@ export default function PlayerOverlay({
   const scrubRef = useRef(currentTime);
   const autoHideTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  // ─── Poll player state ──────────────────────────────────
-  useEffect(() => {
-    if (!player) return;
-    const interval = setInterval(() => {
-      try {
-        setIsPlaying(player.playing);
-        if (!isScrubbing) {
-          setCurrentTime(player.currentTime);
-        }
-        if (player.duration > 0) {
-          setDuration(player.duration);
-        }
-        // Read bitrate from current video track
-        try {
-          const track = (player as any).videoTrack;
-          if (track?.bitrate) setBitrate(track.bitrate);
-        } catch {
-          /* not available */
-        }
-      } catch {
-        // player may have been released
-      }
-    }, SCRUBBER_UPDATE_MS);
+  // ─── Player state, event-driven ──────────────────────────
+  // Replaces a 500ms poll (that raced player teardown, hence the try/catch
+  // it used to need — events simply don't fire on a released player).
+  // player.timeUpdateEventInterval is set once in player.tsx.
+  useEventListener(player, "playingChange", ({ isPlaying: playing }) => {
+    setIsPlaying(playing);
+  });
 
-    return () => clearInterval(interval);
-  }, [player, isScrubbing]);
+  useEventListener(player, "timeUpdate", ({ currentTime: time }) => {
+    if (!isScrubbing) setCurrentTime(time);
+  });
+
+  useEventListener(player, "sourceLoad", ({ duration: loadedDuration }) => {
+    setDuration(loadedDuration);
+  });
+
+  useEventListener(player, "videoTrackChange", ({ videoTrack }) => {
+    setBitrate(videoTrack?.bitrate ?? null);
+  });
 
   const setAutoHideTimer = useCallback(() => {
     if (autoHideTimer.current) clearTimeout(autoHideTimer.current);
@@ -148,12 +143,14 @@ export default function PlayerOverlay({
 
   // ─── Controls ───────────────────────────────────────────
   const handlePlayPause = useCallback(() => {
+    // isPlaying is owned by the playingChange event now — don't read
+    // player.playing back immediately after calling play()/pause(), it may
+    // not have flipped yet.
     if (player.playing) {
       player.pause();
     } else {
       player.play();
     }
-    setIsPlaying(!player.playing);
   }, [player]);
 
   const handleSkipBack = useCallback(() => {

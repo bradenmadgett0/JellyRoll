@@ -180,6 +180,10 @@ export default function PlayerScreen() {
   const player = useVideoPlayer(hlsUrl ?? "", (p) => {
     p.loop = false;
     p.allowsExternalPlayback = true;
+    // Defaults to 0, which means timeUpdate never fires at all. 0.5s matches
+    // the scrubber's old poll cadence; usePlaybackReporting also listens to
+    // this same event for position caching.
+    p.timeUpdateEventInterval = 0.5;
     p.play();
   });
 

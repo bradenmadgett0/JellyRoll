@@ -7,16 +7,16 @@
  * here is a direct read, no offset math.
  */
 
+import { useEventListener } from "expo";
 import { VideoPlayer } from "expo-video";
 import { useEffect, useRef } from "react";
 import { secondsToTicks } from "../../types/player";
 import { JellyfinPlaybackSession, usePlaybackReporter } from "./useJellyfin";
 
-const POSITION_TRACK_MS = 1_000; // cache position every 1s
 const PROGRESS_REPORT_MS = 10_000; // report to Jellyfin every 10s
 
 export interface UsePlaybackReportingOptions {
-  player: VideoPlayer | undefined;
+  player: VideoPlayer;
   itemId: string | undefined;
   session: JellyfinPlaybackSession | null | undefined;
   startTicks: number;
@@ -35,29 +35,17 @@ export function usePlaybackReporting({
 
   // Initialize with startTicks so we never fall back to 0
   const lastKnownTicks = useRef(startTicks);
-  const positionTracker = useRef<ReturnType<typeof setInterval> | null>(null);
   const progressReporter = useRef<ReturnType<typeof setInterval> | null>(null);
 
-  // ─── Position tracker (1s) — caches currentTime locally ─────
-  useEffect(() => {
-    if (!player) return;
-
-    positionTracker.current = setInterval(() => {
-      try {
-        const ticks = secondsToTicks(player.currentTime);
-        if (ticks > 0) lastKnownTicks.current = ticks;
-      } catch {
-        // player may have been released
-      }
-    }, POSITION_TRACK_MS);
-
-    return () => {
-      if (positionTracker.current) {
-        clearInterval(positionTracker.current);
-        positionTracker.current = null;
-      }
-    };
-  }, [player]);
+  // ─── Cache current position from the player's timeUpdate event ──
+  // Requires player.timeUpdateEventInterval to be set (done once, at
+  // creation, in player.tsx) — it defaults to 0, which means the event never
+  // fires at all. Events don't fire on a released player, so no try/catch
+  // is needed here the way the old setInterval poll required.
+  useEventListener(player, "timeUpdate", ({ currentTime }) => {
+    const ticks = secondsToTicks(currentTime);
+    if (ticks > 0) lastKnownTicks.current = ticks;
+  });
 
   // ─── Report playback start ──────────────────────────────────
   // Fires for every new session, not just the first: (P11) a quality/audio
@@ -74,7 +62,7 @@ export function usePlaybackReporting({
 
   // ─── Report progress to Jellyfin (10s) ──────────────────────
   useEffect(() => {
-    if (!itemId || !player) return;
+    if (!itemId) return;
 
     progressReporter.current = setInterval(() => {
       reportProgress(
