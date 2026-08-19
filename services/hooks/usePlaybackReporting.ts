@@ -60,10 +60,17 @@ export function usePlaybackReporting({
   }, [player]);
 
   // ─── Report playback start ──────────────────────────────────
+  // Fires for every new session, not just the first: (P11) a quality/audio
+  // switch re-negotiates and gets a genuinely new PlaySessionId, and the
+  // server 400s any /Sessions/Playing/Progress for a PlaySessionId that
+  // never had a /Sessions/Playing sent for it — confirmed against a live
+  // server. Reports lastKnownTicks (the actual current position) rather
+  // than the original startTicks, since a restart mid-playback isn't
+  // starting from the item's original resume point.
   useEffect(() => {
     if (!itemId || !session) return;
-    reportStart(itemId, startTicks);
-  }, [itemId, session, startTicks, reportStart]);
+    reportStart(itemId, lastKnownTicks.current);
+  }, [itemId, session, reportStart]);
 
   // ─── Report progress to Jellyfin (10s) ──────────────────────
   useEffect(() => {

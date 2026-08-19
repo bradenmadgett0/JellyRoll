@@ -7,6 +7,7 @@ import {
   buildQualityPresets,
   DEFAULT_QUALITY_PRESET,
   QualityPreset,
+  secondsToTicks,
   ticksToSeconds,
 } from "@/types/player";
 import { useEventListener } from "expo";
@@ -106,15 +107,16 @@ export default function PlayerScreen() {
   const {
     session: playbackSession,
     error: playbackError,
+    renegotiate,
   } = usePlaybackSession(itemId, {
     startTicks,
     maxStreamingBitrate: selectedQuality.maxBitrate ?? undefined,
     audioStreamIndex: selectedAudioStreamIndex,
   });
-  const getStreamUrl = useJellyfinStreamUrl(
-    playbackSession?.playSessionId,
-    playbackSession?.mediaSourceId,
-  );
+  // Takes playSessionId/mediaSourceId per call (not bound here) — switchStream
+  // needs to build a URL from a session it just renegotiated, before that
+  // session has propagated back through a render as playbackSession.
+  const getStreamUrl = useJellyfinStreamUrl();
 
   // Single source of truth for the preset list — both the parent (URL
   // building) and the overlay (picker UI) read from this. Reactive, unlike
@@ -151,23 +153,29 @@ export default function PlayerScreen() {
   // it's reverted to the local-seek approach below pending a known-correct
   // way to request a server-side start offset.
   //
-  // selectedQuality/selectedAudioStreamIndex are intentionally excluded from
-  // deps: they're read once here, at the moment the session first becomes
-  // available (already resolved from saved settings before that, per above)
-  // to build the initial URL. Later quality/audio switches go through
-  // switchStream's replaceAsync path, not through rebuilding this memo, so
-  // hlsUrl intentionally goes stale after a switch — P11 unifies URL state
-  // with the session.
-  const hlsUrl = useMemo(() => {
-    if (!itemId || !playbackSession) return null;
+  // Computed once and frozen forever after: expo-video's useVideoPlayer
+  // recreates the entire native player whenever this source string changes
+  // (it memoizes on JSON.stringify(source)), so this must NOT reactively
+  // track playbackSession after the first time — (P11) every quality/audio
+  // switch renegotiates a fresh session, which would otherwise tear down
+  // and recreate the whole player on every switch instead of the intended
+  // in-place replaceAsync in switchStream.
+  const [hlsUrl, setHlsUrl] = useState<string | null>(null);
+  useEffect(() => {
+    if (hlsUrl || !itemId || !playbackSession) return;
     const urls = getStreamUrl(
       itemId,
+      playbackSession.playSessionId,
+      playbackSession.mediaSourceId,
       selectedQuality.maxBitrate,
       selectedAudioStreamIndex,
     );
-    return urls?.hlsUrl ?? null;
+    if (urls?.hlsUrl) setHlsUrl(urls.hlsUrl);
+    // selectedQuality/selectedAudioStreamIndex intentionally excluded — read
+    // once here, at the moment the session first becomes available (already
+    // resolved from saved settings before that, per above).
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [itemId, playbackSession, getStreamUrl]);
+  }, [itemId, playbackSession, hlsUrl, getStreamUrl]);
 
   const player = useVideoPlayer(hlsUrl ?? "", (p) => {
     p.loop = false;
@@ -204,11 +212,16 @@ export default function PlayerScreen() {
   }, []);
 
   // ─── Stream switch (quality or audio track) ─────────────────
-  // Both kinds of switch are the same six steps — remember position, build
-  // URL, kill transcode, replaceAsync, seek back, play — differing only in
-  // which URL param changes. Callers always pass both values explicitly
-  // (rather than "omit to keep current") since `bitrate: null` is itself a
-  // meaningful value (uncapped) and must not collapse into a default.
+  // Re-negotiates a fresh PlaybackInfo session for every switch, rather than
+  // reusing the current one: reusing the same PlaySessionId across a
+  // kill-then-reuse is ambiguous about which request the server should
+  // honor, and — since T5 always requests /master.m3u8 (HLS), never raw
+  // /stream — the session's playMethod (DirectStream vs Transcode) can
+  // genuinely change with a different bitrate/audio constraint, so
+  // usePlaybackReporter needs the new session to report it truthfully.
+  // killTranscode here still targets the OLD session — it's captured from
+  // this render's closure, before renegotiate() updates playbackSession —
+  // so tearing down the old transcode is unaffected by the new negotiation.
   const switchStream = useCallback(
     async ({
       bitrate,
@@ -220,10 +233,24 @@ export default function PlayerScreen() {
       if (!itemId || !player) return;
       // Remember current position
       const resumeTime = player.currentTime;
-      // Build new URL with the selected bitrate/audio track
-      const urls = getStreamUrl(itemId, bitrate, audioStreamIndex);
+      const newSession = await renegotiate({
+        startTicks: secondsToTicks(resumeTime),
+        maxStreamingBitrate: bitrate ?? undefined,
+        audioStreamIndex,
+      });
+      if (!newSession) return;
+      // Build the new URL from the session we just negotiated, not from
+      // playbackSession — that state hasn't propagated back through a
+      // render yet at this point in the async flow.
+      const urls = getStreamUrl(
+        itemId,
+        newSession.playSessionId,
+        newSession.mediaSourceId,
+        bitrate,
+        audioStreamIndex,
+      );
       if (!urls?.hlsUrl) return;
-      // Kill old transcode before starting a new one
+      // Kill the old transcode before starting the new one.
       await killTranscode();
       // Replace the source and seek back — wait for the new source to
       // actually be loaded first; setting currentTime immediately after
@@ -234,7 +261,7 @@ export default function PlayerScreen() {
       player.currentTime = resumeTime;
       player.play();
     },
-    [itemId, player, getStreamUrl, killTranscode],
+    [itemId, player, renegotiate, getStreamUrl, killTranscode],
   );
 
   // ─── Quality change handler ──────────────────────────────────
@@ -268,7 +295,14 @@ export default function PlayerScreen() {
   );
 
   // ─── Error state ────────────────────────────────────────────
-  if (!itemId || playbackError) {
+  // playbackError && !hlsUrl, not just playbackError: once a stream is
+  // playing, a later playbackError can only come from a failed switchStream
+  // renegotiation (P11) — switchStream already bails out on its own and
+  // leaves the old stream running in that case, so don't tear down an
+  // already-working player screen over it. Full-screen error is only for a
+  // failure before any stream ever loaded. P13 will build a proper inline
+  // error/retry affordance for the post-load case.
+  if (!itemId || (playbackError && !hlsUrl)) {
     return (
       <View style={styles.errorContainer}>
         <Stack.Screen options={{ headerShown: false }} />

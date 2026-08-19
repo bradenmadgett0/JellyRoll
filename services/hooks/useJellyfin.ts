@@ -218,21 +218,26 @@ export function useJellyfinPlaybackInfo() {
 
 // ─── Stream URL Helper ──────────────────────────────
 
-/** Requires a negotiated playSessionId + mediaSourceId (see useJellyfinPlaybackInfo) — returns null until both are known. */
-export function useJellyfinStreamUrl(
-  playSessionId: string | undefined,
-  mediaSourceId: string | undefined,
-) {
+/**
+ * Takes playSessionId/mediaSourceId per call rather than bound to the hook,
+ * so callers can build a URL for a session they just negotiated (e.g. a
+ * quality switch's fresh renegotiation) without waiting for that session to
+ * propagate back through a render — a closure over the hook-bound values
+ * would still reflect the *previous* session at the moment of the call.
+ */
+export function useJellyfinStreamUrl() {
   const server = useJellyfinServer();
   const client = useJellyfinClient(server);
 
   return useCallback(
     (
       itemId: string,
+      playSessionId: string,
+      mediaSourceId: string,
       maxBitrate?: number | null,
       audioStreamIndex?: number,
     ): { streamUrl: string; hlsUrl: string } | null => {
-      if (!client || !playSessionId || !mediaSourceId) return null;
+      if (!client) return null;
       return {
         streamUrl: client.getStreamUrl(itemId),
         hlsUrl: client.getHlsStreamUrl(
@@ -244,7 +249,7 @@ export function useJellyfinStreamUrl(
         ),
       };
     },
-    [client, playSessionId, mediaSourceId],
+    [client],
   );
 }
 

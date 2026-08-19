@@ -23,8 +23,15 @@ export interface UsePlaybackSessionResult {
   session: JellyfinPlaybackSession | null;
   error: string | null;
   isLoading: boolean;
-  /** Re-runs the handshake against the current itemId/options. */
-  renegotiate: () => void;
+  /**
+   * Re-runs the handshake, optionally overriding individual options (e.g. a
+   * quality/audio switch), and resolves with the new session — or `null` on
+   * failure, or if a newer call/itemId change has already superseded this
+   * one by the time the response arrives.
+   */
+  renegotiate: (
+    overrides?: Partial<UsePlaybackSessionOptions>,
+  ) => Promise<JellyfinPlaybackSession | null>;
 }
 
 export function usePlaybackSession(
@@ -34,50 +41,56 @@ export function usePlaybackSession(
   const getPlaybackInfo = useJellyfinPlaybackInfo();
   const [session, setSession] = useState<JellyfinPlaybackSession | null>(null);
   const [error, setError] = useState<string | null>(null);
-  // Bumped by renegotiate() to force the handshake effect to re-run even
-  // when itemId/options haven't changed.
-  const [nonce, setNonce] = useState(0);
 
-  // Options are negotiated once per (itemId, nonce) cycle, not reactively on
-  // every options change — a quality/audio switch updates these before the
-  // next render, and switches are handled by replaceAsync (see player.tsx's
-  // switchStream), not by re-negotiating here. If this effect depended on
-  // them directly, every switch would fire a second, racing negotiation
-  // alongside the manual replace. The ref always holds the latest values so
-  // an explicit renegotiate() (P11) still negotiates with current settings.
+  // Options are read once per negotiation, not reactively — see negotiate()
+  // below. The ref always holds the latest render's values so an explicit
+  // renegotiate() call (without overriding a given field) still uses
+  // whatever's current, without the initial-negotiation effect depending on
+  // (and re-firing for) every options change.
   const optionsRef = useRef({ startTicks, maxStreamingBitrate, audioStreamIndex });
   useEffect(() => {
     optionsRef.current = { startTicks, maxStreamingBitrate, audioStreamIndex };
   });
 
-  useEffect(() => {
-    if (!itemId) return;
-    let cancelled = false;
-    setSession(null);
-    setError(null);
+  // Guards against a negotiation resolving after a newer one has already
+  // superseded it — an itemId change, or (P11) rapid quality/audio
+  // switching. Only the response matching the latest request is allowed to
+  // update state; a stale one is silently dropped. This subsumes the
+  // simpler "cancelled" boolean pattern P7 used, which only protected
+  // against the itemId-change case within a single effect instance.
+  const requestIdRef = useRef(0);
 
-    getPlaybackInfo(itemId, {
-      startTimeTicks: optionsRef.current.startTicks,
-      maxStreamingBitrate: optionsRef.current.maxStreamingBitrate,
-      audioStreamIndex: optionsRef.current.audioStreamIndex,
-    })
-      .then((info) => {
-        if (cancelled) return;
+  const negotiate = useCallback(
+    async (
+      id: string,
+      overrides?: Partial<UsePlaybackSessionOptions>,
+    ): Promise<JellyfinPlaybackSession | null> => {
+      const requestId = ++requestIdRef.current;
+      const opts = { ...optionsRef.current, ...overrides };
+
+      try {
+        const info = await getPlaybackInfo(id, {
+          startTimeTicks: opts.startTicks,
+          maxStreamingBitrate: opts.maxStreamingBitrate,
+          audioStreamIndex: opts.audioStreamIndex,
+        });
+        if (requestId !== requestIdRef.current) return null;
+
         if (info.ErrorCode) {
           setError(
             PLAYBACK_ERROR_MESSAGES[info.ErrorCode] ??
               "This item can't be played right now.",
           );
-          return;
+          return null;
         }
-        // Keep media-source selection as-is (first source) — revisited by
-        // the P11 ticket, which needs to reason about re-selection on switch.
+        // Keep media-source selection as-is (first source) — a multi-version
+        // item would need its own selection UI, which doesn't exist yet.
         const source = info.MediaSources?.[0];
         if (!source) {
           setError("No compatible media source was found.");
-          return;
+          return null;
         }
-        setSession({
+        const newSession: JellyfinPlaybackSession = {
           playSessionId: info.PlaySessionId,
           mediaSourceId: source.Id,
           // We only ever request /master.m3u8 (HLS), never the raw /stream
@@ -86,20 +99,33 @@ export function usePlaybackSession(
             ? "DirectStream"
             : "Transcode",
           defaultAudioStreamIndex: source.DefaultAudioStreamIndex,
-        });
-      })
-      .catch(() => {
-        if (!cancelled) setError("Unable to start playback.");
-      });
+        };
+        setError(null);
+        setSession(newSession);
+        return newSession;
+      } catch {
+        if (requestId !== requestIdRef.current) return null;
+        setError("Unable to start playback.");
+        return null;
+      }
+    },
+    [getPlaybackInfo],
+  );
 
-    return () => {
-      cancelled = true;
-    };
-    // startTicks/maxStreamingBitrate/audioStreamIndex intentionally excluded
-    // — see optionsRef comment above.
-  }, [itemId, getPlaybackInfo, nonce]);
+  useEffect(() => {
+    if (!itemId) return;
+    setSession(null);
+    setError(null);
+    negotiate(itemId);
+  }, [itemId, negotiate]);
 
-  const renegotiate = useCallback(() => setNonce((n) => n + 1), []);
+  const renegotiate = useCallback(
+    (overrides?: Partial<UsePlaybackSessionOptions>) => {
+      if (!itemId) return Promise.resolve(null);
+      return negotiate(itemId, overrides);
+    },
+    [itemId, negotiate],
+  );
 
   return {
     session,
