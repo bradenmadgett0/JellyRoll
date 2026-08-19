@@ -108,5 +108,9 @@ export function usePlaybackReporting({
     };
   }, [itemId]);
 
-  return { killTranscode };
+  // Exposed as a ref (not state) so callers (e.g. a stream-error retry) can
+  // read the current cached position on demand without subscribing to it —
+  // it updates every timeUpdate tick, far more often than most callers need
+  // a re-render for.
+  return { killTranscode, lastKnownTicksRef: lastKnownTicks };
 }

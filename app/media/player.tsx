@@ -198,12 +198,28 @@ export default function PlayerScreen() {
     }
   });
 
-  const { killTranscode } = usePlaybackReporting({
+  const { killTranscode, lastKnownTicksRef } = usePlaybackReporting({
     player,
     itemId,
     session: playbackSession,
     startTicks,
     audioStreamIndex: selectedAudioStreamIndex,
+  });
+
+  // ─── Mid-playback stream health ──────────────────────────────
+  // Once past the initial handshake, a dead transcode or a 404'd playlist
+  // otherwise shows nothing — a frozen frame with no message and no way to
+  // recover but backing out. Gated on hlsUrl: before it's set, the player
+  // was created with an empty-string placeholder source, whose own status
+  // churn isn't a real playback error.
+  const [streamError, setStreamError] = useState<string | null>(null);
+  const [isBuffering, setIsBuffering] = useState(false);
+  useEventListener(player, "statusChange", ({ status, error }) => {
+    if (!hlsUrl) return;
+    setIsBuffering(status === "loading");
+    setStreamError(
+      status === "error" ? (error?.message ?? "Playback failed.") : null,
+    );
   });
 
   // ─── Overlay toggle ─────────────────────────────────────────
@@ -230,15 +246,23 @@ export default function PlayerScreen() {
     async ({
       bitrate,
       audioStreamIndex,
+      resumeTicks: resumeTicksOverride,
     }: {
       bitrate: number | null;
       audioStreamIndex: number | undefined;
+      /**
+       * Overrides the resume position instead of reading player.currentTime.
+       * Used by the stream-error retry path (P13): a player that just
+       * errored may report a stale or unreadable currentTime, so retry
+       * resumes from the last known-good tracked position instead.
+       */
+      resumeTicks?: number;
     }) => {
       if (!itemId || !player) return;
-      // Remember current position
-      const resumeTime = player.currentTime;
+      const resumeTicks = resumeTicksOverride ?? secondsToTicks(player.currentTime);
+      const resumeSeconds = ticksToSeconds(resumeTicks);
       const newSession = await renegotiate({
-        startTicks: secondsToTicks(resumeTime),
+        startTicks: resumeTicks,
         maxStreamingBitrate: bitrate ?? undefined,
         audioStreamIndex,
       });
@@ -262,7 +286,7 @@ export default function PlayerScreen() {
       // waitForReady).
       await player.replaceAsync(urls.hlsUrl);
       await waitForReady(player);
-      player.currentTime = resumeTime;
+      player.currentTime = resumeSeconds;
       player.play();
     },
     [itemId, player, renegotiate, getStreamUrl, killTranscode],
@@ -292,20 +316,34 @@ export default function PlayerScreen() {
     [selectedAudioStreamIndex, selectedQuality, setMediaSettings, switchStream],
   );
 
+  // ─── Retry after a mid-playback stream error ─────────────────
+  // A fresh handshake is the right recovery — the most likely cause is a
+  // server-side transcode that was reaped — resuming at the same
+  // bitrate/audio track from the last known-good position, not from 0.
+  const handleRetry = useCallback(() => {
+    setStreamError(null);
+    setIsBuffering(true);
+    switchStream({
+      bitrate: selectedQuality.maxBitrate,
+      audioStreamIndex: selectedAudioStreamIndex,
+      resumeTicks: lastKnownTicksRef.current,
+    });
+  }, [switchStream, selectedQuality, selectedAudioStreamIndex, lastKnownTicksRef]);
+
   // Memoize VideoPlayer to prevent re-renders from overlay toggle
   const videoView = useMemo(
     () => <VideoPlayer player={player} toggleOverlay={toggleOverlay} />,
     [player, toggleOverlay],
   );
 
-  // ─── Error state ────────────────────────────────────────────
+  // ─── Error state (before any stream ever loaded) ─────────────
   // playbackError && !hlsUrl, not just playbackError: once a stream is
   // playing, a later playbackError can only come from a failed switchStream
   // renegotiation (P11) — switchStream already bails out on its own and
   // leaves the old stream running in that case, so don't tear down an
-  // already-working player screen over it. Full-screen error is only for a
-  // failure before any stream ever loaded. P13 will build a proper inline
-  // error/retry affordance for the post-load case.
+  // already-working player screen over it. A mid-playback failure instead
+  // surfaces as streamError (below, P13) — an overlay on the still-mounted
+  // player, with a Retry.
   if (!itemId || (playbackError && !hlsUrl)) {
     return (
       <View style={styles.errorContainer}>
@@ -340,6 +378,34 @@ export default function PlayerScreen() {
       <Stack.Screen options={{ headerShown: false }} />
       <StatusBar hidden />
       {videoView}
+      {streamError ? (
+        <View style={styles.streamErrorOverlay}>
+          <Ionicons
+            name="alert-circle"
+            size={48}
+            color={styles.iconError.color}
+          />
+          <Text style={styles.errorText}>{streamError}</Text>
+          <TouchableOpacity style={styles.backBtn} onPress={handleRetry}>
+            <Text style={styles.backBtnText}>Retry</Text>
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={styles.backBtn}
+            onPress={() => router.back()}
+          >
+            <Text style={styles.backBtnText}>Go Back</Text>
+          </TouchableOpacity>
+        </View>
+      ) : (
+        isBuffering && (
+          <View style={styles.bufferingOverlay} pointerEvents="none">
+            <ActivityIndicator
+              size="large"
+              color={styles.iconPrimary.color}
+            />
+          </View>
+        )
+      )}
       <PlayerOverlay
         player={player}
         item={item}
@@ -368,6 +434,23 @@ const createStyles = (colors: AppColors) =>
       justifyContent: "center",
       alignItems: "center",
       gap: Spacing.md,
+    },
+    // Overlays the frozen frame instead of replacing the whole screen — the
+    // user keeps context (and PlayerOverlay stays reachable) rather than
+    // being dropped onto a blank error page for a mid-playback failure.
+    streamErrorOverlay: {
+      ...StyleSheet.absoluteFillObject,
+      backgroundColor: "rgba(0,0,0,0.85)",
+      justifyContent: "center",
+      alignItems: "center",
+      gap: Spacing.md,
+      zIndex: 30,
+    },
+    bufferingOverlay: {
+      ...StyleSheet.absoluteFillObject,
+      justifyContent: "center",
+      alignItems: "center",
+      zIndex: 30,
     },
     errorText: {
       color: colors.error,
