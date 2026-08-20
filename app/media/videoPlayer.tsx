@@ -5,9 +5,7 @@
 
 import { VideoPlayer as ExpoVideoPlayer, VideoView } from "expo-video";
 import React, { memo } from "react";
-import { Dimensions, StyleSheet, TouchableOpacity } from "react-native";
-
-const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get("window");
+import { StyleSheet, TouchableOpacity } from "react-native";
 
 interface VideoPlayerProps {
   player: ExpoVideoPlayer;
@@ -38,8 +36,12 @@ const styles = StyleSheet.create({
   videoTouchable: {
     flex: 1,
   },
+  // flex: 1 (filling the already flex: 1 touchable) instead of hardcoded
+  // literal dimensions — those were read once from Dimensions.get("window")
+  // at module load, so they went stale on rotation/resize and could be
+  // wrong entirely on a tablet or split-screen window where this view
+  // isn't actually the full screen size.
   video: {
-    width: SCREEN_WIDTH,
-    height: SCREEN_HEIGHT,
+    flex: 1,
   },
 });
