@@ -66,7 +66,10 @@ export function useJellyfinLibraries() {
     queryFn: async () => {
       if (!client) throw new Error("No Jellyfin server configured");
       const response = await client.getLibraries();
-      return response.Items;
+      // Live TV isn't a browsable media grid the way Movies/Shows/Music
+      // are — excluded here, at the source, rather than left for every
+      // consumer to filter out itself.
+      return response.Items.filter((lib) => lib.CollectionType !== "livetv");
     },
     enabled: !!client,
     staleTime: 5 * 60 * 1000, // 5 min

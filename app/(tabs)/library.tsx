@@ -36,6 +36,12 @@ const CARD_GAP = Spacing.md;
 // split-screen/foldable widths alike instead of being fixed at 3.
 const MIN_CARD_WIDTH = 110;
 
+// Distinct from `undefined` (which means "no chip picked yet" — before this
+// existed, the "All" chip's Id was undefined too, indistinguishable from
+// that initial state, so selecting it just fell back to the "pick a
+// library" prompt and the query was never even enabled for it.
+const ALL_LIBRARIES = "all";
+
 const LIBRARY_ICONS: Record<string, keyof typeof Ionicons.glyphMap> = {
   movies: "film",
   tvshows: "tv",
@@ -56,7 +62,7 @@ export default function LibraryScreen() {
 
   const [selectedLibraryId, setSelectedLibraryId] = useState<
     string | undefined
-  >();
+  >(ALL_LIBRARIES);
   const [viewMode, setViewMode] = useState<"grid" | "list">("grid");
 
   // Reactive to rotation/window resize (unlike a one-time Dimensions.get()),
@@ -79,6 +85,8 @@ export default function LibraryScreen() {
     refetch: refetchLibs,
   } = useJellyfinLibraries();
 
+  const isAllSelected = selectedLibraryId === ALL_LIBRARIES;
+
   const {
     data: itemsData,
     fetchNextPage,
@@ -87,7 +95,11 @@ export default function LibraryScreen() {
     isLoading: itemsLoading,
     refetch: refetchItems,
   } = useJellyfinItems({
-    parentId: selectedLibraryId,
+    // "All" has no parentId (searches the whole library, already Recursive
+    // server-side) and is scoped to Movies + Shows specifically, not every
+    // item type (music, photos, books, etc.).
+    parentId: isAllSelected ? undefined : selectedLibraryId,
+    includeItemTypes: isAllSelected ? "Movie,Series" : undefined,
     enabled: !!selectedLibraryId,
   });
 
@@ -193,7 +205,7 @@ export default function LibraryScreen() {
             showsHorizontalScrollIndicator={false}
             contentContainerStyle={styles.libPicker}
             data={[
-              { Id: undefined, Name: "All", CollectionType: undefined },
+              { Id: ALL_LIBRARIES, Name: "All", CollectionType: undefined },
               ...(libraries ?? []),
             ]}
             keyExtractor={(item) => item.Id ?? "all"}
@@ -204,7 +216,7 @@ export default function LibraryScreen() {
               return (
                 <TouchableOpacity
                   style={[styles.libChip, isSelected && styles.libChipSelected]}
-                  onPress={() => setSelectedLibraryId(item.Id ?? undefined)}
+                  onPress={() => setSelectedLibraryId(item.Id)}
                   activeOpacity={0.7}
                 >
                   <Ionicons
