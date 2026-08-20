@@ -7,12 +7,12 @@ import { useRouter } from "expo-router";
 import { useCallback, useMemo, useState } from "react";
 import {
   ActivityIndicator,
-  Dimensions,
   FlatList,
   RefreshControl,
   StyleSheet,
   Text,
   TouchableOpacity,
+  useWindowDimensions,
   View,
 } from "react-native";
 import Animated, { FadeIn, FadeInDown } from "react-native-reanimated";
@@ -29,12 +29,12 @@ import {
 import { useServerStore } from "../../services/stores/serverStore";
 import { JellyfinItem } from "../../types/jellyfin";
 
-const { width: SCREEN_WIDTH } = Dimensions.get("window");
-const GRID_COLUMNS = 3;
 const CARD_GAP = Spacing.md;
-const CARD_WIDTH =
-  (SCREEN_WIDTH - Spacing.screenPadding * 2 - CARD_GAP * (GRID_COLUMNS - 1)) /
-  GRID_COLUMNS;
+// Columns are derived from available width, not hardcoded — a card stays at
+// least this wide, and the grid fits as many of them as will fully fit
+// (never fewer than 2), so it wraps naturally on phones, tablets, and
+// split-screen/foldable widths alike instead of being fixed at 3.
+const MIN_CARD_WIDTH = 110;
 
 const LIBRARY_ICONS: Record<string, keyof typeof Ionicons.glyphMap> = {
   movies: "film",
@@ -58,6 +58,20 @@ export default function LibraryScreen() {
     string | undefined
   >();
   const [viewMode, setViewMode] = useState<"grid" | "list">("grid");
+
+  // Reactive to rotation/window resize (unlike a one-time Dimensions.get()),
+  // so a tablet, foldable, or split-screen window recomputes column count
+  // instead of staying fixed at whatever it was on first render.
+  const { width: windowWidth } = useWindowDimensions();
+  const { columns: gridColumns, cardWidth: CARD_WIDTH } = useMemo(() => {
+    const available = windowWidth - Spacing.screenPadding * 2;
+    const columns = Math.max(
+      2,
+      Math.floor((available + CARD_GAP) / (MIN_CARD_WIDTH + CARD_GAP)),
+    );
+    const cardWidth = (available - CARD_GAP * (columns - 1)) / columns;
+    return { columns, cardWidth };
+  }, [windowWidth]);
 
   const {
     data: libraries,
@@ -118,13 +132,14 @@ export default function LibraryScreen() {
                     : undefined
               }
               variant="grid"
+              width={CARD_WIDTH}
               onPress={() => router.push(`/media/${item.Id}`)}
             />
           </TouchableOpacity>
         </Animated.View>
       );
     },
-    [getImageUrl, router, styles],
+    [getImageUrl, router, styles, CARD_WIDTH],
   );
 
   // Empty state
@@ -267,8 +282,12 @@ export default function LibraryScreen() {
         </View>
       ) : (
         <FlatList
+          // FlatList can't change numColumns on a live instance — remount
+          // when the computed column count changes (e.g. rotation, window
+          // resize) by keying on it.
+          key={gridColumns}
           data={items}
-          numColumns={GRID_COLUMNS}
+          numColumns={gridColumns}
           keyExtractor={(item) => item.Id}
           renderItem={renderItem}
           columnWrapperStyle={styles.gridRow}

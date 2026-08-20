@@ -5,20 +5,11 @@
 
 import { Ionicons } from "@expo/vector-icons";
 import { memo } from "react";
-import {
-  Dimensions,
-  Image,
-  StyleSheet,
-  Text,
-  TouchableOpacity,
-  View,
-} from "react-native";
+import { Image, StyleSheet, Text, TouchableOpacity, View } from "react-native";
 import Animated, { FadeIn } from "react-native-reanimated";
 import { Spacing } from "../../constants/Spacing";
 import { AppColors } from "../../hooks/useColors";
 import { useThemedStyles } from "../../hooks/useThemedStyles";
-
-const { width: SCREEN_WIDTH } = Dimensions.get("window");
 
 export interface MediaCardProps {
   id: string;
@@ -36,9 +27,12 @@ export interface MediaCardProps {
   /**
    * 'poster' = tall card (120×180)
    * 'backdrop' = wide card (220×124)
-   * 'grid' = fills grid column
+   * 'grid' = fills grid column — pass `width` for the actual column size,
+   * since the caller (a responsive grid) is the one that knows it.
    */
   variant?: "poster" | "backdrop" | "grid";
+  /** Required for `variant="grid"` — the caller computes this from its own layout. */
+  width?: number;
 }
 
 const POSTER_W = Spacing.posterWidth;
@@ -58,15 +52,12 @@ function MediaCardBase({
   rating,
   onPress,
   variant = "poster",
+  width,
 }: MediaCardProps) {
   const styles = useThemedStyles(createStyles);
   const isBackdrop = variant === "backdrop";
   const isGrid = variant === "grid";
-  const cardW = isBackdrop
-    ? BACKDROP_W
-    : isGrid
-      ? (SCREEN_WIDTH - Spacing.screenPadding * 2 - Spacing.md) / 3
-      : POSTER_W;
+  const cardW = width ?? (isBackdrop ? BACKDROP_W : POSTER_W);
   const cardH = isBackdrop ? BACKDROP_H : isGrid ? cardW * 1.5 : POSTER_H;
 
   return (
