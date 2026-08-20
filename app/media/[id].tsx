@@ -5,7 +5,7 @@
 import { Ionicons } from "@expo/vector-icons";
 import { LinearGradient } from "expo-linear-gradient";
 import { Stack, useLocalSearchParams, useRouter } from "expo-router";
-import { useMemo, useState } from "react";
+import { useMemo } from "react";
 import {
   ActivityIndicator,
   Dimensions,
@@ -31,7 +31,6 @@ import {
   useJellyfinImageUrl,
   useJellyfinSeasons,
 } from "../../services/hooks/useJellyfin";
-import { JellyfinItem } from "@/types/jellyfin";
 
 const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get("window");
 const BACKDROP_HEIGHT = SCREEN_HEIGHT * 0.45;
@@ -65,8 +64,6 @@ export default function MediaDetailScreen() {
   const isSeries = item?.Type === "Series";
   const { data: seasons } = useJellyfinSeasons(isSeries ? id : undefined);
   const { data: episodes } = useJellyfinEpisodes(isSeries ? id : undefined);
-
-  const [expandedSeason, setExpandedSeason] = useState<string | undefined>();
 
   // Build season/episode list for series
   const seasonGroups: SeasonGroup[] = useMemo(() => {
