@@ -52,6 +52,29 @@ const LIBRARY_ICONS: Record<string, keyof typeof Ionicons.glyphMap> = {
   boxsets: "albums",
 };
 
+// The server always answers /Items with Recursive=true (see jellyfin.ts),
+// so browsing a library without an explicit IncludeItemTypes filter returns
+// every descendant, not just the library's own top-level browsable items —
+// confirmed live: the "Shows" library returned Series *and* every Season
+// under them (6,508 items total, dominated by repeated "Season 1" entries
+// with no series context), which is exactly why seasons were showing up in
+// the grid as if they were shows, and why their "detail" screen had no
+// episodes to show — it's a season's own detail, not a series'. "Collections"
+// showed the same pattern on a smaller scale (a stray Folder item). Movies
+// and Music/Books/Photos weren't independently confirmed against live data
+// (no such libraries existed on the server this was checked against), but
+// they're the same recursive-without-a-filter query, so they get the same
+// treatment based on Jellyfin's own canonical top-level type per collection.
+const LIBRARY_ITEM_TYPES: Record<string, string> = {
+  movies: "Movie",
+  tvshows: "Series",
+  music: "MusicAlbum",
+  books: "Book",
+  boxsets: "BoxSet",
+  playlists: "Playlist",
+  photos: "Photo,PhotoAlbum",
+};
+
 export default function LibraryScreen() {
   const router = useRouter();
   const styles = useThemedStyles(createStyles);
@@ -86,6 +109,7 @@ export default function LibraryScreen() {
   } = useJellyfinLibraries();
 
   const isAllSelected = selectedLibraryId === ALL_LIBRARIES;
+  const selectedLibrary = libraries?.find((lib) => lib.Id === selectedLibraryId);
 
   const {
     data: itemsData,
@@ -97,9 +121,14 @@ export default function LibraryScreen() {
   } = useJellyfinItems({
     // "All" has no parentId (searches the whole library, already Recursive
     // server-side) and is scoped to Movies + Shows specifically, not every
-    // item type (music, photos, books, etc.).
+    // item type (music, photos, books, etc.). A specific library is scoped
+    // to its own canonical top-level type (see LIBRARY_ITEM_TYPES) — without
+    // this, the recursive query returns every descendant (Seasons, Episodes,
+    // ...), not just the library's own browsable items.
     parentId: isAllSelected ? undefined : selectedLibraryId,
-    includeItemTypes: isAllSelected ? "Movie,Series" : undefined,
+    includeItemTypes: isAllSelected
+      ? "Movie,Series"
+      : LIBRARY_ITEM_TYPES[selectedLibrary?.CollectionType ?? ""],
     enabled: !!selectedLibraryId,
   });
 
