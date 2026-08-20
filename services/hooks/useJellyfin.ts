@@ -395,6 +395,7 @@ export function usePlaybackReporter(session?: JellyfinPlaybackSession) {
           itemId,
           positionTicks,
           session.playSessionId,
+          session.mediaSourceId,
         );
         // Kill the server-side transcode session
         await client.deleteActiveEncoding(session.playSessionId);

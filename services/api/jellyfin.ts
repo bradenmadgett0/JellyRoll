@@ -529,11 +529,13 @@ export class JellyfinClient {
     itemId: string,
     positionTicks: number,
     playSessionId: string,
+    mediaSourceId?: string,
   ): Promise<void> {
     await this.client.post("/Sessions/Playing/Stopped", {
       ItemId: itemId,
       PositionTicks: positionTicks,
       PlaySessionId: playSessionId,
+      MediaSourceId: mediaSourceId,
     });
   }
 
