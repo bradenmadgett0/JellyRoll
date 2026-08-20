@@ -264,7 +264,15 @@ export default function PlayerOverlay({
             )}
           </View>
 
-          {Platform.OS === "ios" && <VideoAirPlayButton />}
+          {/* Mirrors controlBtn's fixed size on the other side so the row's
+              two flex-1 title margins stay equal — without this, the title
+              (centered only within its own flex-1 slot) sits visibly off
+              true center: on Android there's nothing here at all to balance
+              the back button, and even on iOS VideoAirPlayButton's native
+              size isn't guaranteed to match controlBtn's. */}
+          <View style={styles.controlBtn}>
+            {Platform.OS === "ios" && <VideoAirPlayButton />}
+          </View>
         </View>
 
         {/* ─── Center Controls ─────────────────────────── */}
