@@ -4,12 +4,10 @@
  */
 
 import {
-  Inter_400Regular,
-  Inter_500Medium,
-  Inter_600SemiBold,
-  Inter_700Bold,
+  SpaceMono_400Regular,
+  SpaceMono_700Bold,
   useFonts,
-} from "@expo-google-fonts/inter";
+} from "@expo-google-fonts/space-mono";
 import type { Theme } from "@react-navigation/native";
 import { ThemeProvider } from "@react-navigation/native";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
@@ -76,15 +74,13 @@ export default function RootLayout() {
   const theme = useTheme();
   const navTheme = useMemo(() => buildNavTheme(theme), [theme]);
 
-  // These registrations must stay in sync with `interFontFamilies` in
+  // These registrations must stay in sync with `spaceMonoFontFamilies` in
   // constants/theme/typography.ts — that's the map the design system hands
   // out, and a family that isn't registered here silently renders as the
   // system font.
   const [fontsLoaded] = useFonts({
-    Inter_400Regular,
-    Inter_500Medium,
-    Inter_600SemiBold,
-    Inter_700Bold,
+    SpaceMono_400Regular,
+    SpaceMono_700Bold,
   });
 
   useEffect(() => {

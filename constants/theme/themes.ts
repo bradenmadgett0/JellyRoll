@@ -13,7 +13,7 @@ import type {
   ThemeTokens,
 } from "./tokens";
 import { BrandColors } from "./tokens";
-import { buildTextFn, interFontFamilies, typeScale } from "./typography";
+import { buildTextFn, spaceMonoFontFamilies, typeScale } from "./typography";
 
 const darkColors: ThemeColors = {
   primary: "#6C63FF",
@@ -110,7 +110,7 @@ const overlay: OverlayTokens = {
   shadow: "#000",
 };
 
-const interText = buildTextFn(interFontFamilies);
+const spaceMonoText = buildTextFn(spaceMonoFontFamilies);
 
 /**
  * Assembles a theme. Brand colors are folded into the palette here so
@@ -129,9 +129,9 @@ function createTheme(
     mode,
     colors: palette,
     overlay,
-    fonts: interFontFamilies,
+    fonts: spaceMonoFontFamilies,
     type: typeScale,
-    text: interText,
+    text: spaceMonoText,
   };
 }
 

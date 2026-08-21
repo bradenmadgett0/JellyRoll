@@ -15,9 +15,9 @@
 /**
  * Registered font family names.
  *
- * These MUST match what's passed to `useFonts()` in `app/_layout.tsx` —
- * @expo-google-fonts registers each weight under its own family name, so
- * there is no single "Inter" family with a numeric `fontWeight`.
+ * These MUST match what's passed to `useFonts()` in `app/_layout.tsx` — each
+ * weight is registered under its own family name, so there is no single
+ * family with a numeric `fontWeight`.
  *
  * Swapping the app's typeface is this object and the `useFonts()` call.
  */
@@ -28,11 +28,18 @@ export interface FontFamilies {
   bold: string;
 }
 
-export const interFontFamilies: FontFamilies = {
-  regular: "Inter_400Regular",
-  medium: "Inter_500Medium",
-  semibold: "Inter_600SemiBold",
-  bold: "Inter_700Bold",
+/**
+ * Space Mono ships only Regular and Bold cuts — there's no dedicated
+ * Medium/SemiBold instance. `medium` maps to Regular and `semibold` maps to
+ * Bold, so the split falls at the midpoint: text meant to stay body-adjacent
+ * stays light, anything meant to stand out (semibold and bold alike) renders
+ * bold.
+ */
+export const spaceMonoFontFamilies: FontFamilies = {
+  regular: "SpaceMono_400Regular",
+  medium: "SpaceMono_400Regular",
+  semibold: "SpaceMono_700Bold",
+  bold: "SpaceMono_700Bold",
 };
 
 /**

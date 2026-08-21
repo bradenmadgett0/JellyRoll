@@ -7,8 +7,8 @@
  *   const colors = useColors();      // just the palette
  *   const styles = useThemedStyles(createStyles);
  *
- * To change the typeface, edit `interFontFamilies` in `typography.ts` and the
- * matching `useFonts()` registration in `app/_layout.tsx`.
+ * To change the typeface, edit `spaceMonoFontFamilies` in `typography.ts` and
+ * the matching `useFonts()` registration in `app/_layout.tsx`.
  */
 
 export { BrandColors } from "./tokens";
@@ -21,4 +21,4 @@ export type {
 } from "./tokens";
 export { darkTheme, DEFAULT_THEME_ID, lightTheme, themeById, themes } from "./themes";
 export type { FontWeightName, TypeScale, TypeStepName } from "./typography";
-export { interFontFamilies } from "./typography";
+export { spaceMonoFontFamilies } from "./typography";
