@@ -3,6 +3,7 @@
  */
 
 import { Ionicons } from "@expo/vector-icons";
+import type { ThemeTokens } from "@/constants/theme";
 import { memo } from "react";
 import { StyleSheet, Text, View } from "react-native";
 import { SOURCE_COLORS, SOURCE_ICONS } from "../../constants/Sources";
@@ -123,7 +124,7 @@ function QueueCardBase({
 
 export const QueueCard = memo(QueueCardBase);
 
-const createStyles = (colors: AppColors) =>
+const createStyles = (colors: AppColors, theme: ThemeTokens) =>
   StyleSheet.create({
     container: {
       backgroundColor: colors.backgroundTertiary,
@@ -147,8 +148,7 @@ const createStyles = (colors: AppColors) =>
       marginRight: Spacing.sm,
     },
     title: {
-      fontFamily: "Inter_600SemiBold",
-      fontSize: 14,
+      ...theme.text("bodySmall", "semibold"),
       color: colors.text,
       flex: 1,
     },
@@ -158,14 +158,12 @@ const createStyles = (colors: AppColors) =>
       borderRadius: Spacing.radiusSm,
     },
     statusText: {
-      fontFamily: "Inter_600SemiBold",
-      fontSize: 10,
+      ...theme.text("micro", "semibold"),
       textTransform: "uppercase",
       letterSpacing: 0.5,
     },
     subtitle: {
-      fontFamily: "Inter_400Regular",
-      fontSize: 12,
+      ...theme.text("label", "regular"),
       color: colors.textSecondary,
       marginBottom: Spacing.sm,
     },
@@ -185,8 +183,7 @@ const createStyles = (colors: AppColors) =>
       gap: Spacing.lg,
     },
     infoText: {
-      fontFamily: "Inter_400Regular",
-      fontSize: 11,
+      ...theme.text("labelSmall", "regular"),
       color: colors.textTertiary,
     },
 

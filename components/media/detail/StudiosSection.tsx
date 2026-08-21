@@ -3,6 +3,7 @@
  */
 
 import { StyleSheet, Text, View } from "react-native";
+import type { ThemeTokens } from "@/constants/theme";
 import Animated, { FadeInDown } from "react-native-reanimated";
 import { Spacing } from "../../../constants/Spacing";
 import { AppColors } from "../../../hooks/useColors";
@@ -32,9 +33,9 @@ export function StudiosSection({ studios }: StudiosSectionProps) {
   );
 }
 
-const createStyles = (colors: AppColors) =>
+const createStyles = (colors: AppColors, theme: ThemeTokens) =>
   StyleSheet.create({
-    ...sectionStyles(colors),
+    ...sectionStyles(colors, theme),
     studioRow: { flexDirection: "row", flexWrap: "wrap", gap: Spacing.sm },
     studioChip: {
       paddingHorizontal: Spacing.md,
@@ -45,8 +46,7 @@ const createStyles = (colors: AppColors) =>
       borderColor: colors.surfaceBorder,
     },
     studioText: {
-      fontFamily: "Inter_400Regular",
-      fontSize: 12,
+      ...theme.text("label", "regular"),
       color: colors.textSecondary,
     },
   });

@@ -3,6 +3,7 @@
  */
 
 import { Ionicons } from "@expo/vector-icons";
+import type { ThemeTokens } from "@/constants/theme";
 import { useRouter } from "expo-router";
 import { StyleSheet, Text, TouchableOpacity, View } from "react-native";
 import { Spacing } from "../../../constants/Spacing";
@@ -63,7 +64,7 @@ export function PlayButton({ item }: PlayButtonProps) {
   );
 }
 
-const createStyles = (colors: AppColors) =>
+const createStyles = (colors: AppColors, theme: ThemeTokens) =>
   StyleSheet.create({
     playButton: {
       flexDirection: "row",
@@ -76,8 +77,7 @@ const createStyles = (colors: AppColors) =>
       marginBottom: Spacing.lg,
     },
     playButtonText: {
-      fontFamily: "Inter_600SemiBold",
-      fontSize: 16,
+      ...theme.text("title", "semibold"),
       color: colors.textInverse,
     },
     resumeProgressContainer: {

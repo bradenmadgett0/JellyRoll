@@ -3,6 +3,7 @@
  */
 
 import { useRouter } from "expo-router";
+import type { ThemeTokens } from "@/constants/theme";
 import { useMemo } from "react";
 import { StyleSheet, Text } from "react-native";
 import Animated, { FadeInDown } from "react-native-reanimated";
@@ -21,7 +22,7 @@ interface SeasonsSectionProps {
   accentColor: string;
 }
 
-const createStyles = (colors: AppColors) => StyleSheet.create({ ...sectionStyles(colors) });
+const createStyles = (colors: AppColors, theme: ThemeTokens) => StyleSheet.create({ ...sectionStyles(colors, theme) });
 
 export function SeasonsSection({ seriesId, accentColor }: SeasonsSectionProps) {
   const styles = useThemedStyles(createStyles);

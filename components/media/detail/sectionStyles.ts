@@ -4,12 +4,12 @@
  */
 
 import { Spacing } from "../../../constants/Spacing";
+import type { ThemeTokens } from "../../../constants/theme";
 import { AppColors } from "../../../hooks/useColors";
 
-export const sectionStyles = (colors: AppColors) => ({
+export const sectionStyles = (colors: AppColors, theme: ThemeTokens) => ({
   sectionTitle: {
-    fontFamily: "Inter_600SemiBold" as const,
-    fontSize: 18,
+    ...theme.text("h3", "semibold"),
     color: colors.text,
     marginTop: Spacing.xxl,
     marginBottom: Spacing.md,

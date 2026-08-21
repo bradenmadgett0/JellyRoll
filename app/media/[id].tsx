@@ -3,6 +3,7 @@
  */
 
 import { Ionicons } from "@expo/vector-icons";
+import type { ThemeTokens } from "@/constants/theme";
 import { Stack, useLocalSearchParams, useRouter } from "expo-router";
 import { ActivityIndicator, ScrollView, StyleSheet, Text, TouchableOpacity, View } from "react-native";
 import Animated, { FadeInUp } from "react-native-reanimated";
@@ -88,7 +89,7 @@ export default function MediaDetailScreen() {
   );
 }
 
-const createStyles = (colors: AppColors) =>
+const createStyles = (colors: AppColors, theme: ThemeTokens) =>
   StyleSheet.create({
     container: { flex: 1, backgroundColor: colors.background },
     scrollView: { flex: 1 },
@@ -101,14 +102,12 @@ const createStyles = (colors: AppColors) =>
       gap: Spacing.md,
     },
     loadingText: {
+      ...theme.text("body", "regular"),
       color: colors.textSecondary,
-      fontSize: 15,
-      fontFamily: "Inter_400Regular",
     },
     errorText: {
+      ...theme.text("title", "medium"),
       color: colors.error,
-      fontSize: 16,
-      fontFamily: "Inter_500Medium",
       marginTop: Spacing.sm,
     },
     backBtn: {
@@ -119,9 +118,8 @@ const createStyles = (colors: AppColors) =>
       borderRadius: Spacing.radiusMd,
     },
     backBtnText: {
+      ...theme.text("body", "semibold"),
       color: colors.primary,
-      fontFamily: "Inter_600SemiBold",
-      fontSize: 15,
     },
     contentOverlay: {
       paddingHorizontal: Spacing.screenPadding,

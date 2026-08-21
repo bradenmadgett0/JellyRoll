@@ -4,6 +4,7 @@
  */
 
 import { Ionicons } from "@expo/vector-icons";
+import type { ThemeTokens } from "@/constants/theme";
 import { memo, useState } from "react";
 import { StyleSheet, Text, TouchableOpacity, View, Image } from "react-native";
 import Animated, { FadeInDown } from "react-native-reanimated";
@@ -184,7 +185,7 @@ function EpisodeListBase({ seasons, accentColor }: EpisodeListProps) {
 
 export const EpisodeList = memo(EpisodeListBase);
 
-const createStyles = (colors: AppColors) =>
+const createStyles = (colors: AppColors, theme: ThemeTokens) =>
   StyleSheet.create({
     seasonContainer: {
       marginBottom: Spacing.sm,
@@ -206,8 +207,7 @@ const createStyles = (colors: AppColors) =>
       gap: Spacing.sm,
     },
     seasonTitle: {
-      fontFamily: "Inter_600SemiBold",
-      fontSize: 15,
+      ...theme.text("body", "semibold"),
       color: colors.text,
     },
     seasonRight: {
@@ -216,8 +216,7 @@ const createStyles = (colors: AppColors) =>
       gap: Spacing.sm,
     },
     episodeCount: {
-      fontFamily: "Inter_400Regular",
-      fontSize: 12,
+      ...theme.text("label", "regular"),
       color: colors.textSecondary,
     },
     miniProgress: {
@@ -254,8 +253,7 @@ const createStyles = (colors: AppColors) =>
       alignItems: "center",
     },
     episodeNumberText: {
-      fontFamily: "Inter_600SemiBold",
-      fontSize: 14,
+      ...theme.text("bodySmall", "semibold"),
       color: colors.textTertiary,
     },
     episodeInfo: {
@@ -263,13 +261,11 @@ const createStyles = (colors: AppColors) =>
       marginHorizontal: Spacing.md,
     },
     episodeTitle: {
-      fontFamily: "Inter_500Medium",
-      fontSize: 14,
+      ...theme.text("bodySmall", "medium"),
       color: colors.text,
     },
     episodeAirDate: {
-      fontFamily: "Inter_400Regular",
-      fontSize: 11,
+      ...theme.text("labelSmall", "regular"),
       color: colors.textTertiary,
       marginTop: 2,
     },

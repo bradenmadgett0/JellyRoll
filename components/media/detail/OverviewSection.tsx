@@ -3,6 +3,7 @@
  */
 
 import { StyleSheet, Text } from "react-native";
+import type { ThemeTokens } from "@/constants/theme";
 import Animated, { FadeInDown } from "react-native-reanimated";
 import { AppColors } from "../../../hooks/useColors";
 import { useThemedStyles } from "../../../hooks/useThemedStyles";
@@ -24,12 +25,11 @@ export function OverviewSection({ overview }: OverviewSectionProps) {
   );
 }
 
-const createStyles = (colors: AppColors) =>
+const createStyles = (colors: AppColors, theme: ThemeTokens) =>
   StyleSheet.create({
-    ...sectionStyles(colors),
+    ...sectionStyles(colors, theme),
     overview: {
-      fontFamily: "Inter_400Regular",
-      fontSize: 15,
+      ...theme.text("body", "regular"),
       color: colors.textSecondary,
       lineHeight: 24,
     },

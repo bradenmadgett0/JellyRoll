@@ -3,6 +3,7 @@
  */
 
 import { Ionicons } from "@expo/vector-icons";
+import type { ThemeTokens } from "@/constants/theme";
 import { useRouter } from "expo-router";
 import { useState } from "react";
 import {
@@ -536,7 +537,7 @@ export default function AddServerScreen() {
   );
 }
 
-const createStyles = (colors: AppColors) =>
+const createStyles = (colors: AppColors, theme: ThemeTokens) =>
   StyleSheet.create({
     container: {
       flex: 1,
@@ -551,14 +552,12 @@ const createStyles = (colors: AppColors) =>
 
     // Steps
     stepTitle: {
-      fontFamily: "Inter_700Bold",
-      fontSize: 24,
+      ...theme.text("h1", "bold"),
       color: colors.text,
       marginBottom: Spacing.sm,
     },
     stepSubtitle: {
-      fontFamily: "Inter_400Regular",
-      fontSize: 15,
+      ...theme.text("body", "regular"),
       color: colors.textSecondary,
       lineHeight: 22,
       marginBottom: Spacing.xxl,
@@ -572,8 +571,7 @@ const createStyles = (colors: AppColors) =>
       marginBottom: Spacing.xl,
     },
     backButtonText: {
-      fontFamily: "Inter_500Medium",
-      fontSize: 14,
+      ...theme.text("bodySmall", "medium"),
       color: colors.primary,
     },
 
@@ -597,14 +595,12 @@ const createStyles = (colors: AppColors) =>
       marginBottom: Spacing.md,
     },
     typeLabel: {
-      fontFamily: "Inter_600SemiBold",
-      fontSize: 18,
+      ...theme.text("h3", "semibold"),
       color: colors.text,
       marginBottom: 4,
     },
     typeDescription: {
-      fontFamily: "Inter_400Regular",
-      fontSize: 13,
+      ...theme.text("caption", "regular"),
       color: colors.textSecondary,
       lineHeight: 18,
     },
@@ -614,24 +610,21 @@ const createStyles = (colors: AppColors) =>
       marginBottom: Spacing.xl,
     },
     inputLabel: {
-      fontFamily: "Inter_500Medium",
-      fontSize: 14,
+      ...theme.text("bodySmall", "medium"),
       color: colors.text,
       marginBottom: Spacing.sm,
     },
     textInput: {
+      ...theme.text("body", "regular"),
       backgroundColor: colors.backgroundTertiary,
       borderRadius: Spacing.radiusMd,
       padding: Spacing.lg,
-      fontSize: 15,
-      fontFamily: "Inter_400Regular",
       color: colors.text,
       borderWidth: 1,
       borderColor: colors.surfaceBorder,
     },
     inputHint: {
-      fontFamily: "Inter_400Regular",
-      fontSize: 12,
+      ...theme.text("label", "regular"),
       color: colors.textTertiary,
       marginTop: Spacing.sm,
       lineHeight: 18,
@@ -659,13 +652,11 @@ const createStyles = (colors: AppColors) =>
       paddingVertical: Spacing.sm,
     },
     httpToggleText: {
-      fontFamily: "Inter_500Medium",
-      fontSize: 14,
+      ...theme.text("bodySmall", "medium"),
       color: colors.text,
     },
     httpWarning: {
-      fontFamily: "Inter_400Regular",
-      fontSize: 12,
+      ...theme.text("label", "regular"),
       color: colors.warning,
       marginTop: 4,
       lineHeight: 18,
@@ -684,8 +675,7 @@ const createStyles = (colors: AppColors) =>
       marginBottom: Spacing.xl,
     },
     errorText: {
-      fontFamily: "Inter_400Regular",
-      fontSize: 13,
+      ...theme.text("caption", "regular"),
       color: colors.error,
       flex: 1,
       lineHeight: 18,
@@ -703,8 +693,7 @@ const createStyles = (colors: AppColors) =>
       marginTop: Spacing.md,
     },
     primaryButtonText: {
-      fontFamily: "Inter_600SemiBold",
-      fontSize: 16,
+      ...theme.text("title", "semibold"),
       color: colors.textInverse,
     },
     secondaryButton: {
@@ -719,8 +708,7 @@ const createStyles = (colors: AppColors) =>
       borderColor: colors.surfaceBorder,
     },
     secondaryButtonText: {
-      fontFamily: "Inter_500Medium",
-      fontSize: 14,
+      ...theme.text("bodySmall", "medium"),
       color: colors.primary,
     },
 
@@ -732,14 +720,12 @@ const createStyles = (colors: AppColors) =>
       paddingVertical: 80,
     },
     testingText: {
-      fontFamily: "Inter_600SemiBold",
-      fontSize: 18,
+      ...theme.text("h3", "semibold"),
       color: colors.text,
       marginTop: Spacing.xxl,
     },
     testingSubtext: {
-      fontFamily: "Inter_400Regular",
-      fontSize: 13,
+      ...theme.text("caption", "regular"),
       color: colors.textTertiary,
       marginTop: Spacing.sm,
     },
@@ -755,26 +741,22 @@ const createStyles = (colors: AppColors) =>
       marginBottom: Spacing.xl,
     },
     successTitle: {
-      fontFamily: "Inter_700Bold",
-      fontSize: 28,
+      ...theme.text("display", "bold"),
       color: colors.success,
       marginBottom: Spacing.sm,
     },
     successServerName: {
-      fontFamily: "Inter_600SemiBold",
-      fontSize: 18,
+      ...theme.text("h3", "semibold"),
       color: colors.text,
       marginBottom: 4,
     },
     successVersion: {
-      fontFamily: "Inter_400Regular",
-      fontSize: 14,
+      ...theme.text("bodySmall", "regular"),
       color: colors.textSecondary,
       marginBottom: Spacing.xl,
     },
     successMessage: {
-      fontFamily: "Inter_400Regular",
-      fontSize: 14,
+      ...theme.text("bodySmall", "regular"),
       color: colors.textSecondary,
       textAlign: "center",
       lineHeight: 22,

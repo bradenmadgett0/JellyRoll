@@ -3,6 +3,7 @@
  */
 
 import { Ionicons } from "@expo/vector-icons";
+import type { ThemeTokens } from "@/constants/theme";
 import { Image, ScrollView, StyleSheet, Text, View } from "react-native";
 import Animated, { FadeInDown } from "react-native-reanimated";
 import { Spacing } from "../../../constants/Spacing";
@@ -56,9 +57,9 @@ export function CastSection({ people }: CastSectionProps) {
   );
 }
 
-const createStyles = (colors: AppColors) =>
+const createStyles = (colors: AppColors, theme: ThemeTokens) =>
   StyleSheet.create({
-    ...sectionStyles(colors),
+    ...sectionStyles(colors, theme),
     castScroll: { marginBottom: Spacing.md },
     castCard: { width: 72, marginRight: Spacing.md, alignItems: "center" },
     castImage: {
@@ -70,14 +71,12 @@ const createStyles = (colors: AppColors) =>
     },
     castImagePlaceholder: { justifyContent: "center", alignItems: "center" },
     castName: {
-      fontFamily: "Inter_500Medium",
-      fontSize: 11,
+      ...theme.text("labelSmall", "medium"),
       color: colors.text,
       textAlign: "center",
     },
     castRole: {
-      fontFamily: "Inter_400Regular",
-      fontSize: 10,
+      ...theme.text("micro", "regular"),
       color: colors.textTertiary,
       textAlign: "center",
     },

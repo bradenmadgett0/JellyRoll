@@ -3,6 +3,7 @@
  */
 
 import { Ionicons } from "@expo/vector-icons";
+import type { ThemeTokens } from "@/constants/theme";
 import { Stack, useRouter } from "expo-router";
 import { useCallback, useMemo, useState } from "react";
 import {
@@ -140,7 +141,7 @@ export default function RadarrScreen() {
           title: "Radarr",
           headerStyle: { backgroundColor: styles.headerBg.backgroundColor },
           headerTintColor: styles.headerTitle.color as string,
-          headerTitleStyle: { fontFamily: "Inter_600SemiBold" },
+          headerTitleStyle: styles.headerTitle,
         }}
       />
 
@@ -234,7 +235,7 @@ export default function RadarrScreen() {
   );
 }
 
-const createStyles = (colors: AppColors) =>
+const createStyles = (colors: AppColors, theme: ThemeTokens) =>
   StyleSheet.create({
     container: { flex: 1, backgroundColor: colors.background },
 
@@ -257,9 +258,8 @@ const createStyles = (colors: AppColors) =>
       gap: Spacing.sm,
     },
     searchInput: {
+      ...theme.text("body", "regular"),
       flex: 1,
-      fontFamily: "Inter_400Regular",
-      fontSize: 15,
       color: colors.text,
       paddingVertical: 4,
     },
@@ -272,8 +272,7 @@ const createStyles = (colors: AppColors) =>
     },
     filterChipActive: { backgroundColor: colors.radarr },
     filterChipText: {
-      fontFamily: "Inter_500Medium",
-      fontSize: 12,
+      ...theme.text("label", "medium"),
       color: colors.textSecondary,
     },
     filterChipTextActive: { color: colors.textInverse },
@@ -285,8 +284,7 @@ const createStyles = (colors: AppColors) =>
     },
     gridRow: { gap: CARD_GAP, marginBottom: CARD_GAP },
     resultCount: {
-      fontFamily: "Inter_400Regular",
-      fontSize: 13,
+      ...theme.text("caption", "regular"),
       color: colors.textTertiary,
       paddingVertical: Spacing.sm,
     },
@@ -320,14 +318,12 @@ const createStyles = (colors: AppColors) =>
     fileBadgeSuccess: { backgroundColor: colors.success },
     fileBadgeMissing: { backgroundColor: colors.badgeMissing },
     movieTitle: {
-      fontFamily: "Inter_500Medium",
-      fontSize: 13,
+      ...theme.text("caption", "medium"),
       color: colors.text,
       lineHeight: 17,
     },
     movieYear: {
-      fontFamily: "Inter_400Regular",
-      fontSize: 11,
+      ...theme.text("labelSmall", "regular"),
       color: colors.textTertiary,
       marginTop: 2,
     },
@@ -336,14 +332,13 @@ const createStyles = (colors: AppColors) =>
     centerLoading: { flex: 1, justifyContent: "center", alignItems: "center" },
     emptyContainer: { paddingTop: 80, alignItems: "center", gap: Spacing.md },
     emptyText: {
-      fontFamily: "Inter_400Regular",
-      fontSize: 15,
+      ...theme.text("body", "regular"),
       color: colors.textTertiary,
     },
 
     // Header
     headerBg: { backgroundColor: colors.backgroundSecondary },
-    headerTitle: { color: colors.text },
+    headerTitle: { ...theme.text("bodySmall", "semibold"), color: colors.text },
 
     // Color tokens for inline use
     iconTertiary: { color: colors.textTertiary },

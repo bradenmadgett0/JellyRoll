@@ -4,14 +4,14 @@
  */
 
 import { Ionicons } from '@expo/vector-icons';
-import { Colors } from './Colors';
+import { BrandColors } from './theme';
 
 /** Brand color for each service source */
 export const SOURCE_COLORS: Record<string, string> = {
-    jellyfin: Colors.jellyfin,
-    sonarr: Colors.sonarr,
-    radarr: Colors.radarr,
-    lidarr: Colors.lidarr,
+    jellyfin: BrandColors.jellyfin,
+    sonarr: BrandColors.sonarr,
+    radarr: BrandColors.radarr,
+    lidarr: BrandColors.lidarr,
 };
 
 /** Icon glyph for each service source */

@@ -3,6 +3,7 @@
  */
 
 import { StyleSheet, Text, View } from "react-native";
+import type { ThemeTokens } from "@/constants/theme";
 import Animated, { FadeInDown } from "react-native-reanimated";
 import { Spacing } from "../../../constants/Spacing";
 import { AppColors } from "../../../hooks/useColors";
@@ -61,9 +62,9 @@ export function MediaInfoSection({ mediaSources }: MediaInfoSectionProps) {
   );
 }
 
-const createStyles = (colors: AppColors) =>
+const createStyles = (colors: AppColors, theme: ThemeTokens) =>
   StyleSheet.create({
-    ...sectionStyles(colors),
+    ...sectionStyles(colors, theme),
     mediaInfoCard: {
       backgroundColor: colors.backgroundTertiary,
       borderRadius: Spacing.radiusMd,
@@ -73,8 +74,7 @@ const createStyles = (colors: AppColors) =>
       marginBottom: Spacing.sm,
     },
     mediaInfoName: {
-      fontFamily: "Inter_600SemiBold",
-      fontSize: 14,
+      ...theme.text("bodySmall", "semibold"),
       color: colors.text,
       marginBottom: Spacing.sm,
     },
@@ -91,13 +91,11 @@ const createStyles = (colors: AppColors) =>
       backgroundColor: colors.surfaceHover,
     },
     mediaInfoChipText: {
-      fontFamily: "Inter_500Medium",
-      fontSize: 11,
+      ...theme.text("labelSmall", "medium"),
       color: colors.textSecondary,
     },
     mediaStreamText: {
-      fontFamily: "Inter_400Regular",
-      fontSize: 12,
+      ...theme.text("label", "regular"),
       color: colors.textTertiary,
       marginTop: 2,
     },

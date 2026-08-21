@@ -7,6 +7,10 @@
  */
 
 import AudioStreamSelector from "@/components/media/AudioStreamSelector";
+import type { ThemeTokens } from "@/constants/theme";
+import type { AppColors } from "@/hooks/useColors";
+import { useTheme } from "@/hooks/useTheme";
+import { useThemedStyles } from "@/hooks/useThemedStyles";
 import { Ionicons } from "@expo/vector-icons";
 import { useEventListener } from "expo";
 import { useRouter } from "expo-router";
@@ -77,6 +81,8 @@ export default function PlayerOverlay({
   onAudioStreamChange,
 }: PlayerOverlayProps) {
   const router = useRouter();
+  const theme = useTheme();
+  const styles = useThemedStyles(createStyles);
 
   const [isPlaying, setIsPlaying] = useState(player.playing);
   const [currentTime, setCurrentTime] = useState(player.currentTime);
@@ -251,7 +257,7 @@ export default function PlayerOverlay({
             style={styles.controlBtn}
             hitSlop={12}
           >
-            <Ionicons name="arrow-back" size={24} color="#fff" />
+            <Ionicons name="arrow-back" size={24} color={theme.overlay.text} />
           </TouchableOpacity>
           <View style={styles.titleContainer}>
             <Text style={styles.title} numberOfLines={1}>
@@ -282,7 +288,7 @@ export default function PlayerOverlay({
             style={styles.skipBtn}
             hitSlop={16}
           >
-            <Ionicons name="play-back" size={28} color="#fff" />
+            <Ionicons name="play-back" size={28} color={theme.overlay.text} />
             <Text style={styles.skipLabel}>10</Text>
           </TouchableOpacity>
 
@@ -294,7 +300,7 @@ export default function PlayerOverlay({
             <Ionicons
               name={isPlaying ? "pause" : "play"}
               size={38}
-              color="#fff"
+              color={theme.overlay.text}
             />
           </TouchableOpacity>
 
@@ -303,7 +309,7 @@ export default function PlayerOverlay({
             style={styles.skipBtn}
             hitSlop={16}
           >
-            <Ionicons name="play-forward" size={28} color="#fff" />
+            <Ionicons name="play-forward" size={28} color={theme.overlay.text} />
             <Text style={styles.skipLabel}>10</Text>
           </TouchableOpacity>
         </View>
@@ -351,7 +357,7 @@ export default function PlayerOverlay({
               <Ionicons
                 name="settings-sharp"
                 size={18}
-                color="rgba(255,255,255,0.8)"
+                color={theme.overlay.icon}
               />
               <Text style={styles.qualityBtnLabel}>
                 {selectedQuality.label}
@@ -403,7 +409,7 @@ export default function PlayerOverlay({
                       {preset.label}
                     </Text>
                     {isActive && (
-                      <Ionicons name="checkmark" size={18} color="#fff" />
+                      <Ionicons name="checkmark" size={18} color={theme.overlay.text} />
                     )}
                   </TouchableOpacity>
                 );
@@ -417,217 +423,212 @@ export default function PlayerOverlay({
 }
 
 // ─── Styles ─────────────────────────────────────────────────
-const styles = StyleSheet.create({
-  overlay: {
-    ...StyleSheet.absoluteFillObject,
-    justifyContent: "space-between",
-    zIndex: 10,
-  },
+// The player chrome sits over video, so it draws entirely from the fixed
+// overlay tokens rather than the themed palette — hence the unused `colors`.
+const createStyles = (_colors: AppColors, theme: ThemeTokens) =>
+  StyleSheet.create({
+    overlay: {
+      ...StyleSheet.absoluteFillObject,
+      justifyContent: "space-between",
+      zIndex: 10,
+    },
 
-  // Gradient scrims
-  scrimTop: {
-    position: "absolute",
-    top: 0,
-    left: 0,
-    right: 0,
-    height: 120,
-    backgroundColor: "transparent",
-    // Simulated gradient via opacity
-    borderTopLeftRadius: 0,
-    borderTopRightRadius: 0,
-  },
-  scrimBottom: {
-    position: "absolute",
-    bottom: 0,
-    left: 0,
-    right: 0,
-    height: 140,
-    backgroundColor: "rgba(0,0,0,0.6)",
-  },
+    // Gradient scrims
+    scrimTop: {
+      position: "absolute",
+      top: 0,
+      left: 0,
+      right: 0,
+      height: 120,
+      backgroundColor: "transparent",
+      // Simulated gradient via opacity
+      borderTopLeftRadius: 0,
+      borderTopRightRadius: 0,
+    },
+    scrimBottom: {
+      position: "absolute",
+      bottom: 0,
+      left: 0,
+      right: 0,
+      height: 140,
+      backgroundColor: theme.overlay.scrimBottom,
+    },
 
-  // Top bar
-  topBar: {
-    flexDirection: "row",
-    alignItems: "center",
-    paddingTop: 54,
-    paddingHorizontal: Spacing.screenPadding,
-    paddingBottom: Spacing.md,
-    backgroundColor: "rgba(0,0,0,0.5)",
-  },
-  controlBtn: {
-    width: 44,
-    height: 44,
-    justifyContent: "center",
-    alignItems: "center",
-  },
-  titleContainer: {
-    flex: 1,
-    marginHorizontal: Spacing.sm,
-    alignItems: "center",
-  },
-  title: {
-    fontFamily: "Inter_600SemiBold",
-    fontSize: 15,
-    color: "#fff",
-    textAlign: "center",
-  },
-  subtitle: {
-    fontFamily: "Inter_400Regular",
-    fontSize: 12,
-    color: "rgba(255,255,255,0.7)",
-    marginTop: 2,
-    textAlign: "center",
-  },
+    // Top bar
+    topBar: {
+      flexDirection: "row",
+      alignItems: "center",
+      paddingTop: 54,
+      paddingHorizontal: Spacing.screenPadding,
+      paddingBottom: Spacing.md,
+      backgroundColor: theme.overlay.scrimTop,
+    },
+    controlBtn: {
+      width: 44,
+      height: 44,
+      justifyContent: "center",
+      alignItems: "center",
+    },
+    titleContainer: {
+      flex: 1,
+      marginHorizontal: Spacing.sm,
+      alignItems: "center",
+    },
+    title: {
+      ...theme.text("body", "semibold"),
+      color: theme.overlay.text,
+      textAlign: "center",
+    },
+    subtitle: {
+      ...theme.text("label", "regular"),
+      color: theme.overlay.textSecondary,
+      marginTop: 2,
+      textAlign: "center",
+    },
 
-  // Center controls
-  centerControls: {
-    flexDirection: "row",
-    justifyContent: "center",
-    alignItems: "center",
-    gap: 48,
-  },
-  skipBtn: {
-    alignItems: "center",
-    justifyContent: "center",
-    width: 56,
-    height: 56,
-  },
-  skipLabel: {
-    fontFamily: "Inter_600SemiBold",
-    fontSize: 10,
-    color: "rgba(255,255,255,0.8)",
-    marginTop: -4,
-  },
-  playPauseBtn: {
-    width: 72,
-    height: 72,
-    borderRadius: 36,
-    backgroundColor: "rgba(255,255,255,0.15)",
-    justifyContent: "center",
-    alignItems: "center",
-  },
+    // Center controls
+    centerControls: {
+      flexDirection: "row",
+      justifyContent: "center",
+      alignItems: "center",
+      gap: 48,
+    },
+    skipBtn: {
+      alignItems: "center",
+      justifyContent: "center",
+      width: 56,
+      height: 56,
+    },
+    skipLabel: {
+      ...theme.text("micro", "semibold"),
+      color: theme.overlay.icon,
+      marginTop: -4,
+    },
+    playPauseBtn: {
+      width: 72,
+      height: 72,
+      borderRadius: 36,
+      backgroundColor: theme.overlay.controlActive,
+      justifyContent: "center",
+      alignItems: "center",
+    },
 
-  // Bottom bar
-  bottomBar: {
-    paddingHorizontal: Spacing.screenPadding,
-    paddingBottom: 40,
-  },
-  scrubberRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: Spacing.sm,
-  },
-  timeLabel: {
-    fontFamily: "Inter_500Medium",
-    fontSize: 12,
-    color: "rgba(255,255,255,0.85)",
-    minWidth: 45,
-    textAlign: "center",
-  },
-  scrubberTrack: {
-    flex: 1,
-    height: 32,
-    justifyContent: "center",
-  },
-  scrubberFill: {
-    position: "absolute",
-    left: 0,
-    height: 4,
-    borderRadius: 2,
-    backgroundColor: "#fff",
-  },
-  scrubberThumb: {
-    position: "absolute",
-    width: 14,
-    height: 14,
-    borderRadius: 7,
-    backgroundColor: "#fff",
-    marginLeft: -7,
-    top: 9,
-    elevation: 3,
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.3,
-    shadowRadius: 2,
-  },
-  bitrateLabel: {
-    fontFamily: "Inter_400Regular",
-    fontSize: 11,
-    color: "rgba(255,255,255,0.5)",
-    textAlign: "right",
-    marginTop: 4,
-  },
-  bottomMeta: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-    marginTop: 6,
-  },
-  qualityBtn: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 4,
-    paddingVertical: 4,
-    paddingHorizontal: 8,
-    borderRadius: 6,
-    backgroundColor: "rgba(255,255,255,0.12)",
-  },
-  qualityBtnLabel: {
-    fontFamily: "Inter_500Medium",
-    fontSize: 11,
-    color: "rgba(255,255,255,0.85)",
-  },
+    // Bottom bar
+    bottomBar: {
+      paddingHorizontal: Spacing.screenPadding,
+      paddingBottom: 40,
+    },
+    scrubberRow: {
+      flexDirection: "row",
+      alignItems: "center",
+      gap: Spacing.sm,
+    },
+    timeLabel: {
+      ...theme.text("label", "medium"),
+      color: theme.overlay.textMuted,
+      minWidth: 45,
+      textAlign: "center",
+    },
+    scrubberTrack: {
+      flex: 1,
+      height: 32,
+      justifyContent: "center",
+    },
+    scrubberFill: {
+      position: "absolute",
+      left: 0,
+      height: 4,
+      borderRadius: 2,
+      backgroundColor: theme.overlay.text,
+    },
+    scrubberThumb: {
+      position: "absolute",
+      width: 14,
+      height: 14,
+      borderRadius: 7,
+      backgroundColor: theme.overlay.text,
+      marginLeft: -7,
+      top: 9,
+      elevation: 3,
+      shadowColor: theme.overlay.shadow,
+      shadowOffset: { width: 0, height: 1 },
+      shadowOpacity: 0.3,
+      shadowRadius: 2,
+    },
+    bitrateLabel: {
+      ...theme.text("labelSmall", "regular"),
+      color: theme.overlay.textFaint,
+      textAlign: "right",
+      marginTop: 4,
+    },
+    bottomMeta: {
+      flexDirection: "row",
+      justifyContent: "space-between",
+      alignItems: "center",
+      marginTop: 6,
+    },
+    qualityBtn: {
+      flexDirection: "row",
+      alignItems: "center",
+      gap: 4,
+      paddingVertical: 4,
+      paddingHorizontal: 8,
+      borderRadius: 6,
+      backgroundColor: theme.overlay.control,
+    },
+    qualityBtnLabel: {
+      ...theme.text("labelSmall", "medium"),
+      color: theme.overlay.textMuted,
+    },
 
-  modalOverlayContainer: {
-    width: "100%",
-    height: "100%",
-    justifyContent: "center",
-    alignItems: "center",
-    zIndex: 20,
-    position: "absolute",
-  },
+    modalOverlayContainer: {
+      width: "100%",
+      height: "100%",
+      justifyContent: "center",
+      alignItems: "center",
+      zIndex: 20,
+      position: "absolute",
+    },
 
-  // Quality picker modal
-  pickerBackdrop: {
-    ...StyleSheet.absoluteFillObject,
-    backgroundColor: "rgba(0,0,0,0.6)",
-    justifyContent: "center",
-    alignItems: "center",
-    zIndex: 20,
-  },
-  pickerContainer: {
-    backgroundColor: "rgba(30,30,30,0.95)",
-    borderRadius: 16,
-    paddingVertical: 16,
-    paddingHorizontal: 8,
-    minWidth: 240,
-    maxWidth: 300,
-  },
-  pickerTitle: {
-    fontFamily: "Inter_600SemiBold",
-    fontSize: 15,
-    color: "#fff",
-    textAlign: "center",
-    marginBottom: 12,
-  },
-  pickerOption: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-    paddingVertical: 10,
-    paddingHorizontal: 16,
-    borderRadius: 8,
-  },
-  pickerOptionActive: {
-    backgroundColor: "rgba(255,255,255,0.12)",
-  },
-  pickerOptionText: {
-    fontFamily: "Inter_400Regular",
-    fontSize: 14,
-    color: "rgba(255,255,255,0.7)",
-  },
-  pickerOptionTextActive: {
-    fontFamily: "Inter_600SemiBold",
-    color: "#fff",
-  },
-});
+    // Quality picker modal
+    pickerBackdrop: {
+      ...StyleSheet.absoluteFillObject,
+      backgroundColor: theme.overlay.backdrop,
+      justifyContent: "center",
+      alignItems: "center",
+      zIndex: 20,
+    },
+    pickerContainer: {
+      backgroundColor: theme.overlay.surface,
+      borderRadius: 16,
+      paddingVertical: 16,
+      paddingHorizontal: 8,
+      minWidth: 240,
+      maxWidth: 300,
+    },
+    pickerTitle: {
+      ...theme.text("body", "semibold"),
+      color: theme.overlay.text,
+      textAlign: "center",
+      marginBottom: 12,
+    },
+    pickerOption: {
+      flexDirection: "row",
+      justifyContent: "space-between",
+      alignItems: "center",
+      paddingVertical: 10,
+      paddingHorizontal: 16,
+      borderRadius: 8,
+    },
+    pickerOptionActive: {
+      backgroundColor: theme.overlay.control,
+    },
+    pickerOptionText: {
+      ...theme.text("bodySmall", "regular"),
+      color: theme.overlay.textSecondary,
+    },
+    pickerOptionTextActive: {
+      ...theme.text("bodySmall", "semibold"),
+      color: theme.overlay.text,
+    },
+    });

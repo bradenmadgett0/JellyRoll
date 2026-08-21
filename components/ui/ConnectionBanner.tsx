@@ -3,6 +3,7 @@
  */
 
 import { Ionicons } from "@expo/vector-icons";
+import type { ThemeTokens } from "@/constants/theme";
 import { useEffect } from "react";
 import { StyleSheet, Text, TouchableOpacity, View } from "react-native";
 import Animated, {
@@ -75,7 +76,7 @@ export function ConnectionBanner({
   );
 }
 
-const createStyles = (colors: AppColors) =>
+const createStyles = (colors: AppColors, theme: ThemeTokens) =>
   StyleSheet.create({
     container: {
       overflow: "hidden",
@@ -92,9 +93,8 @@ const createStyles = (colors: AppColors) =>
       height: 52,
     },
     text: {
+      ...theme.text("caption", "medium"),
       flex: 1,
-      fontFamily: "Inter_500Medium",
-      fontSize: 13,
       color: colors.warning,
     },
     retryBtn: {
@@ -107,8 +107,7 @@ const createStyles = (colors: AppColors) =>
       backgroundColor: colors.surfaceHover,
     },
     retryText: {
-      fontFamily: "Inter_500Medium",
-      fontSize: 12,
+      ...theme.text("label", "medium"),
       color: colors.text,
     },
 

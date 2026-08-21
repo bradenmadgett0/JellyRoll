@@ -3,6 +3,7 @@
  */
 
 import { Ionicons } from "@expo/vector-icons";
+import type { ThemeTokens } from "@/constants/theme";
 import { useQueryClient } from "@tanstack/react-query";
 import { useRouter } from "expo-router";
 import { useMemo } from "react";
@@ -284,7 +285,7 @@ export default function ManageScreen() {
   );
 }
 
-const createStyles = (colors: AppColors) =>
+const createStyles = (colors: AppColors, theme: ThemeTokens) =>
   StyleSheet.create({
     container: { flex: 1, backgroundColor: colors.background },
 
@@ -298,13 +299,11 @@ const createStyles = (colors: AppColors) =>
     },
     emptyContent: { alignItems: "center", gap: Spacing.md },
     emptyTitle: {
-      fontFamily: "Inter_600SemiBold",
-      fontSize: 22,
+      ...theme.text("h2", "semibold"),
       color: colors.text,
     },
     emptySubtitle: {
-      fontFamily: "Inter_400Regular",
-      fontSize: 15,
+      ...theme.text("body", "regular"),
       color: colors.textSecondary,
       textAlign: "center",
       lineHeight: 22,
@@ -320,8 +319,7 @@ const createStyles = (colors: AppColors) =>
       marginTop: Spacing.md,
     },
     addButtonText: {
-      fontFamily: "Inter_600SemiBold",
-      fontSize: 15,
+      ...theme.text("body", "semibold"),
       color: colors.textInverse,
     },
 
@@ -343,22 +341,19 @@ const createStyles = (colors: AppColors) =>
       borderColor: colors.surfaceBorder,
     },
     summaryValue: {
-      fontFamily: "Inter_700Bold",
-      fontSize: 28,
+      ...theme.text("display", "bold"),
       color: colors.text,
     },
     summaryValueHighlight: { color: colors.badgeDownloading },
     summaryLabel: {
-      fontFamily: "Inter_400Regular",
-      fontSize: 12,
+      ...theme.text("label", "regular"),
       color: colors.textTertiary,
       marginTop: 4,
     },
 
     // Sections
     sectionTitle: {
-      fontFamily: "Inter_600SemiBold",
-      fontSize: 18,
+      ...theme.text("h3", "semibold"),
       color: colors.text,
       paddingHorizontal: Spacing.screenPadding,
       marginTop: Spacing.xl,
@@ -386,13 +381,11 @@ const createStyles = (colors: AppColors) =>
     },
     serviceInfo: { flex: 1, marginLeft: Spacing.md },
     serviceName: {
-      fontFamily: "Inter_600SemiBold",
-      fontSize: 16,
+      ...theme.text("title", "semibold"),
       color: colors.text,
     },
     serviceType: {
-      fontFamily: "Inter_400Regular",
-      fontSize: 12,
+      ...theme.text("label", "regular"),
       color: colors.textTertiary,
       textTransform: "capitalize",
       marginTop: 2,
@@ -407,7 +400,8 @@ const createStyles = (colors: AppColors) =>
       borderRadius: Spacing.radiusSm,
       alignSelf: "flex-start",
     },
-    queueBadgeText: { fontFamily: "Inter_500Medium", fontSize: 12 },
+    queueBadgeText: {
+      ...theme.text("label", "medium") },
 
     // Queue
     queueCardWrapper: { paddingHorizontal: Spacing.screenPadding },

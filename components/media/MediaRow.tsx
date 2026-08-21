@@ -3,6 +3,7 @@
  */
 
 import { Ionicons } from "@expo/vector-icons";
+import type { ThemeTokens } from "@/constants/theme";
 import {
   ActivityIndicator,
   ScrollView,
@@ -86,7 +87,7 @@ export function MediaRow({
   );
 }
 
-const createStyles = (colors: AppColors) =>
+const createStyles = (colors: AppColors, theme: ThemeTokens) =>
   StyleSheet.create({
     container: {
       marginBottom: Spacing.xxl,
@@ -99,8 +100,7 @@ const createStyles = (colors: AppColors) =>
       marginBottom: Spacing.md,
     },
     title: {
-      fontFamily: "Inter_600SemiBold",
-      fontSize: 18,
+      ...theme.text("h3", "semibold"),
       color: colors.text,
     },
     seeAllBtn: {
@@ -109,8 +109,7 @@ const createStyles = (colors: AppColors) =>
       gap: 2,
     },
     seeAllText: {
-      fontFamily: "Inter_500Medium",
-      fontSize: 13,
+      ...theme.text("caption", "medium"),
       color: colors.primary,
     },
     scrollContent: {
@@ -132,8 +131,7 @@ const createStyles = (colors: AppColors) =>
       borderColor: colors.surfaceBorder,
     },
     emptyText: {
-      fontFamily: "Inter_400Regular",
-      fontSize: 13,
+      ...theme.text("caption", "regular"),
       color: colors.textTertiary,
     },
 

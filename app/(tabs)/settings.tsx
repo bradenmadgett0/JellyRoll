@@ -3,6 +3,7 @@
  */
 
 import { Ionicons } from "@expo/vector-icons";
+import type { ThemeTokens } from "@/constants/theme";
 import { useRouter } from "expo-router";
 import {
   Alert,
@@ -22,6 +23,8 @@ import { AppColors } from "../../hooks/useColors";
 import { useThemedStyles } from "../../hooks/useThemedStyles";
 import { useServerStore } from "../../services/stores/serverStore";
 import { useSettingsStore } from "../../services/stores/settingsStore";
+import { themes } from "../../constants/theme";
+import { SYSTEM_THEME, useThemeStore } from "../../services/stores/themeStore";
 import { SERVER_TYPE_LABELS } from "../../types/server";
 
 const QUALITY_OPTIONS = [
@@ -38,35 +41,19 @@ const REFRESH_OPTIONS = [
   { label: "60s", value: 60 },
 ] as const;
 
-const THEME_OPTIONS = [
-  {
-    label: "Dark",
-    value: "dark" as const,
-    icon: "moon" as keyof typeof Ionicons.glyphMap,
-  },
-  {
-    label: "Light",
-    value: "light" as const,
-    icon: "sunny" as keyof typeof Ionicons.glyphMap,
-  },
-  {
-    label: "System",
-    value: "system" as const,
-    icon: "phone-portrait" as keyof typeof Ionicons.glyphMap,
-  },
-];
 
 export default function SettingsScreen() {
   const router = useRouter();
   const styles = useThemedStyles(createStyles);
   const { servers, removeServer } = useServerStore();
+  const activeThemeId = useThemeStore((st) => st.activeThemeId);
+  const setActiveTheme = useThemeStore((st) => st.setActiveTheme);
+
   const {
-    theme,
     streamQuality,
     autoRefreshInterval,
     showSubtitles,
     enableNotifications,
-    setTheme,
     setStreamQuality,
     setAutoRefreshInterval,
     setShowSubtitles,
@@ -305,37 +292,83 @@ export default function SettingsScreen() {
               />
               <Text style={styles.settingLabel}>Theme</Text>
             </View>
-            <View style={styles.segmentRow}>
-              {THEME_OPTIONS.map((opt) => (
-                <TouchableOpacity
-                  key={opt.value}
-                  style={[
-                    styles.segmentBtn,
-                    theme === opt.value && styles.segmentBtnActive,
-                  ]}
-                  onPress={() => setTheme(opt.value)}
-                  activeOpacity={0.7}
-                >
+            <View style={styles.themeList}>
+              <TouchableOpacity
+                style={[
+                  styles.themeRow,
+                  activeThemeId === SYSTEM_THEME && styles.themeRowActive,
+                ]}
+                onPress={() => setActiveTheme(SYSTEM_THEME)}
+                activeOpacity={0.7}
+              >
+                <View style={styles.swatchGroup}>
                   <Ionicons
-                    name={opt.icon}
-                    size={14}
-                    color={
-                      theme === opt.value
-                        ? (styles.segmentTextActive.color as string)
-                        : (styles.segmentText.color as string)
-                    }
-                    style={{ marginBottom: 2 }}
+                    name="phone-portrait"
+                    size={16}
+                    color={styles.themeName.color as string}
                   />
-                  <Text
-                    style={[
-                      styles.segmentText,
-                      theme === opt.value && styles.segmentTextActive,
-                    ]}
+                </View>
+                <Text
+                  style={[
+                    styles.themeName,
+                    activeThemeId === SYSTEM_THEME && styles.themeNameActive,
+                  ]}
+                >
+                  Follow system
+                </Text>
+                {activeThemeId === SYSTEM_THEME && (
+                  <Ionicons
+                    name="checkmark"
+                    size={18}
+                    color={styles.themeNameActive.color as string}
+                  />
+                )}
+              </TouchableOpacity>
+
+              {themes.map((option) => {
+                const isActive = activeThemeId === option.id;
+                return (
+                  <TouchableOpacity
+                    key={option.id}
+                    style={[styles.themeRow, isActive && styles.themeRowActive]}
+                    onPress={() => setActiveTheme(option.id)}
+                    activeOpacity={0.7}
                   >
-                    {opt.label}
-                  </Text>
-                </TouchableOpacity>
-              ))}
+                    <View style={styles.swatchGroup}>
+                      <View
+                        style={[
+                          styles.swatch,
+                          { backgroundColor: option.colors.background },
+                        ]}
+                      />
+                      <View
+                        style={[
+                          styles.swatch,
+                          { backgroundColor: option.colors.primary },
+                        ]}
+                      />
+                      <View
+                        style={[
+                          styles.swatch,
+                          { backgroundColor: option.colors.accent },
+                        ]}
+                      />
+                    </View>
+                    <Text
+                      style={[styles.themeName, isActive && styles.themeNameActive]}
+                    >
+                      {option.name}
+                    </Text>
+                    {isActive && (
+                      <Ionicons
+                        name="checkmark"
+                        size={18}
+                        color={styles.themeNameActive.color as string}
+                      />
+                    )}
+                  </TouchableOpacity>
+                );
+              })}
             </View>
           </View>
         </Animated.View>
@@ -384,7 +417,7 @@ export default function SettingsScreen() {
   );
 }
 
-const createStyles = (colors: AppColors) =>
+const createStyles = (colors: AppColors, theme: ThemeTokens) =>
   StyleSheet.create({
     container: { flex: 1, backgroundColor: colors.background },
     // Sections
@@ -397,8 +430,7 @@ const createStyles = (colors: AppColors) =>
       marginBottom: Spacing.md,
     },
     sectionTitle: {
-      fontFamily: "Inter_600SemiBold",
-      fontSize: 14,
+      ...theme.text("bodySmall", "semibold"),
       color: colors.textSecondary,
       textTransform: "uppercase",
       letterSpacing: 0.5,
@@ -418,8 +450,7 @@ const createStyles = (colors: AppColors) =>
       borderColor: colors.surfaceBorder,
     },
     emptyServersText: {
-      fontFamily: "Inter_400Regular",
-      fontSize: 14,
+      ...theme.text("bodySmall", "regular"),
       color: colors.textTertiary,
     },
     serverRow: {
@@ -449,13 +480,11 @@ const createStyles = (colors: AppColors) =>
     },
     serverInfo: { flex: 1 },
     serverName: {
-      fontFamily: "Inter_600SemiBold",
-      fontSize: 15,
+      ...theme.text("body", "semibold"),
       color: colors.text,
     },
     serverMeta: {
-      fontFamily: "Inter_400Regular",
-      fontSize: 12,
+      ...theme.text("label", "regular"),
       color: colors.textSecondary,
       marginTop: 2,
     },
@@ -479,8 +508,7 @@ const createStyles = (colors: AppColors) =>
       gap: Spacing.md,
     },
     settingLabel: {
-      fontFamily: "Inter_500Medium",
-      fontSize: 15,
+      ...theme.text("body", "medium"),
       color: colors.text,
     },
     settingValue: {
@@ -489,8 +517,7 @@ const createStyles = (colors: AppColors) =>
       gap: Spacing.xs,
     },
     settingValueText: {
-      fontFamily: "Inter_400Regular",
-      fontSize: 14,
+      ...theme.text("bodySmall", "regular"),
       color: colors.textSecondary,
     },
 
@@ -510,6 +537,41 @@ const createStyles = (colors: AppColors) =>
       gap: Spacing.md,
       marginBottom: Spacing.md,
     },
+    themeList: { gap: Spacing.xs },
+    themeRow: {
+      flexDirection: "row",
+      alignItems: "center",
+      gap: Spacing.md,
+      paddingVertical: Spacing.sm,
+      paddingHorizontal: Spacing.md,
+      borderRadius: Spacing.radiusMd,
+      backgroundColor: colors.backgroundTertiary,
+    },
+    themeRowActive: {
+      backgroundColor: colors.primary + "22",
+      borderWidth: 1,
+      borderColor: colors.primary,
+    },
+    swatchGroup: {
+      flexDirection: "row",
+      alignItems: "center",
+      gap: 2,
+      width: 44,
+    },
+    swatch: {
+      width: 12,
+      height: 12,
+      borderRadius: Spacing.radiusFull,
+      borderWidth: 1,
+      borderColor: colors.surfaceBorder,
+    },
+    themeName: {
+      ...theme.text("bodySmall", "medium"),
+      color: colors.textSecondary,
+      flex: 1,
+    },
+    themeNameActive: { color: colors.text },
+
     segmentRow: { flexDirection: "row", gap: Spacing.sm },
     segmentBtn: {
       flex: 1,
@@ -524,8 +586,7 @@ const createStyles = (colors: AppColors) =>
       borderColor: colors.primary + "50",
     },
     segmentText: {
-      fontFamily: "Inter_500Medium",
-      fontSize: 13,
+      ...theme.text("caption", "medium"),
       color: colors.textTertiary,
     },
     segmentTextActive: { color: colors.primary },
@@ -550,20 +611,17 @@ const createStyles = (colors: AppColors) =>
       marginBottom: Spacing.md,
     },
     aboutAppName: {
-      fontFamily: "Inter_700Bold",
-      fontSize: 22,
+      ...theme.text("h2", "bold"),
       color: colors.text,
       marginBottom: 4,
     },
     aboutVersion: {
-      fontFamily: "Inter_400Regular",
-      fontSize: 13,
+      ...theme.text("caption", "regular"),
       color: colors.textSecondary,
       marginBottom: Spacing.md,
     },
     aboutDescription: {
-      fontFamily: "Inter_400Regular",
-      fontSize: 14,
+      ...theme.text("bodySmall", "regular"),
       color: colors.textTertiary,
       textAlign: "center",
     },
@@ -581,8 +639,7 @@ const createStyles = (colors: AppColors) =>
       alignItems: "flex-start",
     },
     securityText: {
-      fontFamily: "Inter_400Regular",
-      fontSize: 13,
+      ...theme.text("caption", "regular"),
       color: colors.textSecondary,
       flex: 1,
       lineHeight: 20,

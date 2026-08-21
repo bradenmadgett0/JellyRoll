@@ -4,6 +4,7 @@
  */
 
 import { Ionicons } from "@expo/vector-icons";
+import type { ThemeTokens } from "@/constants/theme";
 import { memo } from "react";
 import { Image, StyleSheet, Text, TouchableOpacity, View } from "react-native";
 import Animated, { FadeIn } from "react-native-reanimated";
@@ -135,7 +136,7 @@ function MediaCardBase({
 
 export const MediaCard = memo(MediaCardBase);
 
-const createStyles = (colors: AppColors) =>
+const createStyles = (colors: AppColors, theme: ThemeTokens) =>
   StyleSheet.create({
     container: {
       marginRight: Spacing.md,
@@ -184,8 +185,7 @@ const createStyles = (colors: AppColors) =>
       borderRadius: Spacing.radiusSm,
     },
     badgeText: {
-      fontFamily: "Inter_600SemiBold",
-      fontSize: 9,
+      ...theme.text("micro", "semibold"),
       color: colors.text,
       textTransform: "uppercase",
       letterSpacing: 0.5,
@@ -205,21 +205,18 @@ const createStyles = (colors: AppColors) =>
       borderRadius: Spacing.radiusSm,
     },
     ratingText: {
-      fontFamily: "Inter_600SemiBold",
-      fontSize: 10,
+      ...theme.text("micro", "semibold"),
       color: colors.text,
     },
 
     // Text
     title: {
-      fontFamily: "Inter_500Medium",
-      fontSize: 13,
+      ...theme.text("caption", "medium"),
       color: colors.text,
       lineHeight: 17,
     },
     subtitle: {
-      fontFamily: "Inter_400Regular",
-      fontSize: 11,
+      ...theme.text("labelSmall", "regular"),
       color: colors.textSecondary,
       marginTop: 2,
     },

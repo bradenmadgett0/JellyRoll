@@ -3,6 +3,7 @@
  */
 
 import { Ionicons } from "@expo/vector-icons";
+import type { ThemeTokens } from "@/constants/theme";
 import { useQueryClient } from "@tanstack/react-query";
 import { useRouter } from "expo-router";
 import { useCallback, useMemo, useState } from "react";
@@ -457,7 +458,7 @@ export default function HomeScreen() {
   );
 }
 
-const createStyles = (colors: AppColors) =>
+const createStyles = (colors: AppColors, theme: ThemeTokens) =>
   StyleSheet.create({
     container: { flex: 1, backgroundColor: colors.background },
     loadingContainer: {
@@ -467,9 +468,8 @@ const createStyles = (colors: AppColors) =>
       alignItems: "center",
     },
     loadingText: {
+      ...theme.text("title", "medium"),
       color: colors.textSecondary,
-      fontSize: 16,
-      fontFamily: "Inter_500Medium",
     },
 
     // Empty state
@@ -491,15 +491,13 @@ const createStyles = (colors: AppColors) =>
       marginBottom: Spacing.xxl,
     },
     emptyTitle: {
-      fontFamily: "Inter_700Bold",
-      fontSize: 28,
+      ...theme.text("display", "bold"),
       color: colors.text,
       marginBottom: Spacing.md,
       textAlign: "center",
     },
     emptySubtitle: {
-      fontFamily: "Inter_400Regular",
-      fontSize: 16,
+      ...theme.text("title", "regular"),
       color: colors.textSecondary,
       textAlign: "center",
       lineHeight: 24,
@@ -515,8 +513,7 @@ const createStyles = (colors: AppColors) =>
       gap: Spacing.sm,
     },
     addServerButtonText: {
-      fontFamily: "Inter_600SemiBold",
-      fontSize: 16,
+      ...theme.text("title", "semibold"),
       color: colors.textInverse,
     },
 
@@ -529,10 +526,10 @@ const createStyles = (colors: AppColors) =>
       paddingTop: Spacing.xl,
       paddingBottom: Spacing.lg,
     },
-    greeting: { fontFamily: "Inter_700Bold", fontSize: 28, color: colors.text },
+    greeting: {
+      ...theme.text("display", "bold"), color: colors.text },
     subtitle: {
-      fontFamily: "Inter_400Regular",
-      fontSize: 14,
+      ...theme.text("bodySmall", "regular"),
       color: colors.textSecondary,
       marginTop: 2,
     },
@@ -572,22 +569,19 @@ const createStyles = (colors: AppColors) =>
       marginBottom: Spacing.sm,
     },
     serverCardName: {
-      fontFamily: "Inter_600SemiBold",
-      fontSize: 13,
+      ...theme.text("caption", "semibold"),
       color: colors.text,
       marginBottom: 2,
     },
     serverCardType: {
-      fontFamily: "Inter_400Regular",
-      fontSize: 11,
+      ...theme.text("labelSmall", "regular"),
       color: colors.textTertiary,
       textTransform: "capitalize",
     },
 
     // Sections
     sectionTitle: {
-      fontFamily: "Inter_600SemiBold",
-      fontSize: 18,
+      ...theme.text("h3", "semibold"),
       color: colors.text,
       paddingHorizontal: Spacing.screenPadding,
       marginTop: Spacing.xl,
@@ -596,8 +590,7 @@ const createStyles = (colors: AppColors) =>
     queueContainer: { paddingHorizontal: Spacing.screenPadding },
     seeMoreQueue: { alignItems: "center", paddingVertical: Spacing.md },
     seeMoreText: {
-      fontFamily: "Inter_500Medium",
-      fontSize: 13,
+      ...theme.text("caption", "medium"),
       color: colors.primary,
     },
 
@@ -618,8 +611,7 @@ const createStyles = (colors: AppColors) =>
       gap: Spacing.sm,
     },
     quickActionText: {
-      fontFamily: "Inter_500Medium",
-      fontSize: 13,
+      ...theme.text("caption", "medium"),
       color: colors.text,
     },
 

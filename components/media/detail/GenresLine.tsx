@@ -3,6 +3,7 @@
  */
 
 import { StyleSheet, Text } from "react-native";
+import type { ThemeTokens } from "@/constants/theme";
 import { Spacing } from "../../../constants/Spacing";
 import { AppColors } from "../../../hooks/useColors";
 import { useThemedStyles } from "../../../hooks/useThemedStyles";
@@ -18,11 +19,10 @@ export function GenresLine({ genres }: GenresLineProps) {
   return <Text style={styles.genres}>{genres.join(" · ")}</Text>;
 }
 
-const createStyles = (colors: AppColors) =>
+const createStyles = (colors: AppColors, theme: ThemeTokens) =>
   StyleSheet.create({
     genres: {
-      fontFamily: "Inter_400Regular",
-      fontSize: 13,
+      ...theme.text("caption", "regular"),
       color: colors.primary,
       marginBottom: Spacing.md,
     },

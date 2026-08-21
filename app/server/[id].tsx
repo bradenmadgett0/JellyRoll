@@ -3,6 +3,7 @@
  */
 
 import { Ionicons } from "@expo/vector-icons";
+import type { ThemeTokens } from "@/constants/theme";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { useState } from "react";
 import {
@@ -271,7 +272,7 @@ export default function ServerDetailScreen() {
   );
 }
 
-const createStyles = (colors: AppColors) =>
+const createStyles = (colors: AppColors, theme: ThemeTokens) =>
   StyleSheet.create({
     container: {
       flex: 1,
@@ -287,8 +288,7 @@ const createStyles = (colors: AppColors) =>
       alignItems: "center",
     },
     errorText: {
-      fontFamily: "Inter_500Medium",
-      fontSize: 16,
+      ...theme.text("title", "medium"),
       color: colors.textSecondary,
       marginBottom: Spacing.lg,
     },
@@ -299,8 +299,7 @@ const createStyles = (colors: AppColors) =>
       borderRadius: Spacing.radiusMd,
     },
     backBtnText: {
-      fontFamily: "Inter_500Medium",
-      fontSize: 14,
+      ...theme.text("bodySmall", "medium"),
       color: colors.primary,
     },
 
@@ -319,27 +318,23 @@ const createStyles = (colors: AppColors) =>
       marginBottom: Spacing.lg,
     },
     serverName: {
-      fontFamily: "Inter_700Bold",
-      fontSize: 24,
+      ...theme.text("h1", "bold"),
       color: colors.text,
       marginBottom: 4,
     },
     serverType: {
-      fontFamily: "Inter_500Medium",
-      fontSize: 14,
+      ...theme.text("bodySmall", "medium"),
       color: colors.textSecondary,
     },
     serverVersion: {
-      fontFamily: "Inter_400Regular",
-      fontSize: 13,
+      ...theme.text("caption", "regular"),
       color: colors.textTertiary,
       marginTop: 4,
     },
 
     // Sections
     sectionTitle: {
-      fontFamily: "Inter_600SemiBold",
-      fontSize: 14,
+      ...theme.text("bodySmall", "semibold"),
       color: colors.textSecondary,
       textTransform: "uppercase",
       letterSpacing: 0.5,
@@ -364,13 +359,11 @@ const createStyles = (colors: AppColors) =>
       padding: Spacing.lg,
     },
     infoLabel: {
-      fontFamily: "Inter_500Medium",
-      fontSize: 14,
+      ...theme.text("bodySmall", "medium"),
       color: colors.textSecondary,
     },
     infoValue: {
-      fontFamily: "Inter_400Regular",
-      fontSize: 14,
+      ...theme.text("bodySmall", "regular"),
       color: colors.text,
       maxWidth: 200,
       textAlign: "right",
@@ -386,8 +379,7 @@ const createStyles = (colors: AppColors) =>
       gap: 4,
     },
     protocolText: {
-      fontFamily: "Inter_500Medium",
-      fontSize: 13,
+      ...theme.text("caption", "medium"),
     },
 
     // Test button
@@ -405,8 +397,7 @@ const createStyles = (colors: AppColors) =>
       gap: Spacing.sm,
     },
     testButtonText: {
-      fontFamily: "Inter_500Medium",
-      fontSize: 15,
+      ...theme.text("body", "medium"),
       color: colors.primary,
     },
     testResultBanner: {
@@ -419,8 +410,7 @@ const createStyles = (colors: AppColors) =>
       gap: Spacing.sm,
     },
     testResultText: {
-      fontFamily: "Inter_400Regular",
-      fontSize: 13,
+      ...theme.text("caption", "regular"),
       flex: 1,
     },
 
@@ -438,8 +428,7 @@ const createStyles = (colors: AppColors) =>
       gap: Spacing.sm,
     },
     dangerButtonText: {
-      fontFamily: "Inter_500Medium",
-      fontSize: 15,
+      ...theme.text("body", "medium"),
       color: colors.error,
     },
 

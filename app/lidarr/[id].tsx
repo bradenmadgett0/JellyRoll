@@ -3,6 +3,7 @@
  */
 
 import { Ionicons } from "@expo/vector-icons";
+import type { ThemeTokens } from "@/constants/theme";
 import { Stack, useLocalSearchParams, useRouter } from "expo-router";
 import {
   ActivityIndicator,
@@ -65,7 +66,7 @@ export default function LidarrDetailScreen() {
           title: artist.artistName,
           headerStyle: { backgroundColor: styles.headerBg.backgroundColor },
           headerTintColor: styles.headerTitle.color as string,
-          headerTitleStyle: { fontFamily: "Inter_600SemiBold" },
+          headerTitleStyle: styles.headerTitle,
         }}
       />
       <ScrollView contentContainerStyle={styles.contentContainer}>
@@ -255,7 +256,7 @@ export default function LidarrDetailScreen() {
   );
 }
 
-const createStyles = (colors: AppColors) =>
+const createStyles = (colors: AppColors, theme: ThemeTokens) =>
   StyleSheet.create({
     container: { flex: 1, backgroundColor: colors.background },
     contentContainer: { paddingBottom: 40 },
@@ -281,22 +282,19 @@ const createStyles = (colors: AppColors) =>
     },
     imagePlaceholder: { justifyContent: "center", alignItems: "center" },
     artistName: {
-      fontFamily: "Inter_700Bold",
-      fontSize: 24,
+      ...theme.text("h1", "bold"),
       color: colors.text,
       textAlign: "center",
     },
     artistType: {
-      fontFamily: "Inter_400Regular",
-      fontSize: 14,
+      ...theme.text("bodySmall", "regular"),
       color: colors.textTertiary,
       marginTop: 4,
     },
     badgeRow: { flexDirection: "row", gap: Spacing.sm, marginTop: Spacing.sm },
     badge: { paddingHorizontal: 8, paddingVertical: 2, borderRadius: 4 },
     badgeText: {
-      fontFamily: "Inter_600SemiBold",
-      fontSize: 10,
+      ...theme.text("micro", "semibold"),
       textTransform: "uppercase",
       letterSpacing: 0.3,
     },
@@ -313,13 +311,11 @@ const createStyles = (colors: AppColors) =>
     },
     stat: { alignItems: "center" },
     statValue: {
-      fontFamily: "Inter_700Bold",
-      fontSize: 18,
+      ...theme.text("h3", "bold"),
       color: colors.lidarr,
     },
     statLabel: {
-      fontFamily: "Inter_400Regular",
-      fontSize: 11,
+      ...theme.text("labelSmall", "regular"),
       color: colors.textTertiary,
       marginTop: 2,
     },
@@ -330,14 +326,12 @@ const createStyles = (colors: AppColors) =>
       marginTop: Spacing.xxl,
     },
     sectionTitle: {
-      fontFamily: "Inter_600SemiBold",
-      fontSize: 18,
+      ...theme.text("h3", "semibold"),
       color: colors.text,
       marginBottom: Spacing.md,
     },
     overview: {
-      fontFamily: "Inter_400Regular",
-      fontSize: 15,
+      ...theme.text("body", "regular"),
       color: colors.textSecondary,
       lineHeight: 24,
     },
@@ -352,13 +346,11 @@ const createStyles = (colors: AppColors) =>
     },
     albumInfo: { flex: 1 },
     albumTitle: {
-      fontFamily: "Inter_600SemiBold",
-      fontSize: 14,
+      ...theme.text("bodySmall", "semibold"),
       color: colors.text,
     },
     albumMeta: {
-      fontFamily: "Inter_400Regular",
-      fontSize: 12,
+      ...theme.text("label", "regular"),
       color: colors.textTertiary,
       marginTop: 2,
     },
@@ -380,8 +372,7 @@ const createStyles = (colors: AppColors) =>
       borderRadius: 2,
     },
     albumProgressText: {
-      fontFamily: "Inter_500Medium",
-      fontSize: 11,
+      ...theme.text("labelSmall", "medium"),
       color: colors.textTertiary,
       width: 40,
     },
@@ -410,14 +401,13 @@ const createStyles = (colors: AppColors) =>
       borderColor: colors.surfaceBorder,
     },
     genreText: {
-      fontFamily: "Inter_400Regular",
-      fontSize: 12,
+      ...theme.text("label", "regular"),
       color: colors.textSecondary,
     },
 
     // Header nav
     headerBg: { backgroundColor: colors.backgroundSecondary },
-    headerTitle: { color: colors.text },
+    headerTitle: { ...theme.text("bodySmall", "semibold"), color: colors.text },
 
     // Color tokens for inline use
     iconTertiary: { color: colors.textTertiary },

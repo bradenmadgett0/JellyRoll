@@ -3,6 +3,7 @@
  */
 
 import { Ionicons } from "@expo/vector-icons";
+import type { ThemeTokens } from "@/constants/theme";
 import { LinearGradient } from "expo-linear-gradient";
 import { Stack, useLocalSearchParams, useRouter } from "expo-router";
 import { useCallback, useMemo } from "react";
@@ -120,7 +121,7 @@ export default function SonarrDetailScreen() {
           title: series.title,
           headerStyle: { backgroundColor: styles.headerBg.backgroundColor },
           headerTintColor: styles.headerTitle.color as string,
-          headerTitleStyle: { fontFamily: "Inter_600SemiBold" },
+          headerTitleStyle: styles.headerTitle,
         }}
       />
       <ScrollView contentContainerStyle={styles.contentContainer}>
@@ -287,7 +288,7 @@ export default function SonarrDetailScreen() {
   );
 }
 
-const createStyles = (colors: AppColors) =>
+const createStyles = (colors: AppColors, theme: ThemeTokens) =>
   StyleSheet.create({
     container: { flex: 1, backgroundColor: colors.background },
     contentContainer: { paddingBottom: 40 },
@@ -319,10 +320,10 @@ const createStyles = (colors: AppColors) =>
     },
     poster: { width: 80, height: 120, borderRadius: Spacing.radiusSm },
     heroInfo: { flex: 1, justifyContent: "flex-end" },
-    title: { fontFamily: "Inter_700Bold", fontSize: 22, color: colors.text },
+    title: {
+      ...theme.text("h2", "bold"), color: colors.text },
     meta: {
-      fontFamily: "Inter_400Regular",
-      fontSize: 13,
+      ...theme.text("caption", "regular"),
       color: colors.textSecondary,
       marginTop: 4,
       textTransform: "capitalize",
@@ -330,8 +331,7 @@ const createStyles = (colors: AppColors) =>
     statusRow: { flexDirection: "row", gap: Spacing.sm, marginTop: 6 },
     badge: { paddingHorizontal: 8, paddingVertical: 2, borderRadius: 4 },
     badgeText: {
-      fontFamily: "Inter_600SemiBold",
-      fontSize: 10,
+      ...theme.text("micro", "semibold"),
       textTransform: "uppercase",
       letterSpacing: 0.3,
     },
@@ -347,13 +347,11 @@ const createStyles = (colors: AppColors) =>
     },
     stat: { alignItems: "center" },
     statValue: {
-      fontFamily: "Inter_700Bold",
-      fontSize: 18,
+      ...theme.text("h3", "bold"),
       color: colors.sonarr,
     },
     statLabel: {
-      fontFamily: "Inter_400Regular",
-      fontSize: 11,
+      ...theme.text("labelSmall", "regular"),
       color: colors.textTertiary,
       marginTop: 2,
     },
@@ -391,8 +389,7 @@ const createStyles = (colors: AppColors) =>
       borderColor: colors.surfaceBorder,
     },
     actionBtnText: {
-      fontFamily: "Inter_500Medium",
-      fontSize: 13,
+      ...theme.text("caption", "medium"),
       color: colors.text,
     },
 
@@ -402,14 +399,12 @@ const createStyles = (colors: AppColors) =>
       marginTop: Spacing.xxl,
     },
     sectionTitle: {
-      fontFamily: "Inter_600SemiBold",
-      fontSize: 18,
+      ...theme.text("h3", "semibold"),
       color: colors.text,
       marginBottom: Spacing.md,
     },
     overview: {
-      fontFamily: "Inter_400Regular",
-      fontSize: 15,
+      ...theme.text("body", "regular"),
       color: colors.textSecondary,
       lineHeight: 24,
     },
@@ -429,14 +424,13 @@ const createStyles = (colors: AppColors) =>
       borderColor: colors.surfaceBorder,
     },
     genreText: {
-      fontFamily: "Inter_400Regular",
-      fontSize: 12,
+      ...theme.text("label", "regular"),
       color: colors.textSecondary,
     },
 
     // Header
     headerBg: { backgroundColor: colors.backgroundSecondary },
-    headerTitle: { color: colors.text },
+    headerTitle: { ...theme.text("bodySmall", "semibold"), color: colors.text },
 
     // Color tokens for inline use
     iconTertiary: { color: colors.textTertiary },

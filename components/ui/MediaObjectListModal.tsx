@@ -1,4 +1,6 @@
 import { AppColors } from "@/hooks/useColors";
+import { useTheme } from "@/hooks/useTheme";
+import type { ThemeTokens } from "@/constants/theme";
 import { useThemedStyles } from "@/hooks/useThemedStyles";
 import { Ionicons } from "@expo/vector-icons";
 import { useState } from "react";
@@ -25,6 +27,7 @@ const MediaObjectListModal = <T extends object>({
   initialSelectedIndex = 0,
   onOptionSelect,
 }: MediaObjectListModalProps<T>) => {
+  const theme = useTheme();
   const themedStyles = useThemedStyles(styles);
   const [selectedIndex, setSelectedIndex] = useState(initialSelectedIndex);
 
@@ -56,7 +59,7 @@ const MediaObjectListModal = <T extends object>({
                   {option.label}
                 </Text>
                 {isActive && (
-                  <Ionicons name="checkmark" size={18} color="#fff" />
+                  <Ionicons name="checkmark" size={18} color={theme.overlay.text} />
                 )}
               </TouchableOpacity>
             );
@@ -70,7 +73,7 @@ const MediaObjectListModal = <T extends object>({
 export default MediaObjectListModal;
 
 // ─── Styles ─────────────────────────────────────────────────
-const styles = (colors: AppColors) =>
+const styles = (colors: AppColors, theme: ThemeTokens) =>
   StyleSheet.create({
     // Bottom bar
     qualityBtn: {
@@ -80,25 +83,24 @@ const styles = (colors: AppColors) =>
       paddingVertical: 4,
       paddingHorizontal: 8,
       borderRadius: 6,
-      backgroundColor: "rgba(255,255,255,0.12)",
+      backgroundColor: theme.overlay.control,
     },
     qualityBtnLabel: {
-      fontFamily: "Inter_500Medium",
-      fontSize: 11,
-      color: "rgba(255,255,255,0.85)",
+      ...theme.text("labelSmall", "medium"),
+      color: theme.overlay.textMuted,
     },
 
     // Quality picker modal
     pickerBackdrop: {
       ...StyleSheet.absoluteFillObject,
-      backgroundColor: "rgba(0,0,0,0.6)",
+      backgroundColor: theme.overlay.backdrop,
       justifyContent: "center",
       alignItems: "center",
       position: "absolute",
       zIndex: 20,
     },
     pickerContainer: {
-      backgroundColor: "rgba(30,30,30,0.95)",
+      backgroundColor: theme.overlay.surface,
       borderRadius: 16,
       paddingVertical: 16,
       paddingHorizontal: 8,
@@ -106,9 +108,8 @@ const styles = (colors: AppColors) =>
       maxWidth: 300,
     },
     pickerTitle: {
-      fontFamily: "Inter_600SemiBold",
-      fontSize: 15,
-      color: "#fff",
+      ...theme.text("body", "semibold"),
+      color: theme.overlay.text,
       textAlign: "center",
       marginBottom: 12,
     },
@@ -121,15 +122,14 @@ const styles = (colors: AppColors) =>
       borderRadius: 8,
     },
     pickerOptionActive: {
-      backgroundColor: "rgba(255,255,255,0.12)",
+      backgroundColor: theme.overlay.control,
     },
     pickerOptionText: {
-      fontFamily: "Inter_400Regular",
-      fontSize: 14,
-      color: "rgba(255,255,255,0.7)",
+      ...theme.text("bodySmall", "regular"),
+      color: theme.overlay.textSecondary,
     },
     pickerOptionTextActive: {
-      fontFamily: "Inter_600SemiBold",
-      color: "#fff",
+      ...theme.text("bodySmall", "semibold"),
+      color: theme.overlay.text,
     },
   });

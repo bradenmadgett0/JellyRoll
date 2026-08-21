@@ -1,23 +1,19 @@
 /**
- * useColors — Theme-aware color hook
+ * useColors — the active color palette.
  *
- * Returns the active color palette based on the user's theme preference
- * (from settings store) resolved against the device color scheme.
+ * A thin view over `useTheme()` for the many components that only need colors.
+ * Reach for `useTheme()` when you also need `text()` or `overlay`.
  *
  * Usage:
  *   const colors = useColors();
  *   <View style={{ backgroundColor: colors.background }} />
  */
 
-import { BrandColors, ThemeColors, Themes } from '../constants/Colors';
-import { useEffectiveScheme } from './useEffectiveScheme';
+import type { PaletteColors } from "../constants/theme";
+import { useTheme } from "./useTheme";
 
-export type AppColors = ThemeColors & typeof BrandColors;
+export type AppColors = PaletteColors;
 
 export function useColors(): AppColors {
-    const scheme = useEffectiveScheme();
-    return {
-        ...Themes[scheme],
-        ...BrandColors,
-    };
+  return useTheme().colors;
 }

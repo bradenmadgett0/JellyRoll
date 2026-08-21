@@ -5,6 +5,7 @@
  */
 
 import { Ionicons } from "@expo/vector-icons";
+import type { ThemeTokens } from "@/constants/theme";
 import { ReactNode } from "react";
 import { Image, StyleSheet, Text, View } from "react-native";
 import { Spacing } from "../../../constants/Spacing";
@@ -57,7 +58,7 @@ export function MediaTitleBlock({ item, subtitle }: MediaTitleBlockProps) {
   );
 }
 
-const createStyles = (colors: AppColors) =>
+const createStyles = (colors: AppColors, theme: ThemeTokens) =>
   StyleSheet.create({
     titleRow: {
       flexDirection: "row",
@@ -72,14 +73,12 @@ const createStyles = (colors: AppColors) =>
     },
     titleInfo: { flex: 1, justifyContent: "flex-end" },
     title: {
-      fontFamily: "Inter_700Bold",
-      fontSize: 24,
+      ...theme.text("h1", "bold"),
       color: colors.text,
       lineHeight: 30,
     },
     meta: {
-      fontFamily: "Inter_400Regular",
-      fontSize: 13,
+      ...theme.text("caption", "regular"),
       color: colors.textSecondary,
       marginTop: 6,
     },
@@ -90,8 +89,7 @@ const createStyles = (colors: AppColors) =>
       marginTop: 6,
     },
     ratingText: {
-      fontFamily: "Inter_600SemiBold",
-      fontSize: 14,
+      ...theme.text("bodySmall", "semibold"),
       color: colors.warning,
     },
   });

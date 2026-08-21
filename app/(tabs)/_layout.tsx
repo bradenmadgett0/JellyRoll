@@ -4,6 +4,7 @@
  */
 
 import { Ionicons } from "@expo/vector-icons";
+import type { ThemeTokens } from "@/constants/theme";
 import { BlurView } from "expo-blur";
 import { Tabs } from "expo-router";
 import { Platform, StyleSheet, Text, View } from "react-native";
@@ -116,7 +117,7 @@ export default function TabLayout() {
   );
 }
 
-const createStyles = (colors: AppColors) =>
+const createStyles = (colors: AppColors, theme: ThemeTokens) =>
   StyleSheet.create({
     tabBar: {
       backgroundColor:
@@ -128,8 +129,7 @@ const createStyles = (colors: AppColors) =>
       position: Platform.OS === "ios" ? "absolute" : "relative",
     },
     tabBarLabel: {
-      fontFamily: "Inter_500Medium",
-      fontSize: 11,
+      ...theme.text("labelSmall", "medium"),
       marginBottom: Platform.OS === "ios" ? 0 : 8,
     },
     tabBarBg: { backgroundColor: colors.backgroundSecondary },
@@ -139,8 +139,7 @@ const createStyles = (colors: AppColors) =>
       backgroundColor: colors.background,
     },
     headerTitle: {
-      fontFamily: "Inter_700Bold",
-      fontSize: 18,
+      ...theme.text("h3", "bold"),
       color: colors.text,
     },
     badge: {
@@ -156,8 +155,7 @@ const createStyles = (colors: AppColors) =>
       paddingHorizontal: 4,
     },
     badgeText: {
-      fontFamily: "Inter_600SemiBold",
-      fontSize: 9,
+      ...theme.text("micro", "semibold"),
       color: "#FFFFFF",
     },
   });

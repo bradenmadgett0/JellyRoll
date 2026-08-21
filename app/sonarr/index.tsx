@@ -3,6 +3,7 @@
  */
 
 import { Ionicons } from "@expo/vector-icons";
+import type { ThemeTokens } from "@/constants/theme";
 import { Stack, useRouter } from "expo-router";
 import { useCallback, useMemo, useState } from "react";
 import {
@@ -174,7 +175,7 @@ export default function SonarrScreen() {
           title: "Sonarr",
           headerStyle: { backgroundColor: styles.headerBg.backgroundColor },
           headerTintColor: styles.headerTitle.color as string,
-          headerTitleStyle: { fontFamily: "Inter_600SemiBold" },
+          headerTitleStyle: styles.headerTitle,
         }}
       />
 
@@ -264,7 +265,7 @@ export default function SonarrScreen() {
   );
 }
 
-const createStyles = (colors: AppColors) =>
+const createStyles = (colors: AppColors, theme: ThemeTokens) =>
   StyleSheet.create({
     container: { flex: 1, backgroundColor: colors.background },
 
@@ -287,9 +288,8 @@ const createStyles = (colors: AppColors) =>
       gap: Spacing.sm,
     },
     searchInput: {
+      ...theme.text("body", "regular"),
       flex: 1,
-      fontFamily: "Inter_400Regular",
-      fontSize: 15,
       color: colors.text,
       paddingVertical: 4,
     },
@@ -302,8 +302,7 @@ const createStyles = (colors: AppColors) =>
     },
     sortChipActive: { backgroundColor: colors.sonarr },
     sortChipText: {
-      fontFamily: "Inter_500Medium",
-      fontSize: 12,
+      ...theme.text("label", "medium"),
       color: colors.textSecondary,
     },
     sortChipTextActive: { color: colors.textInverse },
@@ -311,8 +310,7 @@ const createStyles = (colors: AppColors) =>
     // List
     listContent: { paddingBottom: 32 },
     resultCount: {
-      fontFamily: "Inter_400Regular",
-      fontSize: 13,
+      ...theme.text("caption", "regular"),
       color: colors.textTertiary,
       paddingHorizontal: Spacing.screenPadding,
       paddingVertical: Spacing.sm,
@@ -336,13 +334,11 @@ const createStyles = (colors: AppColors) =>
     posterPlaceholder: { justifyContent: "center", alignItems: "center" },
     seriesInfo: { flex: 1, marginHorizontal: Spacing.md },
     seriesTitle: {
-      fontFamily: "Inter_600SemiBold",
-      fontSize: 15,
+      ...theme.text("body", "semibold"),
       color: colors.text,
     },
     seriesMeta: {
-      fontFamily: "Inter_400Regular",
-      fontSize: 12,
+      ...theme.text("label", "regular"),
       color: colors.textSecondary,
       marginTop: 2,
       textTransform: "capitalize",
@@ -365,16 +361,14 @@ const createStyles = (colors: AppColors) =>
       borderRadius: 2,
     },
     progressText: {
-      fontFamily: "Inter_500Medium",
-      fontSize: 11,
+      ...theme.text("labelSmall", "medium"),
       color: colors.textTertiary,
       width: 40,
     },
     tagsRow: { flexDirection: "row", gap: Spacing.sm, marginTop: 6 },
     statusBadge: { paddingHorizontal: 6, paddingVertical: 2, borderRadius: 4 },
     statusText: {
-      fontFamily: "Inter_600SemiBold",
-      fontSize: 10,
+      ...theme.text("micro", "semibold"),
       textTransform: "uppercase",
       letterSpacing: 0.3,
     },
@@ -383,14 +377,13 @@ const createStyles = (colors: AppColors) =>
     centerLoading: { flex: 1, justifyContent: "center", alignItems: "center" },
     emptyContainer: { paddingTop: 80, alignItems: "center", gap: Spacing.md },
     emptyText: {
-      fontFamily: "Inter_400Regular",
-      fontSize: 15,
+      ...theme.text("body", "regular"),
       color: colors.textTertiary,
     },
 
     // Header
     headerBg: { backgroundColor: colors.backgroundSecondary },
-    headerTitle: { color: colors.text },
+    headerTitle: { ...theme.text("bodySmall", "semibold"), color: colors.text },
 
     // Color tokens for inline use
     iconTertiary: { color: colors.textTertiary },

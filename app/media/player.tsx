@@ -11,6 +11,7 @@ import {
   ticksToSeconds,
 } from "@/types/player";
 import { useEventListener } from "expo";
+import type { ThemeTokens } from "@/constants/theme";
 import { Ionicons } from "@expo/vector-icons";
 import { Stack, useLocalSearchParams, useRouter } from "expo-router";
 import {
@@ -427,7 +428,7 @@ export default function PlayerScreen() {
   );
 }
 
-const createStyles = (colors: AppColors) =>
+const createStyles = (colors: AppColors, theme: ThemeTokens) =>
   StyleSheet.create({
     container: {
       flex: 1,
@@ -458,9 +459,8 @@ const createStyles = (colors: AppColors) =>
       zIndex: 30,
     },
     errorText: {
+      ...theme.text("title", "medium"),
       color: colors.error,
-      fontSize: 16,
-      fontFamily: "Inter_500Medium",
     },
     backBtn: {
       backgroundColor: colors.backgroundTertiary,
@@ -470,9 +470,8 @@ const createStyles = (colors: AppColors) =>
       marginTop: Spacing.md,
     },
     backBtnText: {
+      ...theme.text("body", "semibold"),
       color: colors.primary,
-      fontFamily: "Inter_600SemiBold",
-      fontSize: 15,
     },
     iconError: { color: colors.error },
     iconPrimary: { color: colors.primary },

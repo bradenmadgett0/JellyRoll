@@ -17,16 +17,17 @@ import { Stack } from "expo-router";
 import * as NavigationBar from "expo-navigation-bar";
 import * as SplashScreen from "expo-splash-screen";
 import { StatusBar } from "expo-status-bar";
-import { useEffect } from "react";
+import { useEffect, useMemo } from "react";
 import { Platform } from "react-native";
 import "react-native-reanimated";
 
 import { GestureHandlerRootView } from "react-native-gesture-handler";
-import { Themes } from "../constants/Colors";
-import { useEffectiveScheme } from "../hooks/useEffectiveScheme";
+import type { ThemeTokens } from "../constants/theme";
+import { useTheme } from "../hooks/useTheme";
 import { useMediaSettingsStore } from "../services/stores/mediaSettingsStore";
 import { useServerStore } from "../services/stores/serverStore";
 import { useSettingsStore } from "../services/stores/settingsStore";
+import { useThemeStore } from "../services/stores/themeStore";
 
 // Keep splash visible while loading
 SplashScreen.preventAutoHideAsync();
@@ -42,23 +43,23 @@ const queryClient = new QueryClient({
 });
 
 // Build React Navigation theme entirely from our design tokens
-function buildNavTheme(scheme: "dark" | "light"): Theme {
-  const palette = Themes[scheme];
+function buildNavTheme(theme: ThemeTokens): Theme {
+  const { colors, fonts } = theme;
   return {
-    dark: scheme === "dark",
+    dark: theme.mode === "dark",
     colors: {
-      primary: palette.primary,
-      background: palette.background,
-      card: palette.backgroundSecondary,
-      text: palette.text,
-      border: palette.surfaceBorder,
-      notification: palette.accent,
+      primary: colors.primary,
+      background: colors.background,
+      card: colors.backgroundSecondary,
+      text: colors.text,
+      border: colors.surfaceBorder,
+      notification: colors.accent,
     },
     fonts: {
-      regular: { fontFamily: "Inter_400Regular", fontWeight: "400" },
-      medium: { fontFamily: "Inter_500Medium", fontWeight: "500" },
-      bold: { fontFamily: "Inter_700Bold", fontWeight: "700" },
-      heavy: { fontFamily: "Inter_700Bold", fontWeight: "700" },
+      regular: { fontFamily: fonts.regular, fontWeight: "400" },
+      medium: { fontFamily: fonts.medium, fontWeight: "500" },
+      bold: { fontFamily: fonts.bold, fontWeight: "700" },
+      heavy: { fontFamily: fonts.bold, fontWeight: "700" },
     },
   };
 }
@@ -71,9 +72,14 @@ export default function RootLayout() {
   const loadServers = useServerStore((s) => s.loadServers);
   const loadSettings = useSettingsStore((s) => s.loadSettings);
   const loadMediaSettings = useMediaSettingsStore((s) => s.loadSettings);
-  const scheme = useEffectiveScheme();
-  const navTheme = buildNavTheme(scheme);
+  const loadThemes = useThemeStore((s) => s.loadThemes);
+  const theme = useTheme();
+  const navTheme = useMemo(() => buildNavTheme(theme), [theme]);
 
+  // These registrations must stay in sync with `interFontFamilies` in
+  // constants/theme/typography.ts — that's the map the design system hands
+  // out, and a family that isn't registered here silently renders as the
+  // system font.
   const [fontsLoaded] = useFonts({
     Inter_400Regular,
     Inter_500Medium,
@@ -83,7 +89,12 @@ export default function RootLayout() {
 
   useEffect(() => {
     async function init() {
-      await Promise.all([loadServers(), loadSettings(), loadMediaSettings()]);
+      await Promise.all([
+        loadServers(),
+        loadSettings(),
+        loadMediaSettings(),
+        loadThemes(),
+      ]);
       if (fontsLoaded) {
         try {
           await SplashScreen.hideAsync();
@@ -93,7 +104,7 @@ export default function RootLayout() {
       }
     }
     init();
-  }, [fontsLoaded, loadServers, loadSettings, loadMediaSettings]);
+  }, [fontsLoaded, loadServers, loadSettings, loadMediaSettings, loadThemes]);
 
   // Hide Android's gesture/button nav bar for the whole app, not just the
   // player — Samsung and other Android devices otherwise keep it visible
@@ -119,7 +130,7 @@ export default function RootLayout() {
         <GestureHandlerRootView>
           <Stack
             screenOptions={{
-              headerTitleStyle: { fontFamily: "Inter_600SemiBold" },
+              headerTitleStyle: { fontFamily: theme.fonts.semibold },
             }}
           >
             <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
@@ -204,7 +215,7 @@ export default function RootLayout() {
               }}
             />
           </Stack>
-          <StatusBar style={scheme === "dark" ? "light" : "dark"} />
+          <StatusBar style={theme.mode === "dark" ? "light" : "dark"} />
         </GestureHandlerRootView>
       </ThemeProvider>
     </QueryClientProvider>

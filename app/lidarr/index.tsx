@@ -3,6 +3,7 @@
  */
 
 import { Ionicons } from "@expo/vector-icons";
+import type { ThemeTokens } from "@/constants/theme";
 import { Stack, useRouter } from "expo-router";
 import { useCallback, useMemo, useState } from "react";
 import {
@@ -147,7 +148,7 @@ export default function LidarrScreen() {
           title: "Lidarr",
           headerStyle: { backgroundColor: styles.headerBg.backgroundColor },
           headerTintColor: styles.headerTitle.color as string,
-          headerTitleStyle: { fontFamily: "Inter_600SemiBold" },
+          headerTitleStyle: styles.headerTitle,
         }}
       />
 
@@ -216,7 +217,7 @@ export default function LidarrScreen() {
   );
 }
 
-const createStyles = (colors: AppColors) =>
+const createStyles = (colors: AppColors, theme: ThemeTokens) =>
   StyleSheet.create({
     container: { flex: 1, backgroundColor: colors.background },
 
@@ -238,17 +239,15 @@ const createStyles = (colors: AppColors) =>
       gap: Spacing.sm,
     },
     searchInput: {
+      ...theme.text("body", "regular"),
       flex: 1,
-      fontFamily: "Inter_400Regular",
-      fontSize: 15,
       color: colors.text,
       paddingVertical: 4,
     },
 
     listContent: { paddingBottom: 32 },
     resultCount: {
-      fontFamily: "Inter_400Regular",
-      fontSize: 13,
+      ...theme.text("caption", "regular"),
       color: colors.textTertiary,
       paddingHorizontal: Spacing.screenPadding,
       paddingVertical: Spacing.sm,
@@ -271,27 +270,23 @@ const createStyles = (colors: AppColors) =>
     imagePlaceholder: { justifyContent: "center", alignItems: "center" },
     artistInfo: { flex: 1, marginHorizontal: Spacing.md },
     artistName: {
-      fontFamily: "Inter_600SemiBold",
-      fontSize: 15,
+      ...theme.text("body", "semibold"),
       color: colors.text,
     },
     artistType: {
-      fontFamily: "Inter_400Regular",
-      fontSize: 12,
+      ...theme.text("label", "regular"),
       color: colors.textTertiary,
       marginTop: 2,
     },
     statsRow: { flexDirection: "row", gap: Spacing.lg, marginTop: 4 },
     statText: {
-      fontFamily: "Inter_400Regular",
-      fontSize: 12,
+      ...theme.text("label", "regular"),
       color: colors.textSecondary,
     },
     badgeRow: { flexDirection: "row", gap: Spacing.sm, marginTop: 4 },
     badge: { paddingHorizontal: 6, paddingVertical: 2, borderRadius: 4 },
     badgeText: {
-      fontFamily: "Inter_600SemiBold",
-      fontSize: 10,
+      ...theme.text("micro", "semibold"),
       textTransform: "uppercase",
       letterSpacing: 0.3,
     },
@@ -299,14 +294,13 @@ const createStyles = (colors: AppColors) =>
     centerLoading: { flex: 1, justifyContent: "center", alignItems: "center" },
     emptyContainer: { paddingTop: 80, alignItems: "center", gap: Spacing.md },
     emptyText: {
-      fontFamily: "Inter_400Regular",
-      fontSize: 15,
+      ...theme.text("body", "regular"),
       color: colors.textTertiary,
     },
 
     // Header
     headerBg: { backgroundColor: colors.backgroundSecondary },
-    headerTitle: { color: colors.text },
+    headerTitle: { ...theme.text("bodySmall", "semibold"), color: colors.text },
 
     // Color tokens for inline use
     iconTertiary: { color: colors.textTertiary },

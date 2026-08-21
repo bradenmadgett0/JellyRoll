@@ -1,21 +1,12 @@
 /**
- * useEffectiveScheme — Resolves the effective color scheme
+ * useEffectiveScheme — the active theme's light/dark mode.
  *
- * Reads the user's theme preference from the settings store ('dark', 'light', 'system')
- * and resolves 'system' to the actual device color scheme via useColorScheme().
- *
- * Returns 'dark' or 'light'.
+ * For the few places that branch on mode itself (status bar style, React
+ * Navigation's `dark` flag) rather than read a token.
  */
 
-import { useColorScheme } from 'react-native';
-import { useSettingsStore } from '../services/stores/settingsStore';
+import { useTheme } from "./useTheme";
 
-export function useEffectiveScheme(): 'dark' | 'light' {
-    const themePref = useSettingsStore((s) => s.theme);
-    const deviceScheme = useColorScheme();
-
-    if (themePref === 'system') {
-        return deviceScheme ?? 'dark';
-    }
-    return themePref;
+export function useEffectiveScheme(): "dark" | "light" {
+  return useTheme().mode;
 }

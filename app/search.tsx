@@ -3,6 +3,7 @@
  */
 
 import { Ionicons } from "@expo/vector-icons";
+import type { ThemeTokens } from "@/constants/theme";
 import { Stack, useRouter } from "expo-router";
 import { useCallback, useState } from "react";
 import {
@@ -245,7 +246,7 @@ export default function SearchScreen() {
   );
 }
 
-const createStyles = (colors: AppColors) =>
+const createStyles = (colors: AppColors, theme: ThemeTokens) =>
   StyleSheet.create({
     container: { flex: 1, backgroundColor: colors.background },
 
@@ -278,9 +279,8 @@ const createStyles = (colors: AppColors) =>
       gap: Spacing.sm,
     },
     input: {
+      ...theme.text("title", "regular"),
       flex: 1,
-      fontFamily: "Inter_400Regular",
-      fontSize: 16,
       color: colors.text,
       paddingVertical: 4,
     },
@@ -294,8 +294,7 @@ const createStyles = (colors: AppColors) =>
       paddingVertical: Spacing.lg,
     },
     loadingText: {
-      fontFamily: "Inter_400Regular",
-      fontSize: 14,
+      ...theme.text("bodySmall", "regular"),
       color: colors.textSecondary,
     },
 
@@ -308,13 +307,11 @@ const createStyles = (colors: AppColors) =>
       paddingBottom: 80,
     },
     emptyText: {
-      fontFamily: "Inter_500Medium",
-      fontSize: 16,
+      ...theme.text("title", "medium"),
       color: colors.textSecondary,
     },
     emptySubtext: {
-      fontFamily: "Inter_400Regular",
-      fontSize: 14,
+      ...theme.text("bodySmall", "regular"),
       color: colors.textTertiary,
     },
 
@@ -329,14 +326,12 @@ const createStyles = (colors: AppColors) =>
       paddingBottom: Spacing.sm,
     },
     sectionTitle: {
-      fontFamily: "Inter_600SemiBold",
-      fontSize: 13,
+      ...theme.text("caption", "semibold"),
       textTransform: "uppercase",
       letterSpacing: 0.3,
     },
     sectionCount: {
-      fontFamily: "Inter_400Regular",
-      fontSize: 12,
+      ...theme.text("label", "regular"),
       color: colors.textTertiary,
     },
 
@@ -357,13 +352,11 @@ const createStyles = (colors: AppColors) =>
     resultImagePlaceholder: { justifyContent: "center", alignItems: "center" },
     resultInfo: { flex: 1, marginHorizontal: Spacing.md },
     resultTitle: {
-      fontFamily: "Inter_600SemiBold",
-      fontSize: 15,
+      ...theme.text("body", "semibold"),
       color: colors.text,
     },
     resultSubtitle: {
-      fontFamily: "Inter_400Regular",
-      fontSize: 12,
+      ...theme.text("label", "regular"),
       color: colors.textSecondary,
       marginTop: 2,
     },
@@ -374,14 +367,12 @@ const createStyles = (colors: AppColors) =>
       marginTop: 4,
     },
     resultYear: {
-      fontFamily: "Inter_400Regular",
-      fontSize: 12,
+      ...theme.text("label", "regular"),
       color: colors.textTertiary,
     },
     typeBadge: { paddingHorizontal: 6, paddingVertical: 1, borderRadius: 4 },
     typeBadgeText: {
-      fontFamily: "Inter_600SemiBold",
-      fontSize: 10,
+      ...theme.text("micro", "semibold"),
       textTransform: "uppercase",
       letterSpacing: 0.3,
     },

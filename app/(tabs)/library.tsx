@@ -3,6 +3,7 @@
  */
 
 import { Ionicons } from "@expo/vector-icons";
+import type { ThemeTokens } from "@/constants/theme";
 import { useRouter } from "expo-router";
 import { useCallback, useMemo, useState } from "react";
 import {
@@ -367,7 +368,7 @@ export default function LibraryScreen() {
   );
 }
 
-const createStyles = (colors: AppColors) =>
+const createStyles = (colors: AppColors, theme: ThemeTokens) =>
   StyleSheet.create({
     container: { flex: 1, backgroundColor: colors.background },
 
@@ -398,8 +399,7 @@ const createStyles = (colors: AppColors) =>
       borderColor: colors.primary,
     },
     libChipText: {
-      fontFamily: "Inter_500Medium",
-      fontSize: 13,
+      ...theme.text("caption", "medium"),
       color: colors.textSecondary,
     },
     libChipTextSelected: { color: colors.textInverse },
@@ -413,8 +413,7 @@ const createStyles = (colors: AppColors) =>
       paddingBottom: Spacing.sm,
     },
     resultCount: {
-      fontFamily: "Inter_400Regular",
-      fontSize: 13,
+      ...theme.text("caption", "regular"),
       color: colors.textTertiary,
     },
     viewToggle: { flexDirection: "row", gap: Spacing.lg },
@@ -436,13 +435,11 @@ const createStyles = (colors: AppColors) =>
       gap: Spacing.md,
     },
     loadingText: {
-      fontFamily: "Inter_400Regular",
-      fontSize: 14,
+      ...theme.text("bodySmall", "regular"),
       color: colors.textSecondary,
     },
     pickLibText: {
-      fontFamily: "Inter_400Regular",
-      fontSize: 15,
+      ...theme.text("body", "regular"),
       color: colors.textTertiary,
       textAlign: "center",
     },
@@ -457,13 +454,11 @@ const createStyles = (colors: AppColors) =>
     },
     emptyContent: { alignItems: "center", gap: Spacing.md },
     emptyTitle: {
-      fontFamily: "Inter_600SemiBold",
-      fontSize: 22,
+      ...theme.text("h2", "semibold"),
       color: colors.text,
     },
     emptySubtitle: {
-      fontFamily: "Inter_400Regular",
-      fontSize: 15,
+      ...theme.text("body", "regular"),
       color: colors.textSecondary,
       textAlign: "center",
       lineHeight: 22,
@@ -479,8 +474,7 @@ const createStyles = (colors: AppColors) =>
       marginTop: Spacing.md,
     },
     addButtonText: {
-      fontFamily: "Inter_600SemiBold",
-      fontSize: 15,
+      ...theme.text("body", "semibold"),
       color: colors.textInverse,
     },
 
