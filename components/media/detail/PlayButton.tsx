@@ -1,5 +1,5 @@
 /**
- * PlayButton — Play/Resume button with progress bar for playable items (Movie, Episode)
+ * PlayButton — Play/Resume button for playable items (Movie, Episode)
  */
 
 import { Ionicons } from "@expo/vector-icons";
@@ -31,10 +31,9 @@ export function PlayButton({ item }: PlayButtonProps) {
 
   const positionTicks = item.UserData?.PlaybackPositionTicks ?? 0;
   const isResumable = positionTicks > 0;
-  const playedPct = item.UserData?.PlayedPercentage ?? 0;
 
   return (
-    <View>
+    <View style={styles.buttonRow}>
       <TouchableOpacity
         style={styles.playButton}
         onPress={() =>
@@ -54,11 +53,22 @@ export function PlayButton({ item }: PlayButtonProps) {
         </Text>
       </TouchableOpacity>
       {isResumable && (
-        <View style={styles.resumeProgressContainer}>
-          <View
-            style={[styles.resumeProgressBar, { width: `${Math.min(playedPct, 100)}%` }]}
-          />
-        </View>
+        <TouchableOpacity
+          style={styles.restartButton}
+          onPress={() =>
+            router.push({
+              pathname: "/media/player",
+              params: {
+                itemId: item.Id,
+                startTicks: "0",
+              },
+            })
+          }
+          activeOpacity={0.8}
+          accessibilityLabel="Play from beginning"
+        >
+          <Ionicons name="play-skip-back" size={20} color={styles.restartButtonText.color} />
+        </TouchableOpacity>
       )}
     </View>
   );
@@ -66,7 +76,13 @@ export function PlayButton({ item }: PlayButtonProps) {
 
 const createStyles = (colors: AppColors, theme: ThemeTokens) =>
   StyleSheet.create({
+    buttonRow: {
+      flexDirection: "row",
+      gap: Spacing.sm,
+      marginBottom: Spacing.lg,
+    },
     playButton: {
+      flex: 1,
       flexDirection: "row",
       alignItems: "center",
       justifyContent: "center",
@@ -74,22 +90,19 @@ const createStyles = (colors: AppColors, theme: ThemeTokens) =>
       paddingVertical: Spacing.md,
       borderRadius: Spacing.radiusMd,
       gap: Spacing.sm,
-      marginBottom: Spacing.lg,
     },
     playButtonText: {
       ...theme.text("title", "semibold"),
       color: colors.textInverse,
     },
-    resumeProgressContainer: {
-      position: "absolute",
-      bottom: 0,
-      left: 0,
-      right: 0,
-      height: 4,
-      backgroundColor: colors.surfaceBorder,
-      borderBottomLeftRadius: Spacing.radiusMd,
-      borderBottomRightRadius: Spacing.radiusMd,
-      overflow: "hidden",
+    restartButton: {
+      alignItems: "center",
+      justifyContent: "center",
+      backgroundColor: colors.backgroundTertiary,
+      paddingHorizontal: Spacing.md,
+      borderRadius: Spacing.radiusMd,
     },
-    resumeProgressBar: { height: "100%", backgroundColor: colors.jellyfin },
+    restartButtonText: {
+      color: colors.primary,
+    },
   });
