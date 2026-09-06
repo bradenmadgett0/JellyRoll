@@ -30,10 +30,8 @@ import {
 import { Spacing } from "../../constants/Spacing";
 import { AppColors } from "../../hooks/useColors";
 import { useThemedStyles } from "../../hooks/useThemedStyles";
-import {
-  useJellyfinDetail,
-  useJellyfinPrewarmStream,
-} from "../../services/hooks/useJellyfin";
+import { useJellyfinDetail } from "../../services/hooks/useJellyfin";
+import { useAudioTrackMap } from "../../services/hooks/useAudioTrackMap";
 import { useMediaSettings } from "../../services/hooks/useMediaSettings";
 import { usePlaybackReporting } from "../../services/hooks/usePlaybackReporting";
 import { usePlaybackSession } from "../../services/hooks/usePlaybackSession";
@@ -61,6 +59,15 @@ function waitForReady(player: VideoPlayerInstance): Promise<void> {
   });
 }
 
+/**
+ * Resume-seek watchdog: how long a just-issued resume seek may sit in
+ * 'loading' before it's re-issued, and how many attempts before giving up
+ * and surfacing the stream-error overlay (whose Retry renegotiates a fresh
+ * session through switchStream — the known-good recovery path).
+ */
+const RESUME_STALL_MS = 8000;
+const MAX_RESUME_ATTEMPTS = 3;
+
 export default function PlayerScreen() {
   const { itemId, startTicks: startTicksParam } = useLocalSearchParams<{
     itemId: string;
@@ -74,8 +81,12 @@ export default function PlayerScreen() {
 
   const startTicks = startTicksParam ? parseInt(startTicksParam, 10) : 0;
   const startSeconds = startTicks > 0 ? ticksToSeconds(startTicks) : 0;
-  // Guards the one-time resume-position seek once the player is ready (below).
+  // Guards the resume seek's trigger to once per mount; retries are driven
+  // by the watchdog inside attemptResumeSeek, not by re-triggering.
   const hasSeeked = useRef(false);
+  // Identifies the newest in-flight switchStream — quality/audio changes and
+  // error retries can overlap, and only the newest may touch the player.
+  const switchIdRef = useRef(0);
 
   const [showOverlay, setShowOverlay] = useState(true);
 
@@ -110,11 +121,9 @@ export default function PlayerScreen() {
     error: playbackError,
     renegotiate,
   } = usePlaybackSession(itemId, {
-    startTicks,
     maxStreamingBitrate: selectedQuality.maxBitrate ?? undefined,
     audioStreamIndex: selectedAudioStreamIndex,
   });
-  const prewarmStream = useJellyfinPrewarmStream();
 
   // Single source of truth for the preset list — both the parent (URL
   // building) and the overlay (picker UI) read from this. Reactive, unlike
@@ -122,6 +131,16 @@ export default function PlayerScreen() {
   // once the item detail loads.
   const qualityPresets = useMemo(
     () => buildQualityPresets(item?.MediaSources?.[0]?.Bitrate),
+    [item],
+  );
+
+  // The item's audio tracks, as Jellyfin describes them. Shared by the
+  // default-track effect below and useAudioTrackMap, which maps these onto
+  // the player's own track list for local switching.
+  const audioStreams = useMemo(
+    () =>
+      item?.MediaSources?.[0]?.MediaStreams?.filter((s) => s.Type === "Audio") ??
+      [],
     [item],
   );
 
@@ -135,21 +154,23 @@ export default function PlayerScreen() {
       setSelectedAudioStreamIndex(playbackSession.defaultAudioStreamIndex);
       return;
     }
-    const audioStreams =
-      item?.MediaSources?.[0]?.MediaStreams?.filter(
-        (s) => s.Type === "Audio",
-      ) ?? [];
     const fallback =
       audioStreams.find((s) => s.IsDefault)?.Index ?? audioStreams[0]?.Index;
     if (fallback !== undefined) setSelectedAudioStreamIndex(fallback);
-  }, [playbackSession, selectedAudioStreamIndex, item]);
+  }, [playbackSession, selectedAudioStreamIndex, audioStreams]);
 
-  // NOTE: this previously also baked `startTicks` into the URL so the
-  // server would start the transcode already at the resume point, avoiding
-  // a client-side seek into un-transcoded content. That broke playback
-  // outright against the live server (see the NOTE on getHlsStreamUrl), so
-  // it's reverted to the local-seek approach below pending a known-correct
-  // way to request a server-side start offset.
+  // NOTE: a server-side start offset — having the transcode itself begin at
+  // the resume point, so the client needn't seek into un-transcoded content
+  // — does not work here, confirmed twice against the live server. Jellyfin's
+  // HLS playlist always spans the FULL item (an offset stream still reported
+  // the complete runtime), so StartTimeTicks moves only where the encoder
+  // starts, never where the timeline starts. The player still opens at
+  // playlist position 0 and requests segment 0, which an encoder started
+  // partway in never produces: the load fails with "resource unavailable".
+  // Positioning is therefore entirely the client's job — player.currentTime
+  // is absolute, and the seek below is the only place it is set. Jellyfin
+  // restarts its own transcode when a distant segment is requested, which is
+  // what makes a plain seek viable at all.
   //
   // Computed once and frozen forever after: expo-video's useVideoPlayer
   // recreates the entire native player whenever this source string changes
@@ -161,28 +182,11 @@ export default function PlayerScreen() {
   // already fully resolved (P14) — DirectPlay/DirectStream/Transcode, with
   // bitrate and audio track baked in server-side — so no extra URL-building
   // step is needed here.
-  // For a Transcode/DirectStream session, the URL's first segment can take
-  // many seconds to generate (ffmpeg spinning up, opening/probing the source
-  // file) — confirmed live: ~17s once, then ~0.02s on an identical repeat
-  // request, since Jellyfin serves the already-generated segment from its
-  // transcode cache. Pre-warming it here (while this screen's own loading
-  // spinner is still showing, since hlsUrl is still null) means the player
-  // hits that cached, already-fast second request instead of stalling
-  // visibly itself. DirectPlay has no transcode job, so it's skipped.
   const [hlsUrl, setHlsUrl] = useState<string | null>(null);
   useEffect(() => {
     if (hlsUrl || !playbackSession) return;
-    let cancelled = false;
-    (async () => {
-      if (playbackSession.playMethod !== "DirectPlay") {
-        await prewarmStream(playbackSession.streamUrl);
-      }
-      if (!cancelled) setHlsUrl(playbackSession.streamUrl);
-    })();
-    return () => {
-      cancelled = true;
-    };
-  }, [playbackSession, hlsUrl, prewarmStream]);
+    setHlsUrl(playbackSession.streamUrl);
+  }, [playbackSession, hlsUrl]);
 
   const player = useVideoPlayer(hlsUrl ?? "", (p) => {
     p.loop = false;
@@ -191,18 +195,11 @@ export default function PlayerScreen() {
     // the scrubber's old poll cadence; usePlaybackReporting also listens to
     // this same event for position caching.
     p.timeUpdateEventInterval = 0.5;
-    p.play();
-  });
-
-  // Seek to the resume position once the player has actually loaded the
-  // source. Setting currentTime synchronously in useVideoPlayer's setup
-  // callback above (the previous approach) fires before the player has
-  // anything loaded and is silently dropped — resume always started from 0.
-  useEventListener(player, "statusChange", ({ status }) => {
-    if (status === "readyToPlay" && startSeconds > 0 && !hasSeeked.current) {
-      hasSeeked.current = true;
-      player.currentTime = startSeconds;
-    }
+    // With a resume position, playback deliberately does NOT start here —
+    // the resume block below seeks from the never-played readyToPlay state
+    // and only then calls play(), mirroring switchStream's replace →
+    // waitForReady → seek → play order. See that block for the evidence.
+    if (startSeconds <= 0) p.play();
   });
 
   const { killTranscode, lastKnownTicksRef } = usePlaybackReporting({
@@ -211,6 +208,14 @@ export default function PlayerScreen() {
     session: playbackSession,
     startTicks,
     audioStreamIndex: selectedAudioStreamIndex,
+  });
+
+  // Resolves a Jellyfin audio stream index to a track the player already has
+  // open, for the DirectPlay fast path in handleAudioStreamChange below.
+  const { switchAudioTrack } = useAudioTrackMap({
+    player,
+    audioStreams,
+    playMethod: playbackSession?.playMethod,
   });
 
   // ─── Mid-playback stream health ──────────────────────────────
@@ -228,6 +233,93 @@ export default function PlayerScreen() {
       status === "error" ? (error?.message ?? "Playback failed.") : null,
     );
   });
+
+  // ─── Resume-position seek ────────────────────────────────────
+  // Order matters: wait for readyToPlay, seek while the player has never
+  // been told to play, then play() — the same sequence switchStream uses
+  // after replaceAsync, and the one far-seek-into-a-fresh-transcode shape
+  // observed succeeding against the live server (quality switch to a
+  // brand-new PlaySessionId, immediate seek to the resume point).
+  //
+  // Every failed variant of this seek — in the setup callback, at first
+  // readyToPlay, at first timeUpdate — was issued on a player that had
+  // already been told to play (autoplay lived in the setup callback). Each
+  // accepted the position (currentTime read it back) and then sat in
+  // 'loading' forever. The shapes that work — manual scrubs on an
+  // established pipeline, switchStream's pre-play seek on a fresh session —
+  // differ from the failures only in that the pipeline wasn't
+  // simultaneously just-started AND playing. The fresh-session success also
+  // rules out the server refusing to restart a young transcode job; the
+  // wedge is client-side. So: no autoplay when a resume position exists,
+  // and the first play() happens after the seek.
+  //
+  // The watchdog is the safety net in case that reading is still wrong: a
+  // wedged seek (still 'loading', still parked at the target) is re-issued
+  // — a later seek reliably un-wedges a stuck one, observed repeatedly with
+  // manual scrubs — and after MAX_RESUME_ATTEMPTS it surfaces the
+  // stream-error overlay, whose Retry renegotiates via switchStream.
+  const resumeAttempts = useRef(0);
+  const resumeWatchdog = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  const attemptResumeSeek = useCallback(
+    function attempt() {
+      resumeAttempts.current += 1;
+      player.pause();
+      player.currentTime = startSeconds;
+      player.play();
+      resumeWatchdog.current = setTimeout(() => {
+        // Wedged = still buffering AND still parked at the target. A player
+        // that recovered, or that the user scrubbed somewhere else in the
+        // meantime, fails this check and the watchdog stands down.
+        const wedged =
+          player.status === "loading" &&
+          Math.abs(player.currentTime - startSeconds) < 1;
+        if (!wedged) return;
+        if (resumeAttempts.current >= MAX_RESUME_ATTEMPTS) {
+          setStreamError("Playback stalled while resuming.");
+          return;
+        }
+        attempt();
+      }, RESUME_STALL_MS);
+    },
+    [player, startSeconds],
+  );
+
+  useEventListener(player, "statusChange", ({ status }) => {
+    if (
+      status !== "readyToPlay" ||
+      startSeconds <= 0 ||
+      hasSeeked.current ||
+      !hlsUrl
+    ) {
+      return;
+    }
+    hasSeeked.current = true;
+    attemptResumeSeek();
+  });
+
+  // Listeners bind in an effect, a tick after the player object exists. If
+  // the source reached readyToPlay inside that gap the listener above never
+  // fires — and with autoplay skipped for resumes, nothing would ever play.
+  // Before, a missed event just meant playing from 0; now it must be caught.
+  useEffect(() => {
+    if (
+      hlsUrl &&
+      startSeconds > 0 &&
+      !hasSeeked.current &&
+      player.status === "readyToPlay"
+    ) {
+      hasSeeked.current = true;
+      attemptResumeSeek();
+    }
+  }, [player, hlsUrl, startSeconds, attemptResumeSeek]);
+
+  useEffect(
+    () => () => {
+      if (resumeWatchdog.current) clearTimeout(resumeWatchdog.current);
+    },
+    [],
+  );
 
   // ─── Overlay toggle ─────────────────────────────────────────
   const toggleOverlay = useCallback(() => {
@@ -266,26 +358,54 @@ export default function PlayerScreen() {
       resumeTicks?: number;
     }) => {
       if (!itemId || !player) return;
-      const resumeTicks = resumeTicksOverride ?? secondsToTicks(player.currentTime);
+
+      // Stop the outgoing stream before anything else. The PlaybackInfo
+      // round-trip below runs while the player is otherwise still playing
+      // the OLD source, since nothing touches it until replaceAsync at the
+      // end. Left running, an audio switch keeps playing the language the
+      // user just replaced for that whole window, and the position captured
+      // below keeps advancing, so the seek at the end jumps backwards by
+      // however long the switch took.
+      const switchId = ++switchIdRef.current;
+      const wasPlaying = player.playing;
+      player.pause();
+      // Pausing doesn't change player.status, so the statusChange listener
+      // above won't raise the spinner on its own until replaceAsync — and a
+      // frozen, silent frame with no feedback reads as a crash.
+      setIsBuffering(true);
+
+      const resumeTicks =
+        resumeTicksOverride ?? secondsToTicks(player.currentTime);
       const resumeSeconds = ticksToSeconds(resumeTicks);
       const newSession = await renegotiate({
-        startTicks: resumeTicks,
         maxStreamingBitrate: bitrate ?? undefined,
         audioStreamIndex,
       });
-      if (!newSession) return;
+      // Renegotiation failed. The old source is still loaded and its
+      // transcode still alive (nothing has been torn down yet), so restore
+      // the player as we found it rather than stranding it paused behind a
+      // spinner with no route out. The reason surfaces via playbackError.
+      // Null means either a genuine failure or that a newer switch has
+      // superseded this one (renegotiate drops stale responses). Only the
+      // newest may touch the player — otherwise an abandoned switch resumes
+      // the outgoing stream underneath the one still negotiating.
+      if (!newSession) {
+        if (switchId === switchIdRef.current) {
+          setIsBuffering(false);
+          if (wasPlaying) player.play();
+        }
+        return;
+      }
+      // Tear the outgoing transcode down before the player starts the new
+      // one below, so the two never run at once competing for the same
+      // server CPU. Safe here because the player is already paused and no
+      // longer pulling segments from the old source, and killTranscode
+      // swallows its own errors so it can't break the chain. Which session
+      // it targets is unchanged — see the note above.
+      await killTranscode();
       // newSession.streamUrl is already resolved (P14) — built from the
       // session we just negotiated, not from playbackSession, which hasn't
       // propagated back through a render yet at this point in the async flow.
-      // A switch renegotiates a fresh PlaySessionId, i.e. a fresh transcode
-      // job with the same slow-first-segment cost as initial load — pre-warm
-      // it for the same reason as the hlsUrl effect above, before the player
-      // itself waits on it via replaceAsync/waitForReady below.
-      if (newSession.playMethod !== "DirectPlay") {
-        await prewarmStream(newSession.streamUrl);
-      }
-      // Kill the old transcode before starting the new one.
-      await killTranscode();
       // Replace the source and seek back — wait for the new source to
       // actually be loaded first; setting currentTime immediately after
       // replaceAsync resolves is not guaranteed to take effect (see
@@ -295,7 +415,7 @@ export default function PlayerScreen() {
       player.currentTime = resumeSeconds;
       player.play();
     },
-    [itemId, player, renegotiate, killTranscode, prewarmStream],
+    [itemId, player, renegotiate, killTranscode],
   );
 
   // ─── Quality change handler ──────────────────────────────────
@@ -312,14 +432,34 @@ export default function PlayerScreen() {
   );
 
   // ─── Audio stream change handler ────────────────────────────
+  // A DirectPlay source is the original file, so every audio track is
+  // already inside the container the player has open — switching is an
+  // in-place media-selection change with no new URL, no transcode teardown,
+  // no reload and no rebuffer. switchAudioTrack reports false when the track
+  // couldn't be mapped unambiguously or the player didn't honour the
+  // selection (see useAudioTrackMap), and false is also what a transcoded
+  // session always returns, since Jellyfin bakes a single audio track into
+  // the transcode job. Every one of those cases falls through to the full
+  // renegotiation below — i.e. exactly the previous behaviour.
+  //
+  // State/persistence/reporting are updated up front either way: the
+  // Jellyfin stream index stays the app's currency, and the player track is
+  // only ever a resolution target at the moment of switching.
   const handleAudioStreamChange = useCallback(
-    (audioStreamIndex: number) => {
+    async (audioStreamIndex: number) => {
       if (audioStreamIndex === selectedAudioStreamIndex) return;
       setSelectedAudioStreamIndex(audioStreamIndex);
       setMediaSettings({ audioStreamIndex });
+      if (await switchAudioTrack(audioStreamIndex)) return;
       switchStream({ bitrate: selectedQuality.maxBitrate, audioStreamIndex });
     },
-    [selectedAudioStreamIndex, selectedQuality, setMediaSettings, switchStream],
+    [
+      selectedAudioStreamIndex,
+      selectedQuality,
+      setMediaSettings,
+      switchAudioTrack,
+      switchStream,
+    ],
   );
 
   // ─── Retry after a mid-playback stream error ─────────────────

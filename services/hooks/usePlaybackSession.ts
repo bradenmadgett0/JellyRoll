@@ -23,7 +23,6 @@ const PLAYBACK_ERROR_MESSAGES: Record<JellyfinPlaybackErrorCode, string> = {
 };
 
 export interface UsePlaybackSessionOptions {
-  startTicks?: number;
   maxStreamingBitrate?: number;
   audioStreamIndex?: number;
 }
@@ -45,7 +44,7 @@ export interface UsePlaybackSessionResult {
 
 export function usePlaybackSession(
   itemId: string | undefined,
-  { startTicks, maxStreamingBitrate, audioStreamIndex }: UsePlaybackSessionOptions = {},
+  { maxStreamingBitrate, audioStreamIndex }: UsePlaybackSessionOptions = {},
 ): UsePlaybackSessionResult {
   const getPlaybackInfo = useJellyfinPlaybackInfo();
   const resolveStreamUrl = useJellyfinResolveStreamUrl();
@@ -57,9 +56,9 @@ export function usePlaybackSession(
   // renegotiate() call (without overriding a given field) still uses
   // whatever's current, without the initial-negotiation effect depending on
   // (and re-firing for) every options change.
-  const optionsRef = useRef({ startTicks, maxStreamingBitrate, audioStreamIndex });
+  const optionsRef = useRef({ maxStreamingBitrate, audioStreamIndex });
   useEffect(() => {
-    optionsRef.current = { startTicks, maxStreamingBitrate, audioStreamIndex };
+    optionsRef.current = { maxStreamingBitrate, audioStreamIndex };
   });
 
   // Guards against a negotiation resolving after a newer one has already
@@ -70,6 +69,11 @@ export function usePlaybackSession(
   // against the itemId-change case within a single effect instance.
   const requestIdRef = useRef(0);
 
+  // Mirrors `session` for reads inside negotiate(), which can't depend on
+  // session state without re-creating itself — and with it the
+  // initial-negotiation effect below — on every handshake.
+  const sessionRef = useRef<JellyfinPlaybackSession | null>(null);
+
   const negotiate = useCallback(
     async (
       id: string,
@@ -78,11 +82,24 @@ export function usePlaybackSession(
       const requestId = ++requestIdRef.current;
       const opts = { ...optionsRef.current, ...overrides };
 
+      // Jellyfin applies AudioStreamIndex only to the media source named by
+      // MediaSourceId; with nothing to match against it silently drops the
+      // request's audio selection and bakes the source's DEFAULT audio track
+      // into the TranscodingUrl it returns. Nothing about that looks like a
+      // failure — the handshake succeeds and the URL plays — the audio just
+      // comes back in the original language. So pin the source we already
+      // know we're playing whenever we have it.
+      const mediaSourceId = sessionRef.current?.mediaSourceId;
+
+
+      // No StartTimeTicks: it can't set the stream's start position (the
+      // playlist always spans the full item) and breaks the load when the
+      // server does honour it. See getPlaybackInfo's note on the param.
       try {
-        const info = await getPlaybackInfo(id, {
-          startTimeTicks: opts.startTicks,
+        let info = await getPlaybackInfo(id, {
           maxStreamingBitrate: opts.maxStreamingBitrate,
           audioStreamIndex: opts.audioStreamIndex,
+          mediaSourceId,
           deviceProfile: DEVICE_PROFILE,
         });
         if (requestId !== requestIdRef.current) return null;
@@ -96,10 +113,38 @@ export function usePlaybackSession(
         }
         // Keep media-source selection as-is (first source) — a multi-version
         // item would need its own selection UI, which doesn't exist yet.
-        const source = info.MediaSources?.[0];
+        let source = info.MediaSources?.[0];
         if (!source) {
           setError("No compatible media source was found.");
           return null;
+        }
+
+        // First handshake for this item: there was no session yet, so there
+        // was no source id to pin a requested track to. Now the response
+        // names one — ask again with it, so a restored audio preference
+        // actually applies instead of silently losing to the default. Done
+        // before any state is published, so the un-pinned session never
+        // reaches the player and can't race the one-shot hlsUrl effect in
+        // player.tsx. Costs one extra round trip and no transcode (ffmpeg
+        // starts only when the stream URL is fetched), and only when a track
+        // was actually asked for.
+        if (!mediaSourceId && opts.audioStreamIndex !== undefined) {
+          const pinned = await getPlaybackInfo(id, {
+            maxStreamingBitrate: opts.maxStreamingBitrate,
+            audioStreamIndex: opts.audioStreamIndex,
+            mediaSourceId: source.Id,
+            deviceProfile: DEVICE_PROFILE,
+          });
+          if (requestId !== requestIdRef.current) return null;
+          // Keep the un-pinned result if the retry didn't yield a usable
+          // one — a playable stream in the wrong language beats none.
+          const pinnedSource = pinned.ErrorCode
+            ? undefined
+            : pinned.MediaSources?.[0];
+          if (pinnedSource) {
+            info = pinned;
+            source = pinnedSource;
+          }
         }
         // Resolves DirectPlay/DirectStream/Transcode from what the server
         // actually negotiated (P14), rather than assuming every request goes
@@ -125,6 +170,7 @@ export function usePlaybackSession(
           defaultAudioStreamIndex: source.DefaultAudioStreamIndex,
         };
         setError(null);
+        sessionRef.current = newSession;
         setSession(newSession);
         return newSession;
       } catch {
@@ -138,6 +184,7 @@ export function usePlaybackSession(
 
   useEffect(() => {
     if (!itemId) return;
+    sessionRef.current = null;
     setSession(null);
     setError(null);
     negotiate(itemId);

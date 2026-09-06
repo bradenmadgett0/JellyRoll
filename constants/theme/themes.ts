@@ -16,7 +16,7 @@ import { BrandColors } from "./tokens";
 import { buildTextFn, spaceMonoFontFamilies, typeScale } from "./typography";
 
 const darkColors: ThemeColors = {
-  primary: "#6C63FF",
+  primary: "#BA3F1D",
   primaryLight: "#8B83FF",
   primaryDark: "#4F46E5",
   secondary: "#00D9A6",
@@ -27,7 +27,7 @@ const darkColors: ThemeColors = {
   error: "#FF5757",
   success: "#00D9A6",
   info: "#5BC0EB",
-  background: "#0D1117",
+  background: "#000000",
   backgroundSecondary: "#161B22",
   backgroundTertiary: "#1C2333",
   backgroundElevated: "#21283B",
@@ -37,9 +37,9 @@ const darkColors: ThemeColors = {
   glass: "rgba(28, 35, 51, 0.85)",
   glassBorder: "rgba(99, 115, 155, 0.2)",
   glassHighlight: "rgba(108, 99, 255, 0.08)",
-  text: "#F0F6FC",
-  textSecondary: "#8B949E",
-  textTertiary: "#484F58",
+  text: "#DADAD2",
+  textSecondary: "#A2A38F",
+  textTertiary: "#A2A38F",
   textInverse: "#0D1117",
   gradientPrimary: ["#6C63FF", "#8B83FF"],
   gradientSecondary: ["#00D9A6", "#00B88A"],

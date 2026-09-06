@@ -125,7 +125,7 @@ export default function HomeScreen() {
 
   // Combined queue items
   const allQueueItems = useMemo(() => {
-    const items: Array<{
+    const items: {
       id: string;
       title: string;
       subtitle?: string;
@@ -135,7 +135,7 @@ export default function HomeScreen() {
       timeLeft?: string;
       quality?: string;
       source: "sonarr" | "radarr" | "lidarr";
-    }> = [];
+    }[] = [];
 
     const formatSize = (bytes: number) => {
       if (bytes >= 1e9) return `${(bytes / 1e9).toFixed(1)} GB`;

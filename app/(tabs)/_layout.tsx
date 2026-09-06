@@ -15,6 +15,8 @@ import { useRadarrQueue } from "../../services/hooks/useRadarr";
 import { useSonarrQueue } from "../../services/hooks/useSonarr";
 import { useServerStore } from "../../services/stores/serverStore";
 
+const ICON_SIZE = 18;
+
 export default function TabLayout() {
   const styles = useThemedStyles(createStyles);
   const servers = useServerStore((s) => s.servers);
@@ -41,15 +43,11 @@ export default function TabLayout() {
         headerTitleStyle: styles.headerTitle,
         headerShadowVisible: false,
         tabBarBackground: () =>
-          Platform.OS === "ios" ? (
             <BlurView
-              intensity={80}
+              intensity={Platform.OS === "ios" ? 60 : 100}
               tint="dark"
-              style={StyleSheet.absoluteFill}
+              style={[StyleSheet.absoluteFill, styles.tabBarBgLayout]}
             />
-          ) : (
-            <View style={[StyleSheet.absoluteFill, styles.tabBarBg]} />
-          ),
       }}
     >
       <Tabs.Screen
@@ -59,7 +57,7 @@ export default function TabLayout() {
           tabBarIcon: ({ color, focused }) => (
             <Ionicons
               name={focused ? "home" : "home-outline"}
-              size={24}
+              size={ICON_SIZE}
               color={color}
             />
           ),
@@ -72,7 +70,7 @@ export default function TabLayout() {
           tabBarIcon: ({ color, focused }) => (
             <Ionicons
               name={focused ? "grid" : "grid-outline"}
-              size={24}
+              size={ICON_SIZE}
               color={color}
             />
           ),
@@ -86,7 +84,7 @@ export default function TabLayout() {
             <View>
               <Ionicons
                 name={focused ? "layers" : "layers-outline"}
-                size={24}
+                size={ICON_SIZE}
                 color={color}
               />
               {totalQueue > 0 && (
@@ -107,7 +105,7 @@ export default function TabLayout() {
           tabBarIcon: ({ color, focused }) => (
             <Ionicons
               name={focused ? "person-circle" : "person-circle-outline"}
-              size={24}
+              size={ICON_SIZE}
               color={color}
             />
           ),
@@ -120,21 +118,27 @@ export default function TabLayout() {
 const createStyles = (colors: AppColors, theme: ThemeTokens) =>
   StyleSheet.create({
     tabBar: {
-      backgroundColor:
-        Platform.OS === "ios" ? "transparent" : colors.backgroundSecondary,
+      backgroundColor: "transparent",
       borderTopColor: colors.glassBorder,
       borderTopWidth: 0.5,
       paddingTop: 4,
-      height: Platform.OS === "ios" ? 88 : 64,
-      position: Platform.OS === "ios" ? "absolute" : "relative",
+      height: 64,
+      position: "absolute",
+      marginBottom: 24,
+      marginHorizontal: 24
     },
     tabBarLabel: {
       ...theme.text("labelSmall", "medium"),
       marginBottom: Platform.OS === "ios" ? 0 : 8,
+      backgroundColor: 'transparent'
+    },
+    tabBarBgLayout: {
+      borderRadius: 30,
+      overflow: 'hidden',
     },
     tabBarBg: { backgroundColor: colors.backgroundSecondary },
-    tabBarActive: { color: colors.primary },
-    tabBarInactive: { color: colors.textTertiary },
+    tabBarActive: { color: colors.text },
+    tabBarInactive: { color: colors.textSecondary },
     header: {
       backgroundColor: colors.background,
     },

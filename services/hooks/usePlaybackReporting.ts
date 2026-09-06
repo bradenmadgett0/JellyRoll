@@ -2,9 +2,10 @@
  * usePlaybackReporting — Position tracking + start/progress/stop reporting
  * for a negotiated playback session. Pure side effects, no JSX.
  *
- * player.currentTime is absolute (streams always start at position 0; the
- * caller seeks locally for a resume — see player.tsx) so position tracking
- * here is a direct read, no offset math.
+ * player.currentTime is absolute: a Jellyfin HLS playlist always spans the
+ * full item regardless of where its transcode was started, and the caller
+ * seeks locally for a resume — so position tracking here is a direct read,
+ * no offset math.
  */
 
 import { useEventListener } from "expo";

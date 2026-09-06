@@ -304,6 +304,16 @@ export class JellyfinClient {
     itemId: string,
     opts: {
       maxStreamingBitrate?: number;
+      /**
+       * CAUTION — verified broken against a live server, twice. Jellyfin's
+       * HLS playlist always spans the FULL item (confirmed: an offset stream
+       * still reported the complete runtime), so this only moves where the
+       * encoder begins, not where the timeline begins. The player still opens
+       * at playlist position 0 and asks for segment 0, which an encoder
+       * started partway in never produces — the load fails outright with
+       * "resource unavailable". Seeking is the client's job; Jellyfin
+       * restarts the transcode itself when a distant segment is requested.
+       */
       startTimeTicks?: number;
       audioStreamIndex?: number;
       subtitleStreamIndex?: number;
@@ -336,53 +346,6 @@ export class JellyfinClient {
   // that just leaks it into logs, caches, and any proxy in between.
   getStreamUrl(itemId: string): string {
     return `${this.server.url}/Videos/${itemId}/stream?static=true`;
-  }
-
-  /**
-   * Fetches (and discards) the first segment of a transcoding HLS stream so
-   * its slow part — ffmpeg spinning up and opening/probing the source file —
-   * already happened by the time the player asks for the same URL. Confirmed
-   * live: a heavy multi-track 4K remux took ~17s to produce its first
-   * segment once, then ~0.02s on an identical second request (Jellyfin
-   * serves the already-generated .ts file from its transcode cache). Only
-   * meaningful for a TranscodingUrl (Transcode/DirectStream) — DirectPlay's
-   * static /stream endpoint has no transcode job to warm up, and calling
-   * this on it would just be a wasted extra request.
-   *
-   * Self-authenticating URLs only (TranscodingUrl carries its own `ApiKey`
-   * query param — see resolveStreamUrl), so no auth header is needed here.
-   * Best-effort: any failure (network, malformed playlist) is swallowed —
-   * the player will make the same requests itself and surface a real error
-   * through its own status if something's actually wrong.
-   *
-   * TODO: double-check this actually helps on-device. Verified live from
-   * this sandbox against the server directly, but never through expo-video
-   * itself — confirm the perceived stall before playback starts is
-   * genuinely shorter with this in place, not just that the raw HTTP
-   * timing improves.
-   */
-  async prewarmHlsStream(masterUrl: string): Promise<void> {
-    try {
-      const masterText = await (await fetch(masterUrl)).text();
-      const mainLine = masterText
-        .split("\n")
-        .map((l) => l.trim())
-        .find((l) => l && !l.startsWith("#"));
-      if (!mainLine) return;
-      const mainUrl = new URL(mainLine, masterUrl).toString();
-
-      const mainText = await (await fetch(mainUrl)).text();
-      const segLine = mainText
-        .split("\n")
-        .map((l) => l.trim())
-        .find((l) => l && !l.startsWith("#"));
-      if (!segLine) return;
-      const segUrl = new URL(segLine, mainUrl).toString();
-
-      await fetch(segUrl);
-    } catch {
-      // Best-effort — see doc comment above.
-    }
   }
 
   /**

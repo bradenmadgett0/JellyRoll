@@ -216,6 +216,9 @@ export function useJellyfinPlaybackInfo() {
         startTimeTicks?: number;
         audioStreamIndex?: number;
         subtitleStreamIndex?: number;
+        // Required for audioStreamIndex/subtitleStreamIndex to take effect:
+        // the server only applies them to the media source this names.
+        mediaSourceId?: string;
         deviceProfile?: JellyfinDeviceProfile;
       },
     ): Promise<JellyfinPlaybackInfoResponse> => {
@@ -256,20 +259,6 @@ export function useJellyfinResolveStreamUrl() {
         maxBitrate,
         audioStreamIndex,
       );
-    },
-    [client],
-  );
-}
-
-/** See JellyfinClient.prewarmHlsStream — absorbs a transcode's slow first-segment startup before the player requests it. */
-export function useJellyfinPrewarmStream() {
-  const server = useJellyfinServer();
-  const client = useJellyfinClient(server);
-
-  return useCallback(
-    (masterUrl: string): Promise<void> => {
-      if (!client) return Promise.resolve();
-      return client.prewarmHlsStream(masterUrl);
     },
     [client],
   );
