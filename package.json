@@ -10,7 +10,8 @@
     "web": "expo start --web",
     "lint": "expo lint",
     "test": "jest",
-    "test:watch": "jest --watch"
+    "test:watch": "jest --watch",
+    "test:e2e": "maestro test .maestro"
   },
   "dependencies": {
     "@expo-google-fonts/inter": "^0.4.2",

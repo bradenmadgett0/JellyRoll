@@ -1,0 +1,13 @@
+appId: com.jellyroll.app
+---
+- launchApp:
+    clearState: true
+- assertVisible: "Welcome to JellyRoll"
+- tapOn: ".*Library.*"
+- assertVisible: "No Library Connected"
+- tapOn: ".*Manage.*"
+- assertVisible: "No Management Servers"
+- tapOn: ".*Settings.*"
+- assertVisible: "No servers connected"
+- tapOn: ".*Home.*"
+- assertVisible: "Welcome to JellyRoll"
