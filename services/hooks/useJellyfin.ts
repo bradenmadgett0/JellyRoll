@@ -16,7 +16,7 @@ import {
     JellyfinPlayMethod,
 } from "../../types/jellyfin";
 import { ServerConfig } from "../../types/server";
-import { JellyfinMediaClient } from "../api/jellyfin/media";
+import { Jellyfin } from "../api/jellyfin";
 import { useServerStore } from "../stores/serverStore";
 
 /** IDs negotiated with the server via PlaybackInfo; required before a stream URL can be built. */
@@ -30,11 +30,6 @@ export interface JellyfinPlaybackSession {
   defaultAudioStreamIndex?: number;
 }
 
-/** Create a JellyfinMediaClient instance from a server config */
-function createJellyfinMediaClient(server: ServerConfig): JellyfinMediaClient {
-  return new JellyfinMediaClient(server);
-}
-
 /** Get first connected Jellyfin server */
 function useJellyfinServer(): ServerConfig | undefined {
   return useServerStore((s) =>
@@ -42,9 +37,9 @@ function useJellyfinServer(): ServerConfig | undefined {
   );
 }
 
-function useJellyfinMediaClient(server: ServerConfig | undefined): JellyfinMediaClient | undefined {
+function useJellyfinClient(server: ServerConfig | undefined): Jellyfin | undefined {
   return useMemo(
-    () => (server ? createJellyfinMediaClient(server) : undefined),
+    () => (server ? new Jellyfin(server) : undefined),
     // eslint-disable-next-line react-hooks/exhaustive-deps
     [server?.id, server?.deviceId, server?.url, server?.accessToken],
   );
@@ -54,13 +49,13 @@ function useJellyfinMediaClient(server: ServerConfig | undefined): JellyfinMedia
 
 export function useJellyfinLibraries() {
   const server = useJellyfinServer();
-  const client = useJellyfinMediaClient(server);
+  const client = useJellyfinClient(server);
 
   return useQuery({
     queryKey: ["jellyfin", "libraries", server?.id],
     queryFn: async () => {
       if (!client) throw new Error("No Jellyfin server configured");
-      const response = await client.getLibraries();
+      const response = await client.media.getLibraries();
       // Live TV isn't a browsable media grid the way Movies/Shows/Music
       // are — excluded here, at the source, rather than left for every
       // consumer to filter out itself.
@@ -82,14 +77,14 @@ export function useJellyfinItems(params: {
   enabled?: boolean;
 }) {
   const server = useJellyfinServer();
-  const client = useJellyfinMediaClient(server);
+  const client = useJellyfinClient(server);
   const PAGE_SIZE = 20;
 
   return useInfiniteQuery({
     queryKey: ["jellyfin", "items", server?.id, params],
     queryFn: async ({ pageParam = 0 }) => {
       if (!client) throw new Error("No Jellyfin server configured");
-      return client.getItems({
+      return client.media.getItems({
         ...params,
         limit: PAGE_SIZE,
         startIndex: pageParam,
@@ -109,13 +104,13 @@ export function useJellyfinItems(params: {
 
 export function useJellyfinDetail(itemId: string | undefined) {
   const server = useJellyfinServer();
-  const client = useJellyfinMediaClient(server);
+  const client = useJellyfinClient(server);
 
   return useQuery({
     queryKey: ["jellyfin", "detail", server?.id, itemId],
     queryFn: async () => {
       if (!client || !itemId) throw new Error("Missing server or item ID");
-      return client.getItemDetail(itemId);
+      return client.media.getItemDetail(itemId);
     },
     enabled: !!client && !!itemId,
     staleTime: 2 * 60 * 1000,
@@ -126,13 +121,13 @@ export function useJellyfinDetail(itemId: string | undefined) {
 
 export function useResumeItems(limit: number = 12) {
   const server = useJellyfinServer();
-  const client = useJellyfinMediaClient(server);
+  const client = useJellyfinClient(server);
 
   return useQuery({
     queryKey: ["jellyfin", "resume", server?.id, limit],
     queryFn: async () => {
       if (!client) throw new Error("No Jellyfin server configured");
-      const response = await client.getResumeItems(limit);
+      const response = await client.media.getResumeItems(limit);
       return response.Items;
     },
     enabled: !!client,
@@ -145,13 +140,13 @@ export function useResumeItems(limit: number = 12) {
 
 export function useLatestItems(parentId?: string, limit: number = 16) {
   const server = useJellyfinServer();
-  const client = useJellyfinMediaClient(server);
+  const client = useJellyfinClient(server);
 
   return useQuery({
     queryKey: ["jellyfin", "latest", server?.id, parentId, limit],
     queryFn: async () => {
       if (!client) throw new Error("No Jellyfin server configured");
-      return client.getLatestItems(parentId, limit);
+      return client.media.getLatestItems(parentId, limit);
     },
     enabled: !!client,
     staleTime: 2 * 60 * 1000,
@@ -162,13 +157,13 @@ export function useLatestItems(parentId?: string, limit: number = 16) {
 
 export function useJellyfinSearch(term: string) {
   const server = useJellyfinServer();
-  const client = useJellyfinMediaClient(server);
+  const client = useJellyfinClient(server);
 
   return useQuery({
     queryKey: ["jellyfin", "search", server?.id, term],
     queryFn: async () => {
       if (!client) throw new Error("No Jellyfin server configured");
-      const response = await client.search(term);
+      const response = await client.media.search(term);
       return response.Items;
     },
     enabled: !!client && term.length >= 2,
@@ -180,7 +175,7 @@ export function useJellyfinSearch(term: string) {
 
 export function useJellyfinImageUrl() {
   const server = useJellyfinServer();
-  const client = useJellyfinMediaClient(server);
+  const client = useJellyfinClient(server);
 
   return useCallback(
     (
@@ -190,7 +185,7 @@ export function useJellyfinImageUrl() {
       tag?: string,
     ): string | null => {
       if (!client) return null;
-      return client.getImageUrl(itemId, imageType, maxWidth, undefined, tag);
+      return client.media.getImageUrl(itemId, imageType, maxWidth, undefined, tag);
     },
     [client],
   );
@@ -201,7 +196,7 @@ export function useJellyfinImageUrl() {
 /** Negotiate MediaSources + a server-issued PlaySessionId for an item before streaming it. */
 export function useJellyfinPlaybackInfo() {
   const server = useJellyfinServer();
-  const client = useJellyfinMediaClient(server);
+  const client = useJellyfinClient(server);
 
   return useCallback(
     (
@@ -219,7 +214,7 @@ export function useJellyfinPlaybackInfo() {
     ): Promise<JellyfinPlaybackInfoResponse> => {
       if (!client)
         return Promise.reject(new Error("No Jellyfin server configured"));
-      return client.getPlaybackInfo(itemId, opts);
+      return client.media.getPlaybackInfo(itemId, opts);
     },
     [client],
   );
@@ -236,7 +231,7 @@ export function useJellyfinPlaybackInfo() {
  */
 export function useJellyfinResolveStreamUrl() {
   const server = useJellyfinServer();
-  const client = useJellyfinMediaClient(server);
+  const client = useJellyfinClient(server);
 
   return useCallback(
     (
@@ -247,7 +242,7 @@ export function useJellyfinResolveStreamUrl() {
       audioStreamIndex?: number,
     ): { url: string; playMethod: JellyfinPlayMethod } | null => {
       if (!client) return null;
-      return client.resolveStreamUrl(
+      return client.media.resolveStreamUrl(
         itemId,
         source,
         playSessionId,
@@ -263,13 +258,13 @@ export function useJellyfinResolveStreamUrl() {
 
 export function useJellyfinSeasons(seriesId: string | undefined) {
   const server = useJellyfinServer();
-  const client = useJellyfinMediaClient(server);
+  const client = useJellyfinClient(server);
 
   return useQuery({
     queryKey: ["jellyfin", "seasons", server?.id, seriesId],
     queryFn: async () => {
       if (!client || !seriesId) throw new Error("Missing params");
-      const response = await client.getSeasons(seriesId);
+      const response = await client.media.getSeasons(seriesId);
       return response.Items;
     },
     enabled: !!client && !!seriesId,
@@ -283,13 +278,13 @@ export function useJellyfinEpisodes(
   seasonId?: string,
 ) {
   const server = useJellyfinServer();
-  const client = useJellyfinMediaClient(server);
+  const client = useJellyfinClient(server);
 
   return useQuery({
     queryKey: ["jellyfin", "episodes", server?.id, seriesId, seasonId],
     queryFn: async () => {
       if (!client || !seriesId) throw new Error("Missing params");
-      const response = await client.getEpisodes(seriesId, seasonId);
+      const response = await client.media.getEpisodes(seriesId, seasonId);
       return response.Items;
     },
     enabled: !!client && !!seriesId,
@@ -306,7 +301,7 @@ export function useJellyfinEpisodes(
  */
 export function usePlaybackReporter(session?: JellyfinPlaybackSession) {
   const server = useJellyfinServer();
-  const client = useJellyfinMediaClient(server);
+  const client = useJellyfinClient(server);
   const queryClient = useQueryClient();
 
   const reportStart = useCallback(
@@ -318,7 +313,7 @@ export function usePlaybackReporter(session?: JellyfinPlaybackSession) {
     ) => {
       if (!client || !session) return;
       try {
-        await client.reportPlaybackStart(
+        await client.media.reportPlaybackStart(
           itemId,
           positionTicks,
           session.playSessionId,
@@ -346,7 +341,7 @@ export function usePlaybackReporter(session?: JellyfinPlaybackSession) {
     ) => {
       if (!client || !session) return;
       try {
-        await client.reportPlaybackProgress(
+        await client.media.reportPlaybackProgress(
           itemId,
           positionTicks,
           isPaused,
@@ -368,7 +363,7 @@ export function usePlaybackReporter(session?: JellyfinPlaybackSession) {
   const killTranscode = useCallback(async () => {
     if (!client || !session) return;
     try {
-      await client.deleteActiveEncoding(session.playSessionId);
+      await client.media.deleteActiveEncoding(session.playSessionId);
     } catch (e) {
       console.warn("[Playback] Failed to kill transcode", e);
     }
@@ -378,14 +373,14 @@ export function usePlaybackReporter(session?: JellyfinPlaybackSession) {
     async (itemId: string, positionTicks: number) => {
       if (!client || !session) return;
       try {
-        await client.reportPlaybackStopped(
+        await client.media.reportPlaybackStopped(
           itemId,
           positionTicks,
           session.playSessionId,
           session.mediaSourceId,
         );
         // Kill the server-side transcode session
-        await client.deleteActiveEncoding(session.playSessionId);
+        await client.media.deleteActiveEncoding(session.playSessionId);
         // Invalidate resume cache so Continue Watching refreshes
         queryClient.invalidateQueries({ queryKey: ["jellyfin", "resume"] });
         // Also invalidate the detail cache for this item

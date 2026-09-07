@@ -10,7 +10,21 @@ import {
   JellyfinPlayMethod
 } from "@/types/jellyfin";
 
-export class JellyfinMediaClient extends JellyfinClient {
+export class JellyfinMediaClient {
+  constructor(private readonly root: JellyfinClient) {}
+
+  private get client() {
+    return this.root.client;
+  }
+
+  private get server() {
+    return this.root.server;
+  }
+
+  private get deviceId() {
+    return this.root.deviceId;
+  }
+
   // ─── Libraries ───────────────────────────────────────
 
   async getLibraries(): Promise<JellyfinLibraryResponse> {
