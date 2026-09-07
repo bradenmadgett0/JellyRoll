@@ -2,6 +2,8 @@
  * Server configuration types
  */
 
+import { JellyfinUserPolicy } from './jellyfin';
+
 export type ServerType = 'jellyfin' | 'sonarr' | 'radarr' | 'lidarr';
 
 export interface ServerConfig {
@@ -15,6 +17,8 @@ export interface ServerConfig {
     accessToken?: string;
     /** Jellyfin user ID */
     userId?: string;
+    /** Jellyfin user policy — captured at login, refreshed via getCurrentUser() */
+    policy?: JellyfinUserPolicy;
     /** Stable per-server device ID sent as DeviceId in the Jellyfin auth header. Generated once at add-time; must not change, or Jellyfin registers a new session/device per value. */
     deviceId?: string;
     /** Whether this server connection works over HTTPS */

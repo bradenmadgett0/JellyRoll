@@ -15,6 +15,25 @@ export interface JellyfinUser {
     HasPassword: boolean;
     HasConfiguredPassword: boolean;
     PrimaryImageTag?: string;
+    LastLoginDate?: string;
+    LastActivityDate?: string;
+    Policy: JellyfinUserPolicy;
+}
+
+// Subset of UserPolicy's 44 fields — just what gates features in the M-series
+// server-management tickets. Expand as those tickets need more (M12's user
+// policy editor needs the full set).
+export interface JellyfinUserPolicy {
+    IsAdministrator: boolean;
+    IsDisabled: boolean;
+    EnableContentDeletion: boolean;
+    EnableContentDeletionFromFolders: string[];
+    EnableCollectionManagement: boolean;
+    EnableSubtitleManagement: boolean;
+    EnableLiveTvManagement: boolean;
+    EnableLiveTvAccess: boolean;
+    EnableRemoteControlOfOtherUsers: boolean;
+    EnableSharedDeviceControl: boolean;
 }
 
 export interface JellyfinLibrary {
