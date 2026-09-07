@@ -22,7 +22,7 @@ import { SOURCE_COLORS } from "../../constants/Sources";
 import { Spacing } from "../../constants/Spacing";
 import { AppColors } from "../../hooks/useColors";
 import { useThemedStyles } from "../../hooks/useThemedStyles";
-import { generateDeviceId, JellyfinClient } from "../../services/api/jellyfin";
+import { generateDeviceId, JellyfinClient } from "../../services/api/jellyfin/client";
 import { LidarrClient } from "../../services/api/lidarr";
 import { RadarrClient } from "../../services/api/radarr";
 import { SonarrClient } from "../../services/api/sonarr";

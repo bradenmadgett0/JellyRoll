@@ -16,7 +16,7 @@ import {
     JellyfinPlayMethod,
 } from "../../types/jellyfin";
 import { ServerConfig } from "../../types/server";
-import { JellyfinClient } from "../api/jellyfin";
+import { JellyfinMediaClient } from "../api/jellyfin/media";
 import { useServerStore } from "../stores/serverStore";
 
 /** IDs negotiated with the server via PlaybackInfo; required before a stream URL can be built. */
@@ -30,9 +30,9 @@ export interface JellyfinPlaybackSession {
   defaultAudioStreamIndex?: number;
 }
 
-/** Create a JellyfinClient instance from a server config */
-function createClient(server: ServerConfig): JellyfinClient {
-  return new JellyfinClient(server);
+/** Create a JellyfinMediaClient instance from a server config */
+function createJellyfinMediaClient(server: ServerConfig): JellyfinMediaClient {
+  return new JellyfinMediaClient(server);
 }
 
 /** Get first connected Jellyfin server */
@@ -42,14 +42,9 @@ function useJellyfinServer(): ServerConfig | undefined {
   );
 }
 
-/**
- * Memoize the JellyfinClient per server so callers constructing one on every
- * render (or every query fetch) don't re-run the constructor's device-ID
- * backfill write (`resolveDeviceId` in jellyfin.ts) repeatedly.
- */
-function useJellyfinClient(server: ServerConfig | undefined): JellyfinClient | undefined {
+function useJellyfinMediaClient(server: ServerConfig | undefined): JellyfinMediaClient | undefined {
   return useMemo(
-    () => (server ? createClient(server) : undefined),
+    () => (server ? createJellyfinMediaClient(server) : undefined),
     // eslint-disable-next-line react-hooks/exhaustive-deps
     [server?.id, server?.deviceId, server?.url, server?.accessToken],
   );
@@ -59,7 +54,7 @@ function useJellyfinClient(server: ServerConfig | undefined): JellyfinClient | u
 
 export function useJellyfinLibraries() {
   const server = useJellyfinServer();
-  const client = useJellyfinClient(server);
+  const client = useJellyfinMediaClient(server);
 
   return useQuery({
     queryKey: ["jellyfin", "libraries", server?.id],
@@ -87,7 +82,7 @@ export function useJellyfinItems(params: {
   enabled?: boolean;
 }) {
   const server = useJellyfinServer();
-  const client = useJellyfinClient(server);
+  const client = useJellyfinMediaClient(server);
   const PAGE_SIZE = 20;
 
   return useInfiniteQuery({
@@ -114,7 +109,7 @@ export function useJellyfinItems(params: {
 
 export function useJellyfinDetail(itemId: string | undefined) {
   const server = useJellyfinServer();
-  const client = useJellyfinClient(server);
+  const client = useJellyfinMediaClient(server);
 
   return useQuery({
     queryKey: ["jellyfin", "detail", server?.id, itemId],
@@ -131,7 +126,7 @@ export function useJellyfinDetail(itemId: string | undefined) {
 
 export function useResumeItems(limit: number = 12) {
   const server = useJellyfinServer();
-  const client = useJellyfinClient(server);
+  const client = useJellyfinMediaClient(server);
 
   return useQuery({
     queryKey: ["jellyfin", "resume", server?.id, limit],
@@ -150,7 +145,7 @@ export function useResumeItems(limit: number = 12) {
 
 export function useLatestItems(parentId?: string, limit: number = 16) {
   const server = useJellyfinServer();
-  const client = useJellyfinClient(server);
+  const client = useJellyfinMediaClient(server);
 
   return useQuery({
     queryKey: ["jellyfin", "latest", server?.id, parentId, limit],
@@ -167,7 +162,7 @@ export function useLatestItems(parentId?: string, limit: number = 16) {
 
 export function useJellyfinSearch(term: string) {
   const server = useJellyfinServer();
-  const client = useJellyfinClient(server);
+  const client = useJellyfinMediaClient(server);
 
   return useQuery({
     queryKey: ["jellyfin", "search", server?.id, term],
@@ -185,7 +180,7 @@ export function useJellyfinSearch(term: string) {
 
 export function useJellyfinImageUrl() {
   const server = useJellyfinServer();
-  const client = useJellyfinClient(server);
+  const client = useJellyfinMediaClient(server);
 
   return useCallback(
     (
@@ -206,7 +201,7 @@ export function useJellyfinImageUrl() {
 /** Negotiate MediaSources + a server-issued PlaySessionId for an item before streaming it. */
 export function useJellyfinPlaybackInfo() {
   const server = useJellyfinServer();
-  const client = useJellyfinClient(server);
+  const client = useJellyfinMediaClient(server);
 
   return useCallback(
     (
@@ -241,7 +236,7 @@ export function useJellyfinPlaybackInfo() {
  */
 export function useJellyfinResolveStreamUrl() {
   const server = useJellyfinServer();
-  const client = useJellyfinClient(server);
+  const client = useJellyfinMediaClient(server);
 
   return useCallback(
     (
@@ -268,7 +263,7 @@ export function useJellyfinResolveStreamUrl() {
 
 export function useJellyfinSeasons(seriesId: string | undefined) {
   const server = useJellyfinServer();
-  const client = useJellyfinClient(server);
+  const client = useJellyfinMediaClient(server);
 
   return useQuery({
     queryKey: ["jellyfin", "seasons", server?.id, seriesId],
@@ -288,7 +283,7 @@ export function useJellyfinEpisodes(
   seasonId?: string,
 ) {
   const server = useJellyfinServer();
-  const client = useJellyfinClient(server);
+  const client = useJellyfinMediaClient(server);
 
   return useQuery({
     queryKey: ["jellyfin", "episodes", server?.id, seriesId, seasonId],
@@ -311,7 +306,7 @@ export function useJellyfinEpisodes(
  */
 export function usePlaybackReporter(session?: JellyfinPlaybackSession) {
   const server = useJellyfinServer();
-  const client = useJellyfinClient(server);
+  const client = useJellyfinMediaClient(server);
   const queryClient = useQueryClient();
 
   const reportStart = useCallback(

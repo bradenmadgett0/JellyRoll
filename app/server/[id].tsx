@@ -21,7 +21,7 @@ import { SOURCE_COLORS, SOURCE_ICONS } from "../../constants/Sources";
 import { Spacing } from "../../constants/Spacing";
 import { AppColors } from "../../hooks/useColors";
 import { useThemedStyles } from "../../hooks/useThemedStyles";
-import { JellyfinClient } from "../../services/api/jellyfin";
+import { JellyfinClient } from "../../services/api/jellyfin/client";
 import { LidarrClient } from "../../services/api/lidarr";
 import { RadarrClient } from "../../services/api/radarr";
 import { SonarrClient } from "../../services/api/sonarr";

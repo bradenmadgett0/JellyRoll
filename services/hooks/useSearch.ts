@@ -8,7 +8,7 @@ import { JellyfinItem } from '../../types/jellyfin';
 import { LidarrLookupResult } from '../../types/lidarr';
 import { RadarrLookupResult } from '../../types/radarr';
 import { SonarrLookupResult } from '../../types/sonarr';
-import { JellyfinClient } from '../api/jellyfin';
+import { JellyfinMediaClient } from '../api/jellyfin/media';
 import { LidarrClient } from '../api/lidarr';
 import { RadarrClient } from '../api/radarr';
 import { SonarrClient } from '../api/sonarr';
@@ -50,7 +50,7 @@ export function useGlobalSearch(query: string) {
         queryKey: ['search', 'jellyfin', jellyfinServer?.id, debouncedQuery],
         queryFn: async (): Promise<SearchResult[]> => {
             if (!jellyfinServer) return [];
-            const client = new JellyfinClient(jellyfinServer);
+            const client = new JellyfinMediaClient(jellyfinServer);
             const result = await client.search(debouncedQuery, 15);
             const items = result.Items ?? [];
             return items.map((item: JellyfinItem) => ({
