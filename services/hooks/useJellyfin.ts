@@ -14,6 +14,7 @@ import {
     JellyfinMediaSource,
     JellyfinPlaybackInfoResponse,
     JellyfinPlayMethod,
+    JellyfinUserPolicy,
 } from "../../types/jellyfin";
 import { ServerConfig } from "../../types/server";
 import { Jellyfin } from "../api/jellyfin";
@@ -43,6 +44,31 @@ function useJellyfinClient(server: ServerConfig | undefined): Jellyfin | undefin
     // eslint-disable-next-line react-hooks/exhaustive-deps
     [server?.id, server?.deviceId, server?.url, server?.accessToken],
   );
+}
+
+// ─── User Policy ─────────────────────────────────────
+
+/** The signed-in Jellyfin user's policy, captured at login and persisted with the server. */
+export function useUserPolicy(): JellyfinUserPolicy | undefined {
+  return useJellyfinServer()?.policy;
+}
+
+/** Whether the signed-in Jellyfin user is an administrator. Gates every management screen. */
+export function useIsAdmin(): boolean {
+  return useUserPolicy()?.IsAdministrator ?? false;
+}
+
+/** Re-fetches the current user's policy and persists it — for when it may have changed mid-session. */
+export function useRefreshUserPolicy() {
+  const server = useJellyfinServer();
+  const client = useJellyfinClient(server);
+  const updateServer = useServerStore((s) => s.updateServer);
+
+  return useCallback(async () => {
+    if (!client || !server) return;
+    const user = await client.getCurrentUser();
+    await updateServer(server.id, { policy: user.Policy });
+  }, [client, server, updateServer]);
 }
 
 // ─── Libraries ───────────────────────────────────────

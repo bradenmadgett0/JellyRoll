@@ -8,6 +8,7 @@
 import {
     JellyfinAuthResponse,
     JellyfinSystemInfo,
+    JellyfinUser,
 } from "@/types/jellyfin";
 import { ConnectionTestResult, ServerConfig } from "@/types/server";
 import { JellyfinClient } from "./client";
@@ -39,6 +40,10 @@ export class Jellyfin {
 
   getSystemInfo(): Promise<JellyfinSystemInfo> {
     return this.root.getSystemInfo();
+  }
+
+  getCurrentUser(): Promise<JellyfinUser> {
+    return this.root.getCurrentUser();
   }
 }
 

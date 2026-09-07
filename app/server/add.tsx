@@ -144,6 +144,7 @@ export default function AddServerScreen() {
           url: normalizedUrl,
           accessToken: authResult.AccessToken,
           userId: authResult.User.Id,
+          policy: authResult.User.Policy,
           isHttps: normalizedUrl.startsWith("https"),
           httpAllowed: useHttp,
           lastConnected: new Date().toISOString(),

@@ -7,6 +7,7 @@ import axios, { AxiosInstance } from "axios";
 import {
     JellyfinAuthResponse,
     JellyfinSystemInfo,
+    JellyfinUser,
 } from "../../../types/jellyfin";
 import { ConnectionTestResult, ServerConfig } from "../../../types/server";
 import { useServerStore } from "../../stores/serverStore";
@@ -122,6 +123,14 @@ export class JellyfinClient {
         error: error instanceof Error ? error.message : "Unknown error",
       };
     }
+  }
+
+  // ─── User ────────────────────────────────────────────
+
+  /** Re-fetches the signed-in user, including `Policy` — for refreshing it mid-session. */
+  async getCurrentUser(): Promise<JellyfinUser> {
+    const { data } = await this.client.get("/Users/Me");
+    return data;
   }
 
   // ─── System ──────────────────────────────────────────
