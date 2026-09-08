@@ -47,6 +47,7 @@ export default function TabLayout() {
               intensity={Platform.OS === "ios" ? 60 : 100}
               tint="dark"
               style={[StyleSheet.absoluteFill, styles.tabBarBgLayout]}
+              pointerEvents="none"
             />
       }}
     >
@@ -54,6 +55,7 @@ export default function TabLayout() {
         name="index"
         options={{
           title: "Home",
+          tabBarButtonTestID: "tab-home",
           tabBarIcon: ({ color, focused }) => (
             <Ionicons
               name={focused ? "home" : "home-outline"}
@@ -67,6 +69,7 @@ export default function TabLayout() {
         name="library"
         options={{
           title: "Library",
+          tabBarButtonTestID: "tab-library",
           tabBarIcon: ({ color, focused }) => (
             <Ionicons
               name={focused ? "grid" : "grid-outline"}
@@ -80,6 +83,7 @@ export default function TabLayout() {
         name="manage"
         options={{
           title: "Manage",
+          tabBarButtonTestID: "tab-manage",
           tabBarIcon: ({ color, focused }) => (
             <View>
               <Ionicons
@@ -102,6 +106,7 @@ export default function TabLayout() {
         name="settings"
         options={{
           title: "Settings",
+          tabBarButtonTestID: "tab-settings",
           tabBarIcon: ({ color, focused }) => (
             <Ionicons
               name={focused ? "person-circle" : "person-circle-outline"}

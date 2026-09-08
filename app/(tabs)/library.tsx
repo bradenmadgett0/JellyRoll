@@ -197,7 +197,9 @@ export default function LibraryScreen() {
             size={64}
             color={styles.iconTertiary.color}
           />
-          <Text style={styles.emptyTitle}>No Library Connected</Text>
+          <Text style={styles.emptyTitle} testID="library-empty-title">
+            No Library Connected
+          </Text>
           <Text style={styles.emptySubtitle}>
             Add a Jellyfin server to browse your media library.
           </Text>

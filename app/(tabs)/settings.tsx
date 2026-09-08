@@ -99,7 +99,9 @@ export default function SettingsScreen() {
 
           {servers.length === 0 ? (
             <View style={styles.emptyServers}>
-              <Text style={styles.emptyServersText}>No servers connected</Text>
+              <Text style={styles.emptyServersText} testID="settings-empty-servers">
+                No servers connected
+              </Text>
             </View>
           ) : (
             servers.map((server) => (
