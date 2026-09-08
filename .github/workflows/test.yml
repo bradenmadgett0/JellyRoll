@@ -89,7 +89,7 @@ jobs:
 
       - name: Build release app for Simulator
         run: |
-          WORKSPACE=$(ls ios/*.xcworkspace | head -n1)
+          WORKSPACE=$(ls -d ios/*.xcworkspace | head -n1)
           SCHEME=$(xcodebuild -list -workspace "$WORKSPACE" -json | jq -r '.workspace.schemes[0]')
           xcodebuild -workspace "$WORKSPACE" -scheme "$SCHEME" \
             -configuration Release -sdk iphonesimulator \

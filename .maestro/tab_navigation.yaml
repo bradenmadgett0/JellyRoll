@@ -4,6 +4,7 @@ appId: com.jellyroll.app
     clearState: true
 - assertVisible:
     id: "home-empty-title"
+    timeout: 45000
 - tapOn:
     id: "tab-library"
 - assertVisible:

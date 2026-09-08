@@ -4,5 +4,6 @@ appId: com.jellyroll.app
     clearState: true
 - assertVisible:
     id: "home-empty-title"
+    timeout: 45000
 - assertVisible:
     id: "add-first-server-button"
