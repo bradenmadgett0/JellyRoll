@@ -2,5 +2,7 @@ appId: com.jellyroll.app
 ---
 - launchApp:
     clearState: true
-- assertVisible: "Welcome to JellyRoll"
-- assertVisible: ".*Add Your First Server.*"
+- assertVisible:
+    id: "home-empty-title"
+- assertVisible:
+    id: "add-first-server-button"

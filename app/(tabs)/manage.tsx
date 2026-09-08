@@ -169,7 +169,9 @@ export default function ManageScreen() {
             size={64}
             color={styles.iconTertiary.color}
           />
-          <Text style={styles.emptyTitle}>No Management Servers</Text>
+          <Text style={styles.emptyTitle} testID="manage-empty-title">
+            No Management Servers
+          </Text>
           <Text style={styles.emptySubtitle}>
             Add Sonarr, Radarr, or Lidarr to manage your media collection.
           </Text>

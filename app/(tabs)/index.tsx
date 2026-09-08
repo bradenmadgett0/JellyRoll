@@ -246,7 +246,9 @@ export default function HomeScreen() {
               color={styles.iconPrimary.color}
             />
           </View>
-          <Text style={styles.emptyTitle}>Welcome to JellyRoll</Text>
+          <Text style={styles.emptyTitle} testID="home-empty-title">
+            Welcome to JellyRoll
+          </Text>
           <Text style={styles.emptySubtitle}>
             Connect your media servers to get started.{"\n"}
             Add your Jellyfin, Sonarr, Radarr, or Lidarr servers.
@@ -255,6 +257,7 @@ export default function HomeScreen() {
             style={styles.addServerButton}
             onPress={() => router.push("/server/add")}
             activeOpacity={0.8}
+            testID="add-first-server-button"
           >
             <Ionicons
               name="add-circle"

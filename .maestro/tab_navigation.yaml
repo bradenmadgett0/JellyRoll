@@ -2,12 +2,21 @@ appId: com.jellyroll.app
 ---
 - launchApp:
     clearState: true
-- assertVisible: "Welcome to JellyRoll"
-- tapOn: ".*Library.*"
-- assertVisible: "No Library Connected"
-- tapOn: ".*Manage.*"
-- assertVisible: "No Management Servers"
-- tapOn: ".*Settings.*"
-- assertVisible: "No servers connected"
-- tapOn: ".*Home.*"
-- assertVisible: "Welcome to JellyRoll"
+- assertVisible:
+    id: "home-empty-title"
+- tapOn:
+    id: "tab-library"
+- assertVisible:
+    id: "library-empty-title"
+- tapOn:
+    id: "tab-manage"
+- assertVisible:
+    id: "manage-empty-title"
+- tapOn:
+    id: "tab-settings"
+- assertVisible:
+    id: "settings-empty-servers"
+- tapOn:
+    id: "tab-home"
+- assertVisible:
+    id: "home-empty-title"
