@@ -47,4 +47,8 @@ export class Jellyfin {
   }
 }
 
-export { generateDeviceId, JellyfinClient } from "./client";
+export {
+    generateDeviceId,
+    JellyfinClient,
+    JellyfinPermissionError,
+} from "./client";

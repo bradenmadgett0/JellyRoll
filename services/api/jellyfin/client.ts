@@ -21,6 +21,18 @@ export function generateDeviceId(): string {
 }
 
 /**
+ * Thrown for a 403 (authenticated but not permitted), distinct from a 401.
+ * Callers that know which permission a screen requires can catch this and
+ * show a more specific message than the generic one attached here.
+ */
+export class JellyfinPermissionError extends Error {
+  constructor(message = "You don't have permission to do this.") {
+    super(message);
+    this.name = "JellyfinPermissionError";
+  }
+}
+
+/**
  * Resolve the stable device ID for a server, backfilling and persisting one
  * for installs that predate the deviceId field. Without a stable ID, Jellyfin
  * registers a new session/device per request.
@@ -79,6 +91,24 @@ export class JellyfinClient {
           throw new Error(
             "Authentication failed. Please re-enter your credentials.",
           );
+        }
+        if (error.response?.status === 403) {
+          // Management screens gate on cached policy (M1); a 403 means that
+          // cache is stale or the server-side policy changed. Re-fetch and
+          // re-persist it so the next gate check reflects reality.
+          this.getCurrentUser()
+            .then((user) =>
+              useServerStore
+                .getState()
+                .updateServer(this.server.id, { policy: user.Policy }),
+            )
+            .catch((e) =>
+              console.warn(
+                "[Jellyfin] Failed to refresh policy after 403",
+                e,
+              ),
+            );
+          throw new JellyfinPermissionError();
         }
         if (error.response) {
           throw new Error(

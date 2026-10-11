@@ -1,5 +1,9 @@
 import MockAdapter from "axios-mock-adapter";
-import { generateDeviceId, JellyfinClient } from "./client";
+import {
+  generateDeviceId,
+  JellyfinClient,
+  JellyfinPermissionError,
+} from "./client";
 import { useServerStore } from "@/services/stores/serverStore";
 import { makeServerConfig, noResponseReply } from "@/test/fixtures";
 
@@ -99,6 +103,35 @@ describe("JellyfinClient — error mapping", () => {
     await expect(client.getSystemInfo()).rejects.toThrow(
       /Authentication failed/,
     );
+  });
+
+  it("maps a 403 to a permission error, not a raw status code", async () => {
+    mock.onGet("/System/Info/Public").reply(403);
+    mock.onGet("/Users/Me").reply(200, { Policy: { IsAdministrator: false } });
+
+    await expect(client.getSystemInfo()).rejects.toThrow(
+      JellyfinPermissionError,
+    );
+    await expect(client.getSystemInfo()).rejects.not.toThrow(/403/);
+  });
+
+  it("re-fetches and persists the current user's policy on a 403", async () => {
+    const updateServer = jest.fn().mockResolvedValue(undefined);
+    (useServerStore.getState as jest.Mock).mockReturnValue({ updateServer });
+    mock.onGet("/System/Info/Public").reply(403);
+    mock
+      .onGet("/Users/Me")
+      .reply(200, { Policy: { IsAdministrator: false } });
+
+    await expect(client.getSystemInfo()).rejects.toThrow(
+      JellyfinPermissionError,
+    );
+    // The refresh is fire-and-forget, so let its microtasks flush.
+    await new Promise((resolve) => setImmediate(resolve));
+
+    expect(updateServer).toHaveBeenCalledWith(client.server.id, {
+      policy: { IsAdministrator: false },
+    });
   });
 
   it("maps other HTTP error statuses to a status-coded message", async () => {
