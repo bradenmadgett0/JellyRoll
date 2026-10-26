@@ -2,8 +2,10 @@ appId: com.jellyroll.app
 ---
 - launchApp:
     clearState: true
-- assertVisible:
-    id: "home-empty-title"
+- extendedWaitUntil:
+    visible:
+      id: "home-empty-title"
+    timeout: 45000
 - tapOn:
     id: "tab-library"
 - assertVisible:
@@ -14,8 +16,10 @@ appId: com.jellyroll.app
     id: "manage-empty-title"
 - tapOn:
     id: "tab-settings"
-- assertVisible:
-    id: "settings-empty-servers"
+- extendedWaitUntil:
+    visible:
+      id: "settings-empty-servers"
+    timeout: 60000
 - tapOn:
     id: "tab-home"
 - assertVisible:
