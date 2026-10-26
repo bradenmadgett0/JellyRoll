@@ -284,7 +284,7 @@ export default function HomeScreen() {
         />
       }
     >
-      <TabSafeView style={{ 'paddingBottom': 80 }}>
+      <TabSafeView>
         {/* Header */}
         <Animated.View
           entering={FadeInDown.duration(500)}
