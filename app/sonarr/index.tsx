@@ -241,7 +241,9 @@ export default function SonarrScreen() {
           refreshControl={
             <RefreshControl
               refreshing={false}
-              onRefresh={refetch}
+              onRefresh={() => {
+                refetch();
+              }}
               tintColor={styles.sonarrColor.color as string}
             />
           }

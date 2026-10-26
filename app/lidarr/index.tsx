@@ -191,7 +191,9 @@ export default function LidarrScreen() {
           refreshControl={
             <RefreshControl
               refreshing={false}
-              onRefresh={refetch}
+              onRefresh={() => {
+                refetch();
+              }}
               tintColor={styles.lidarrColor.color as string}
             />
           }

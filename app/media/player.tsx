@@ -585,7 +585,7 @@ const createStyles = (colors: AppColors, theme: ThemeTokens) =>
     // user keeps context (and PlayerOverlay stays reachable) rather than
     // being dropped onto a blank error page for a mid-playback failure.
     streamErrorOverlay: {
-      ...StyleSheet.absoluteFillObject,
+      ...StyleSheet.absoluteFill,
       backgroundColor: "rgba(0,0,0,0.85)",
       justifyContent: "center",
       alignItems: "center",
@@ -593,7 +593,7 @@ const createStyles = (colors: AppColors, theme: ThemeTokens) =>
       zIndex: 30,
     },
     bufferingOverlay: {
-      ...StyleSheet.absoluteFillObject,
+      ...StyleSheet.absoluteFill,
       justifyContent: "center",
       alignItems: "center",
       zIndex: 30,

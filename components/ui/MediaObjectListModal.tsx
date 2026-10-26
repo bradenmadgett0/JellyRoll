@@ -92,7 +92,7 @@ const styles = (colors: AppColors, theme: ThemeTokens) =>
 
     // Quality picker modal
     pickerBackdrop: {
-      ...StyleSheet.absoluteFillObject,
+      ...StyleSheet.absoluteFill,
       backgroundColor: theme.overlay.backdrop,
       justifyContent: "center",
       alignItems: "center",

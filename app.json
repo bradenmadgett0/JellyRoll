@@ -7,7 +7,6 @@
     "icon": "./assets/images/icon.png",
     "scheme": "jellyroll",
     "userInterfaceStyle": "dark",
-    "newArchEnabled": true,
     "ios": {
       "supportsTablet": true,
       "bundleIdentifier": "com.jellyroll.app"
@@ -19,7 +18,6 @@
         "backgroundImage": "./assets/images/android-icon-background.png",
         "monochromeImage": "./assets/images/android-icon-monochrome.png"
       },
-      "edgeToEdgeEnabled": true,
       "package": "com.jellyroll.app",
       "allowBackup": false
     },
@@ -48,7 +46,11 @@
             "backgroundColor": "#0D1117"
           }
         }
-      ]
+      ],
+      "expo-font",
+      "expo-image",
+      "expo-status-bar",
+      "expo-web-browser"
     ],
     "experiments": {
       "typedRoutes": true,
