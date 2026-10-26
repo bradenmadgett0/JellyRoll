@@ -31,6 +31,7 @@ import {
   Text,
   TouchableOpacity,
   View,
+  ViewInstance,
 } from "react-native";
 import { Gesture, GestureDetector } from "react-native-gesture-handler";
 import Animated, { FadeIn, FadeOut } from "react-native-reanimated";
@@ -188,7 +189,7 @@ export default function PlayerOverlay({
     [scrubberWidth, duration],
   );
 
-  const scrubberTrackRef = useRef<View>(null);
+  const scrubberTrackRef = useRef<ViewInstance>(null);
   const trackXRef = useRef(0);
 
   const handleScrubStart = useCallback(
@@ -212,10 +213,14 @@ export default function PlayerOverlay({
     [seekToPosition],
   );
 
+  // player is expo-video's imperative handle — assigning currentTime is its
+  // documented seek API, not a React state mutation.
+  /* eslint-disable react-hooks/immutability */
   const handleScrubEnd = useCallback(() => {
     player.currentTime = scrubRef.current;
     setIsScrubbing(false);
   }, [player]);
+  /* eslint-enable react-hooks/immutability */
 
   // ─── Derived values ─────────────────────────────────────
   const progress = duration > 0 ? currentTime / duration : 0;
@@ -224,6 +229,9 @@ export default function PlayerOverlay({
   const parentGesture = useMemo(
     () =>
       Gesture.Tap()
+        // onStart only runs on an actual tap gesture, never during render —
+        // the compiler's ref-access check can't see that from the builder API.
+        // eslint-disable-next-line react-hooks/refs
         .onStart(() => {
           setAutoHideTimer();
         })
@@ -428,7 +436,7 @@ export default function PlayerOverlay({
 const createStyles = (_colors: AppColors, theme: ThemeTokens) =>
   StyleSheet.create({
     overlay: {
-      ...StyleSheet.absoluteFillObject,
+      ...StyleSheet.absoluteFill,
       justifyContent: "space-between",
       zIndex: 10,
     },
@@ -592,7 +600,7 @@ const createStyles = (_colors: AppColors, theme: ThemeTokens) =>
 
     // Quality picker modal
     pickerBackdrop: {
-      ...StyleSheet.absoluteFillObject,
+      ...StyleSheet.absoluteFill,
       backgroundColor: theme.overlay.backdrop,
       justifyContent: "center",
       alignItems: "center",

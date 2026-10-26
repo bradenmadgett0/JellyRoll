@@ -20,12 +20,14 @@
  */
 
 import { useMemo } from "react";
-import { StyleSheet } from "react-native";
+import type { ImageStyle, TextStyle, ViewStyle } from "react-native";
 import type { ThemeTokens } from "../constants/theme";
 import type { AppColors } from "./useColors";
 import { useTheme } from "./useTheme";
 
-type NamedStyles<T> = StyleSheet.NamedStyles<T>;
+type NamedStyles<T> = {
+  [P in keyof T]: ViewStyle | TextStyle | ImageStyle;
+};
 
 export type StyleFactory<T> = (colors: AppColors, theme: ThemeTokens) => T;
 

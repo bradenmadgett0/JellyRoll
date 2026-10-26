@@ -60,7 +60,7 @@ export default function TabLayout() {
             <Ionicons
               name={focused ? "home" : "home-outline"}
               size={ICON_SIZE}
-              color={color}
+              color={color as string}
             />
           ),
         }}
@@ -74,7 +74,7 @@ export default function TabLayout() {
             <Ionicons
               name={focused ? "grid" : "grid-outline"}
               size={ICON_SIZE}
-              color={color}
+              color={color as string}
             />
           ),
         }}
@@ -89,7 +89,7 @@ export default function TabLayout() {
               <Ionicons
                 name={focused ? "layers" : "layers-outline"}
                 size={ICON_SIZE}
-                color={color}
+                color={color as string}
               />
               {totalQueue > 0 && (
                 <View style={styles.badge}>
@@ -111,7 +111,7 @@ export default function TabLayout() {
             <Ionicons
               name={focused ? "person-circle" : "person-circle-outline"}
               size={ICON_SIZE}
-              color={color}
+              color={color as string}
             />
           ),
         }}

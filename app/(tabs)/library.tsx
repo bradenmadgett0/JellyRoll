@@ -352,7 +352,7 @@ export default function LibraryScreen() {
                 color={styles.iconPrimary.color as string}
                 style={{ paddingVertical: 20 }}
               />
-            ) : null
+            ) : undefined
           }
           ListEmptyComponent={
             <View style={styles.centerLoading}>

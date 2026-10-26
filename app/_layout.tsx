@@ -12,7 +12,7 @@ import type { Theme } from "@react-navigation/native";
 import { ThemeProvider } from "@react-navigation/native";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { Stack } from "expo-router";
-import * as NavigationBar from "expo-navigation-bar";
+import { NavigationBar } from "expo-navigation-bar";
 import * as SplashScreen from "expo-splash-screen";
 import { StatusBar } from "expo-status-bar";
 import { useEffect, useMemo } from "react";
@@ -104,16 +104,15 @@ export default function RootLayout() {
 
   // Hide Android's gesture/button nav bar for the whole app, not just the
   // player — Samsung and other Android devices otherwise keep it visible
-  // indefinitely. 'overlay-swipe' is the standard "immersive sticky" pattern:
-  // a swipe from the bottom temporarily reveals it, then it auto-hides again
-  // rather than staying up until dismissed (that's 'inset-swipe' instead).
-  // No cleanup/restore — this is the root layout, so there's no "leaving"
-  // state to restore to while the app is open. iOS has no such bar, hence
-  // the Platform guard.
+  // indefinitely. Under mandatory edge-to-edge, hidden system bars default
+  // to the "immersive sticky" behavior (swipe from the bottom temporarily
+  // reveals it, then it auto-hides again), so no separate behavior API is
+  // needed anymore. No cleanup/restore — this is the root layout, so there's
+  // no "leaving" state to restore to while the app is open. iOS has no such
+  // bar, hence the Platform guard.
   useEffect(() => {
     if (Platform.OS !== "android") return;
-    NavigationBar.setVisibilityAsync("hidden");
-    NavigationBar.setBehaviorAsync("overlay-swipe");
+    NavigationBar.setHidden(true);
   }, []);
 
   if (!fontsLoaded) {

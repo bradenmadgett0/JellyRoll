@@ -209,7 +209,9 @@ export default function RadarrScreen() {
           refreshControl={
             <RefreshControl
               refreshing={false}
-              onRefresh={refetch}
+              onRefresh={() => {
+                refetch();
+              }}
               tintColor={styles.radarrColor.color as string}
             />
           }
