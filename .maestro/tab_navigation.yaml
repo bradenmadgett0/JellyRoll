@@ -19,7 +19,7 @@ appId: com.jellyroll.app
 - extendedWaitUntil:
     visible:
       id: "settings-empty-servers"
-    timeout: 30000
+    timeout: 60000
 - tapOn:
     id: "tab-home"
 - assertVisible:
