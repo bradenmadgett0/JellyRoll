@@ -16,7 +16,7 @@ import { Platform, StyleSheet, View, ViewStyle } from "react-native";
  * Import this directly if you need the raw value (e.g. for FlatList
  * `contentContainerStyle` or `ListFooterComponent`).
  */
-export const TAB_BAR_BOTTOM_INSET = Platform.OS === "ios" ? 100 : 16;
+export const TAB_BAR_BOTTOM_INSET = Platform.OS === "ios" ? 100 : 60;
 
 interface TabSafeViewProps {
   children: ReactNode;

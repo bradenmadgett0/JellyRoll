@@ -18,7 +18,7 @@ import {
 } from "react-native";
 import Animated, { FadeIn, FadeInDown } from "react-native-reanimated";
 import { MediaCard } from "../../components/media/MediaCard";
-import { TAB_BAR_BOTTOM_INSET } from "../../components/ui/TabSafeView";
+import TabSafeView, { TAB_BAR_BOTTOM_INSET } from "../../components/ui/TabSafeView";
 import { Spacing } from "../../constants/Spacing";
 import { AppColors } from "../../hooks/useColors";
 import { useThemedStyles } from "../../hooks/useThemedStyles";
@@ -221,7 +221,7 @@ export default function LibraryScreen() {
   }
 
   return (
-    <View style={styles.container}>
+    <TabSafeView style={styles.container}>
       {/* Library picker */}
       {libLoading ? (
         <View style={styles.libPickerLoading}>
@@ -366,14 +366,13 @@ export default function LibraryScreen() {
           }
         />
       )}
-    </View>
+    </TabSafeView>
   );
 }
 
 const createStyles = (colors: AppColors, theme: ThemeTokens) =>
   StyleSheet.create({
     container: { flex: 1, backgroundColor: colors.background },
-
     // Library picker
     libPicker: {
       paddingHorizontal: Spacing.screenPadding,
